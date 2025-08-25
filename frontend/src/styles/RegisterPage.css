@@ -1,0 +1,391 @@
+/* Import Roboto font */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+.register-container {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(85, 119, 187, 1);
+  font-family: 'Roboto', sans-serif;
+}
+
+.register-left-panel {
+  width: 800px;
+  height: 100vh;
+  background-color: rgba(255, 255, 255, 1);
+  margin: 0px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.register-form-container {
+  width: 480px;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.register-logo {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 16px auto;
+  display: block;
+}
+
+.register-title {
+  font-size: 26px;
+  font-weight: bold;
+  color: rgba(74, 85, 105, 1);
+  line-height: 36px;
+  margin: 0 0 16px 4px;
+  white-space: nowrap;
+}
+
+.register-subtitle {
+  font-size: 16px;
+  font-weight: normal;
+  color: rgba(74, 85, 105, 1);
+  line-height: 24px;
+  margin: 0 0 20px 4px;
+  max-width: 460px;
+}
+
+.register-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-label {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(74, 85, 105, 1);
+  line-height: 24px;
+  margin: 0 0 6px 4px;
+}
+
+.form-input {
+  width: 100%;
+  max-width: 460px;
+  height: 35px;
+  border-radius: 6px;
+  border: 2px solid rgba(241, 243, 246, 1);
+  background-color: rgba(241, 243, 246, 1);
+  box-shadow: 0px 0px 0px 3px rgba(5, 138, 255, 0.06);
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: normal;
+  color: rgba(0, 0, 0, 1);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  border-color: rgba(45, 101, 195, 1);
+}
+
+.form-input::placeholder {
+  color: rgba(0, 0, 0, 1);
+  font-size: 14px;
+}
+
+/* Account type selection styles */
+.account-type-selection {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 2px solid rgba(241, 243, 246, 1);
+  background-color: rgba(255, 255, 255, 1);
+  transition: all 0.3s ease;
+  flex: 1;
+  min-width: 200px;
+}
+
+.radio-option:hover {
+  border-color: rgba(45, 101, 195, 0.5);
+  background-color: rgba(45, 101, 195, 0.05);
+}
+
+.radio-option input[type="radio"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: rgba(45, 101, 195, 1);
+}
+
+.radio-option input[type="radio"]:checked + .radio-label {
+  color: rgba(45, 101, 195, 1);
+  font-weight: 500;
+}
+
+.radio-label {
+  font-size: 14px;
+  color: rgba(74, 85, 105, 1);
+  font-weight: normal;
+  transition: all 0.3s ease;
+}
+
+/* Form hint styles */
+.form-hint {
+  display: block;
+  font-size: 12px;
+  color: rgba(107, 114, 128, 1);
+  margin-top: 4px;
+  margin-left: 4px;
+  font-style: italic;
+}
+
+.form-actions {
+  margin: 24px 0 20px 0;
+}
+
+.register-button {
+  width: 100%;
+  max-width: 460px;
+  height: 42px;
+  border-radius: 8px;
+  background-color: rgba(45, 101, 195, 1);
+  border: none;
+  color: rgba(255, 255, 255, 1);
+  font-size: 16px;
+  font-weight: normal;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.register-button:hover {
+  background-color: rgba(35, 91, 185, 1);
+}
+
+.login-section {
+  display: flex;
+  align-items: center;
+  margin-left: 4px;
+  margin-top: 20px;
+  gap: 12px;
+}
+
+.login-text {
+  font-size: 14px;
+  font-weight: normal;
+  color: rgba(74, 85, 105, 1);
+  line-height: 32px;
+}
+
+.login-button {
+  background: none;
+  border: none;
+  color: rgba(55, 109, 233, 1);
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.login-button:hover {
+  color: rgba(45, 99, 223, 1);
+  text-decoration: underline;
+}
+
+.register-right-panel {
+  flex: 1;
+  background-color: rgba(85, 119, 187, 1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
+.showcase-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.showcase-image {
+  width: 100%;
+  max-width: 700px;
+  height: auto;
+  max-height: 450px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  object-fit: contain;
+}
+
+.showcase-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 1);
+  line-height: 28px;
+  text-align: center;
+  margin: 0 0 12px 0;
+  max-width: 600px;
+}
+
+.showcase-subtitle {
+  font-size: 16px;
+  font-weight: normal;
+  color: rgba(255, 255, 255, 1);
+  line-height: 22px;
+  text-align: center;
+  margin: 0;
+  max-width: 550px;
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 1400px) {
+  .register-left-panel {
+    width: 50%;
+  }
+  
+  .register-form-container {
+    width: 90%;
+    max-width: 400px;
+  }
+  
+  .form-input,
+  .register-button {
+    width: 100%;
+  }
+  
+  .register-title {
+    font-size: 22px;
+  }
+  
+  .register-subtitle {
+    font-size: 14px;
+  }
+  
+  .form-label {
+    font-size: 14px;
+  }
+  
+  .form-input {
+    font-size: 13px;
+    height: 38px;
+  }
+  
+  .register-button {
+    font-size: 14px;
+    height: 38px;
+  }
+  
+  .showcase-title {
+    font-size: 20px;
+  }
+  
+  .showcase-subtitle {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .register-container {
+    flex-direction: column;
+  }
+  
+  .register-left-panel {
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+  }
+  
+  .register-right-panel {
+    display: none;
+  }
+  
+  .register-form-container {
+    width: 95%;
+    padding: 30px 0;
+  }
+  
+  .register-logo {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .register-title {
+    font-size: 20px;
+    text-align: center;
+    margin-left: 0;
+  }
+  
+  .register-subtitle {
+    font-size: 13px;
+    text-align: center;
+    margin-left: 0;
+  }
+  
+  .form-label {
+    font-size: 13px;
+    margin-left: 0;
+  }
+  
+  .form-input {
+    font-size: 12px;
+    height: 36px;
+  }
+  
+  .register-button {
+    font-size: 14px;
+    height: 36px;
+  }
+  
+  .login-section {
+    flex-direction: column;
+    align-items: center;
+    margin-left: 0;
+    gap: 8px;
+  }
+  
+  .login-text {
+    font-size: 12px;
+    text-align: center;
+  }
+  
+  .login-button {
+    font-size: 14px;
+  }
+  
+  /* Mobile responsive cho account type selection */
+  .account-type-selection {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .radio-option {
+    padding: 6px 10px;
+    min-width: auto;
+    flex: none;
+  }
+  
+  .radio-label {
+    font-size: 12px;
+  }
+  
+  .form-hint {
+    font-size: 11px;
+  }
+} 
