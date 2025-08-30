@@ -1,34 +1,37 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import LoginPage from '@/components/LoginPage';
 import RegisterPage from '@/components/RegisterPage';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState<'login' | 'register'>('login');
-
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+  
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, router]);
+  
+  // These handlers are kept for logging purposes but actual authentication 
+  // is now handled in the components using the AuthContext
   const handleLogin = (email: string, password: string) => {
-    console.log('Login attempt:', { email, password });
-    // TODO: Implement actual login logic
+    console.log('Login attempt logged in Home page:', { email });
   };
 
   const handleRegister = (email: string, password: string, confirmPassword: string, fullName: string, accountType: 'admin' | 'staff', companyName?: string, companyCode?: string) => {
-    console.log('Register attempt:', { 
+    console.log('Register attempt logged in Home page:', { 
       email, 
-      password, 
-      confirmPassword, 
       fullName, 
       accountType, 
       companyName, 
       companyCode 
     });
-    // TODO: Implement actual register logic
-    
-    if (accountType === 'admin') {
-      console.log('Creating new company:', companyName, 'with code:', companyCode);
-    } else {
-      console.log('Joining existing company with code:', companyCode);
-    }
   };
 
   const handleForgotPassword = () => {

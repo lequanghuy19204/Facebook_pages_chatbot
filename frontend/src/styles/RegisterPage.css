@@ -153,6 +153,26 @@
   font-style: italic;
 }
 
+.error-message {
+  background-color: #ffebee;
+  color: #d32f2f;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+  font-size: 14px;
+  border-left: 4px solid #d32f2f;
+}
+
+.success-message {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+  font-size: 14px;
+  border-left: 4px solid #2e7d32;
+}
+
 .form-actions {
   margin: 24px 0 20px 0;
 }
@@ -173,6 +193,11 @@
 
 .register-button:hover {
   background-color: rgba(35, 91, 185, 1);
+}
+
+.register-button:disabled {
+  background-color: rgba(45, 101, 195, 0.6);
+  cursor: not-allowed;
 }
 
 .login-section {

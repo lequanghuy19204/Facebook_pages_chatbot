@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import "@/styles/RegisterPage.css";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface RegisterPageProps {
   onRegister?: (email: string, password: string, confirmPassword: string, fullName: string, accountType: 'admin' | 'staff', companyName?: string, companyCode?: string) => void;
@@ -16,28 +18,86 @@ export default function RegisterPage(props: RegisterPageProps) {
   const [accountType, setAccountType] = useState<'admin' | 'staff'>('staff');
   const [companyName, setCompanyName] = useState("");
   const [companyCode, setCompanyCode] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  
+  const { registerAdmin, registerStaff } = useAuth();
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+    
+    // Validation
     if (password !== confirmPassword) {
-      alert("Mật khẩu không khớp!");
+      setErrorMessage("Mật khẩu không khớp!");
+      setIsLoading(false);
       return;
     }
     
     // Validation cho Admin
     if (accountType === 'admin' && (!companyName.trim() || !companyCode.trim())) {
-      alert("Vui lòng nhập đầy đủ tên công ty và mã công ty!");
+      setErrorMessage("Vui lòng nhập đầy đủ tên công ty và mã công ty!");
+      setIsLoading(false);
       return;
     }
     
     // Validation cho Staff
     if (accountType === 'staff' && !companyCode.trim()) {
-      alert("Vui lòng nhập mã công ty để tham gia!");
+      setErrorMessage("Vui lòng nhập mã công ty để tham gia!");
+      setIsLoading(false);
       return;
     }
     
-    if (props.onRegister) {
-      props.onRegister(email, password, confirmPassword, fullName, accountType, companyName, companyCode);
+    try {
+      if (accountType === 'admin') {
+        // Đăng ký Admin (tạo công ty mới)
+        const adminData = {
+          email,
+          password,
+          full_name: fullName,
+          company_name: companyName,
+          company_code: companyCode
+        };
+        
+        await registerAdmin(adminData);
+        
+        // Nếu đăng ký admin thành công, chuyển hướng đến dashboard
+        router.push("/dashboard");
+      } else {
+        // Đăng ký Staff (tham gia công ty)
+        const staffData = {
+          email,
+          password,
+          full_name: fullName,
+          company_code: companyCode,
+          phone: ""
+        };
+        
+        const response = await registerStaff(staffData);
+        
+        // Hiển thị thông báo thành công cho staff
+        setSuccessMessage(response.message || "Đăng ký thành công! Vui lòng chờ admin duyệt tài khoản.");
+        
+        // Reset form sau 3 giây và quay lại trang đăng nhập
+        setTimeout(() => {
+          if (props.onBackToLogin) {
+            props.onBackToLogin();
+          }
+        }, 3000);
+      }
+      
+      // Gọi callback nếu có
+      if (props.onRegister) {
+        props.onRegister(email, password, confirmPassword, fullName, accountType, companyName, companyCode);
+      }
+    } catch (error: any) {
+      setErrorMessage(error.message || "Đăng ký thất bại. Vui lòng thử lại.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -177,9 +237,25 @@ export default function RegisterPage(props: RegisterPageProps) {
               />
             </div>
 
+            {errorMessage && (
+              <div className="error-message">
+                {errorMessage}
+              </div>
+            )}
+            
+            {successMessage && (
+              <div className="success-message">
+                {successMessage}
+              </div>
+            )}
+            
             <div className="form-actions">
-              <button type="submit" className="register-button">
-                Đăng ký
+              <button 
+                type="submit" 
+                className="register-button"
+                disabled={isLoading || !!successMessage}
+              >
+                {isLoading ? "Đang xử lý..." : "Đăng ký"}
               </button>
             </div>
           </form>

@@ -100,6 +100,16 @@
   font-size: 14px;
 }
 
+.error-message {
+  background-color: #ffebee;
+  color: #d32f2f;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+  font-size: 14px;
+  border-left: 4px solid #d32f2f;
+}
+
 .form-actions {
   margin: 28px 0 20px 0;
   position: relative;
@@ -123,6 +133,11 @@
   background-color: rgba(35, 91, 185, 1);
 }
 
+.sign-in-button:disabled {
+  background-color: rgba(45, 101, 195, 0.6);
+  cursor: not-allowed;
+}
+
 .forgot-password-button {
   position: absolute;
   top: 50px;
@@ -143,6 +158,11 @@
 .forgot-password-button:hover {
   color: rgba(45, 99, 223, 1);
   text-decoration: underline;
+}
+
+.forgot-password-button:disabled {
+  color: rgba(55, 109, 233, 0.6);
+  cursor: not-allowed;
 }
 
 .signup-section {

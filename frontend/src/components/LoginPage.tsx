@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import "@/styles/LoginPage.css";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface LoginPageProps {
   onLogin?: (email: string, password: string) => void;
@@ -12,11 +14,32 @@ export interface LoginPageProps {
 export default function LoginPage(props: LoginPageProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  
+  const { login } = useAuth();
+  const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (props.onLogin) {
-      props.onLogin(email, password);
+    setIsLoading(true);
+    setErrorMessage("");
+    
+    try {
+      // Use the auth context login
+      await login(email, password);
+      
+      // If login is successful, redirect to dashboard
+      router.push("/dashboard");
+      
+      // Also call the prop callback if provided
+      if (props.onLogin) {
+        props.onLogin(email, password);
+      }
+    } catch (error: any) {
+      setErrorMessage(error.message || "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -59,14 +82,25 @@ export default function LoginPage(props: LoginPageProps) {
               />
             </div>
 
+            {errorMessage && (
+              <div className="error-message">
+                {errorMessage}
+              </div>
+            )}
+            
             <div className="form-actions">
-              <button type="submit" className="sign-in-button">
-                Đăng nhập
+              <button 
+                type="submit" 
+                className="sign-in-button"
+                disabled={isLoading}
+              >
+                {isLoading ? "Đang xử lý..." : "Đăng nhập"}
               </button>
               <button 
                 type="button" 
                 className="forgot-password-button"
                 onClick={props.onForgotPassword}
+                disabled={isLoading}
               >
                 Quên mật khẩu
               </button>
