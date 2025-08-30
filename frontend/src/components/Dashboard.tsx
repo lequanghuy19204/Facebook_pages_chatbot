@@ -84,55 +84,54 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-wrapper">
-        {/* Header */}
-        <div className="dashboard-header">
-          <div className="header-content">
-            <div className="user-info">
-              <div className="user-details">
-                <img 
-                  src="/src/components/assets/4c28cb16-18df-4f17-8cc7-4c74fa3296e0.png" 
-                  alt="User Avatar" 
-                  className="user-avatar"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/logo.svg';
-                  }}
-                />
-                <div className="user-name">{user?.full_name || 'Lê Quang Huy'}</div>
-              </div>
-              <button className="logout-button" onClick={handleLogout}>
-                <img src="/src/components/assets/1b87e5c8-ea65-4dbb-9cf6-8efdb1282da1.png" alt="Logout" className="logout-icon" />
-              </button>
+      {/* Header */}
+      <div className="dashboard-header">
+        <div className="header-content">
+          <div className="user-info">
+            <div className="user-details">
+              <img 
+                src="/src/components/assets/4c28cb16-18df-4f17-8cc7-4c74fa3296e0.png" 
+                alt="User Avatar" 
+                className="user-avatar"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/logo.svg';
+                }}
+              />
+              <div className="user-name">{user?.full_name || 'Lê Quang Huy'}</div>
             </div>
+            <button className="logout-button" onClick={handleLogout}>
+              <img src="/src/components/assets/1b87e5c8-ea65-4dbb-9cf6-8efdb1282da1.png" alt="Logout" className="logout-icon" />
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Main Content */}
-        <div className="dashboard-main">
-          <div className="dashboard-content">
-            <div>
-              {/* Control Panel Header */}
-              <div className="control-panel-header">
-                <div className="panel-title">Bảng điều khiển</div>
-                <div className="panel-actions">
+      {/* Main Content */}
+      <div className="dashboard-main">
+        <div className="dashboard-content">
+          <div className="content-wrapper">
+            {/* Control Panel Header */}
+            <div className="control-panel-header">
+              <div className="panel-title">Bảng điều khiển</div>
+              <div className="panel-actions">
                 <div className="search-box">
-                  <img src="/src/components/assets/1ade629c-87bf-4b83-96ce-af82cb24659d.png" alt="Search" className="search-icon" />
+                  <img src="/search.svg" alt="Search" className="search-icon" />
                   <div className="search-input">
                     <span className="search-placeholder">Tìm kiếm</span>
                   </div>
                 </div>
                 
                 <button className="action-button">
-                  <img src="/src/components/assets/90f57a73-4194-4302-a257-1d9929f60deb.png" alt="Notifications" className="action-icon" />
+                  <img src="/load.svg" alt="Notifications" className="action-icon" />
                 </button>
                 
                 <button className="connect-facebook-button">
-                  <img src="/src/components/assets/0fd30a51-ba56-4051-b7a8-60c2b2c6a16c.png" alt="Facebook" className="facebook-icon" />
+                  <img src="/plus.svg" alt="Facebook" className="facebook-icon" />
                   <span>Kết nối Facebook</span>
                 </button>
                 
                 <button className="merge-pages-button">
-                  <img src="/src/components/assets/eac3c5f0-f854-453d-be26-4132269dcc44.png" alt="Merge" className="merge-icon" />
+                  <img src="/megre_page.svg" alt="Merge" className="merge-icon" />
                   <span>Gộp trang</span>
                 </button>
               </div>
@@ -142,12 +141,12 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             <div className="filter-tabs">
               <div className="tab-container">
                 <div className="tab active">
-                  <img src="/src/components/assets/eacc2bde-3eb3-4382-aeb0-6a7ed43b6638.png" alt="All" className="tab-icon" />
+                  <img src="/all.svg" alt="All" className="tab-icon" />
                   <span className="tab-text">Tất cả</span>
                   <div className="tab-badge">10</div>
                 </div>
                 <div className="tab">
-                  <img src="/src/components/assets/7f1b4674-6e34-4460-b170-6549a33437ac.png" alt="Facebook" className="tab-icon" />
+                  <img src="/facebook.svg" alt="Facebook" className="tab-icon" />
                   <span className="tab-text">Facebook</span>
                   <div className="tab-badge inactive">10</div>
                 </div>
@@ -177,7 +176,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   </div>
                 ))}
               </div>
-            </div>
             </div>
           </div>
         </div>
