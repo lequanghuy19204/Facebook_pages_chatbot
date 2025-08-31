@@ -6,6 +6,7 @@ import { useFacebook } from '@/contexts/FacebookContext';
 import FacebookConnect from './FacebookConnect';
 import FacebookPages from './FacebookPages';
 import '@/styles/Dashboard.css';
+import { toast } from 'react-toastify';
 
 interface DashboardProps {
   onLogout?: () => void;
@@ -13,7 +14,7 @@ interface DashboardProps {
 
 export default function Dashboard({ onLogout }: DashboardProps) {
   const { user, company, logout } = useAuth();
-  const { isConnected, pages, pagesLoading } = useFacebook();
+  const { isConnected, pages, pagesLoading, syncing, syncPages } = useFacebook();
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleLogout = async () => {
@@ -45,6 +46,33 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   // Clear search
   const clearSearch = () => {
     setSearchQuery('');
+  };
+
+  // Handle sync pages
+  const handleSyncPages = async () => {
+    if (!isConnected) {
+      toast.warning('Vui lòng kết nối Facebook trước khi đồng bộ');
+      return;
+    }
+
+    try {
+      const result = await syncPages();
+      
+      if (result.sync_status === 'success') {
+        toast.success(`Đã đồng bộ thành công ${result.pages_synced} trang`);
+      } else if (result.sync_status === 'partial') {
+        toast.warning(
+          `Đồng bộ một phần: ${result.pages_synced}/${result.pages_total} trang. ` +
+          (result.error_message ? result.error_message : '')
+        );
+      } else {
+        toast.error(
+          `Đồng bộ thất bại: ${result.error_message || 'Đã có lỗi xảy ra'}`
+        );
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Không thể đồng bộ Facebook Pages');
+    }
   };
 
   // Generate avatar placeholder for pages
@@ -108,8 +136,17 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                 </div>
                 
                 <div className="actions-right">
-                  <button className="action-button">
-                    <img src="/load.svg" alt="Notifications" className="action-icon" />
+                  <button 
+                    className="action-button"
+                    onClick={handleSyncPages}
+                    disabled={syncing || !isConnected}
+                    title={!isConnected ? "Vui lòng kết nối Facebook trước" : "Đồng bộ Pages từ Facebook"}
+                  >
+                    {syncing ? (
+                      <div className="loading-spinner"></div>
+                    ) : (
+                      <img src="/load.svg" alt="Sync" className="action-icon" />
+                    )}
                   </button>
                   
                   <FacebookConnect className="connect-facebook-button" />
@@ -223,6 +260,51 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        .action-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 6px;
+          border: none;
+          background-color: rgba(234, 236, 240, 1);
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .action-button:hover:not(:disabled) {
+          background-color: rgba(224, 226, 230, 1);
+        }
+
+        .action-button:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+          background-color: rgba(234, 236, 240, 0.5);
+        }
+
+        .action-button .loading-spinner {
+          width: 16px;
+          height: 16px;
+          border: 2px solid rgba(52, 64, 84, 0.2);
+          border-top: 2px solid rgba(52, 64, 84, 0.8);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        .action-button .action-icon {
+          width: 16px;
+          height: 16px;
+          opacity: 0.8;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
