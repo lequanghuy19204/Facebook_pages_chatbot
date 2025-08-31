@@ -8,7 +8,8 @@ export enum UserRole {
   STAFF = 'staff',
   MANAGE_USER = 'manage_user',
   MANAGE_PRODUCTS = 'manage_products',
-  MANAGE_CHATBOT = 'manage_chatbot'
+  MANAGE_CHATBOT = 'manage_chatbot',
+  MANAGE_FACEBOOK_PAGES = 'manage_facebook_pages'
 }
 
 @Schema({ 
@@ -44,6 +45,9 @@ export class User {
   })
   roles: UserRole[];
 
+  @Prop({ type: [String], default: [] })
+  facebook_pages_access: string[];
+
   @Prop({ default: true })
   is_active: boolean;
 
@@ -69,3 +73,4 @@ UserSchema.index({ company_id: 1, is_active: 1 });
 UserSchema.index({ roles: 1 });
 UserSchema.index({ company_id: 1, roles: 1 });
 UserSchema.index({ email: 1, is_active: 1 });
+UserSchema.index({ facebook_pages_access: 1 });

@@ -12,6 +12,7 @@ export interface JwtPayload {
   company_id: string;
   roles: string[];
   email: string;
+  facebook_pages_access?: string[];
 }
 
 @Injectable()
@@ -57,6 +58,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       full_name: user.full_name,
       roles: user.roles,
       company_id: user.company_id,
+      facebook_pages_access: user.facebook_pages_access,
       is_active: user.is_active,
     };
   }
