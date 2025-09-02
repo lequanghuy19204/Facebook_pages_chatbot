@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFacebook } from '@/contexts/FacebookContext';
 import FacebookConnect from './FacebookConnect';
 import FacebookPages from './FacebookPages';
+import Header from './Header';
 import '@/styles/Dashboard.css';
 import { toast } from 'react-toastify';
 
@@ -89,21 +90,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   return (
     <div className="dashboard-container">
       {/* Header */}
-      <div className="dashboard-header">
-        <div className="header-content">
-          <div className="user-info">
-            <div className="user-details">
-              <div className="user-avatar-placeholder">
-                {user?.full_name?.charAt(0)?.toUpperCase() || 'U'}
-              </div>
-              <div className="user-name">{user?.full_name || 'User'}</div>
-            </div>
-            <button className="logout-button" onClick={handleLogout} title="Đăng xuất">
-              <span className="logout-text">⏻</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      <Header onLogout={onLogout} />
 
       {/* Main Content */}
       <div className="dashboard-main">
@@ -283,6 +270,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       </div>
 
       <style jsx>{`
+
+        
         .action-button {
           display: flex;
           align-items: center;
