@@ -67,10 +67,15 @@ export interface FacebookPage {
   facebook_page_id: string;
   name: string;
   category?: string;
+  category_list?: Array<{ id: string; name: string }>;
   access_token: string;
   is_active: boolean;
   last_sync?: string;
   sync_status: string;
+  picture_url?: string;
+  picture_cloudflare_url?: string;
+  picture_cloudflare_key?: string;
+  tasks?: string[];
   imported_by: string;
   imported_at?: string;
   created_at: string;

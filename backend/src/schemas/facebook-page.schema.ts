@@ -23,6 +23,9 @@ export class FacebookPage {
   @Prop()
   category?: string;
 
+  @Prop()
+  category_list?: Array<{ id: string; name: string }>;
+
   @Prop({ required: true })
   access_token: string;
 
@@ -37,6 +40,18 @@ export class FacebookPage {
 
   @Prop()
   error_message?: string;
+
+  @Prop()
+  picture_url?: string;
+
+  @Prop()
+  picture_cloudflare_url?: string;
+
+  @Prop()
+  picture_cloudflare_key?: string;
+
+  @Prop()
+  tasks?: string[];
 
   @Prop({ required: true })
   imported_by: string;

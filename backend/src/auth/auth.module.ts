@@ -19,7 +19,7 @@ import { Company, CompanySchema } from '../schemas/company.schema';
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET') || 'fallback-secret-key',
         signOptions: {
-          expiresIn: '1h',
+          expiresIn: '30d',
         },
       }),
       inject: [ConfigService],

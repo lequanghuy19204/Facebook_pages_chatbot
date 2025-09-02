@@ -122,12 +122,27 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
   };
 
   // Render page card
-  const renderPageCard = (page: any) => (
+  const renderPageCard = (page: any) => {
+    return (
     <div key={page.page_id} className="page-card">
       <div className="page-avatar">
-        <div className="avatar-placeholder">
-          {page.name.charAt(0).toUpperCase()}
-        </div>
+        {page.picture_cloudflare_key ? (
+          <img 
+            src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${page.picture_cloudflare_key}`} 
+            alt={`${page.name} logo`}
+            className="avatar-image"
+            onError={(e) => {
+              // Fallback to placeholder if image fails to load
+              const target = e.target as HTMLImageElement;
+              target.onerror = null; // Prevent infinite loop
+              target.parentElement!.innerHTML = `<div class="avatar-placeholder">${page.name.charAt(0).toUpperCase()}</div>`;
+            }}
+          />
+        ) : (
+          <div className="avatar-placeholder">
+            {page.name.charAt(0).toUpperCase()}
+          </div>
+        )}
       </div>
       
       <div className="page-info">
@@ -137,8 +152,8 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
         <div className="page-details">
           <div className="page-id-container">
             <img 
-              src="/src/components/assets/c27e5581-3934-4841-9207-3e7c6f822f6c.png" 
-              alt="Link" 
+              src="/facebook.svg" 
+              alt="Facebook" 
               className="link-icon"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
@@ -415,6 +430,17 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
 
         .page-avatar {
           flex-shrink: 0;
+          width: 48px;
+          height: 48px;
+        }
+
+        .avatar-image {
+          width: 48px;
+          height: 48px;
+          border-radius: 8px;
+          object-fit: cover;
+          border: 1px solid #e5e7eb;
+          background-color: #ffffff;
         }
 
         .avatar-placeholder {
@@ -510,4 +536,4 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
       `}</style>
     </div>
   );
-}
+}}

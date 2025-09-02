@@ -46,7 +46,7 @@ interface FacebookProviderProps {
 }
 
 export function FacebookProvider({ children }: FacebookProviderProps) {
-  const { token, user } = useAuth();
+  const { token, user, loading } = useAuth();
   
   // State
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -60,10 +60,10 @@ export function FacebookProvider({ children }: FacebookProviderProps) {
 
   // Load Facebook status when user is authenticated
   useEffect(() => {
-    if (token && user) {
+    if (token && user && !loading) {
       refreshStatus();
     }
-  }, [token, user]);
+  }, [token, user, loading]);
 
   // Load pages when connected
   useEffect(() => {

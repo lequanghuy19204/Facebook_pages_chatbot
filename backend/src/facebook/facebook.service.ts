@@ -7,6 +7,7 @@ import * as crypto from 'crypto';
 import { Company, CompanyDocument } from '../schemas/company.schema';
 import { User, UserDocument, UserRole } from '../schemas/user.schema';
 import { FacebookPage, FacebookPageDocument } from '../schemas/facebook-page.schema';
+import { CloudflareR2Service } from '../cloudflare/cloudflare-r2.service';
 import {
   FacebookConnectDto,
   FacebookUserInfoDto,
@@ -32,6 +33,7 @@ export class FacebookService {
 
   constructor(
     private configService: ConfigService,
+    private cloudflareR2Service: CloudflareR2Service,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(FacebookPage.name) private facebookPageModel: Model<FacebookPageDocument>,
@@ -164,7 +166,8 @@ export class FacebookService {
     try {
       const params = new URLSearchParams({
         access_token: accessToken,
-        fields: 'id,name,access_token,category,fan_count,about'
+        fields: 'id,name,access_token,category,category_list,fan_count,about,tasks,picture.width(512).height(512){url}',
+        limit: '50'
       });
 
       const url = `${this.facebookGraphUrl}/me/accounts?${params.toString()}`;
@@ -369,20 +372,42 @@ export class FacebookService {
         try {
           const pageId = `page_${uuidv4().replace(/-/g, '').substring(0, 12)}`;
           
-          const facebookPage = new this.facebookPageModel({
+          // Prepare page data
+          const pageData: any = {
             page_id: pageId,
             company_id: user.company_id,
             facebook_page_id: page.id,
             name: page.name,
             category: page.category,
+            category_list: page.category_list,
             access_token: page.access_token,
             is_active: true,
             last_sync: new Date(),
             sync_status: 'success',
             imported_by: userId,
-            imported_at: new Date()
-          });
-
+            imported_at: new Date(),
+            tasks: page.tasks
+          };
+          
+          // Handle profile picture if available
+          if (page.picture?.data?.url) {
+            // Store original Facebook URL
+            pageData.picture_url = page.picture.data.url;
+            
+            // Download and upload to Cloudflare R2
+            const pictureResult = await this.downloadAndUploadPageProfilePicture(
+              page.id,
+              page.picture.data.url
+            );
+            
+            if (pictureResult) {
+              pageData.picture_cloudflare_key = pictureResult.cloudflareKey;
+              pageData.picture_cloudflare_url = pictureResult.cloudflareUrl;
+              this.logger.log(`Stored page profile picture for ${page.name} in Cloudflare R2`);
+            }
+          }
+          
+          const facebookPage = new this.facebookPageModel(pageData);
           await facebookPage.save();
           syncedCount++;
           
@@ -506,6 +531,25 @@ export class FacebookService {
 
       this.logger.log(`Disconnecting Facebook for company: ${user.company_id} by admin: ${user.full_name}`);
 
+      // First get all pages to retrieve their Cloudflare keys
+      const pages = await this.facebookPageModel.find({ company_id: user.company_id }).exec();
+      
+      // Delete profile pictures from Cloudflare R2
+      let deletedPicturesCount = 0;
+      for (const page of pages) {
+        if (page.picture_cloudflare_key) {
+          try {
+            await this.cloudflareR2Service.deleteFile(page.picture_cloudflare_key);
+            deletedPicturesCount++;
+            this.logger.log(`Deleted profile picture from Cloudflare R2: ${page.picture_cloudflare_key}`);
+          } catch (error) {
+            this.logger.error(`Failed to delete profile picture for page ${page.name}: ${error.message}`);
+          }
+        }
+      }
+      
+      this.logger.log(`Deleted ${deletedPicturesCount} profile pictures from Cloudflare R2`);
+
       // Delete all Facebook pages for this company
       const deletedPages = await this.facebookPageModel.deleteMany({ 
         company_id: user.company_id 
@@ -626,6 +670,57 @@ export class FacebookService {
         throw error;
       }
       throw new InternalServerErrorException('Failed to sync pages');
+    }
+  }
+
+  /**
+   * Download and upload Facebook page profile picture to Cloudflare R2
+   */
+  async downloadAndUploadPageProfilePicture(pageId: string, pictureUrl: string): Promise<{
+    cloudflareKey: string;
+    cloudflareUrl: string;
+  } | null> {
+    try {
+      if (!pictureUrl) {
+        return null;
+      }
+
+      this.logger.log(`Downloading profile picture for page ${pageId}: ${pictureUrl}`);
+      
+      // Download the image
+      const response = await fetch(pictureUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download profile picture: ${response.status} ${response.statusText}`);
+      }
+      
+      const imageBuffer = Buffer.from(await response.arrayBuffer());
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      
+      // Generate a unique key for Cloudflare R2
+      const fileExtension = contentType.includes('png') ? '.png' : 
+                           contentType.includes('gif') ? '.gif' : 
+                           contentType.includes('svg') ? '.svg' : '.jpg';
+      
+      const fileName = `fb_page_${pageId}_${Date.now()}${fileExtension}`;
+      const key = `facebook/page_images/${fileName}`;
+      
+      // Upload to Cloudflare R2
+      const uploadResult = await this.cloudflareR2Service.uploadBuffer(
+        imageBuffer,
+        key,
+        contentType
+      );
+      
+      this.logger.log(`Successfully uploaded profile picture to Cloudflare R2: ${key}`);
+      
+      return {
+        cloudflareKey: uploadResult.key,
+        cloudflareUrl: uploadResult.publicUrl
+      };
+      
+    } catch (error) {
+      this.logger.error(`Error downloading/uploading profile picture for page ${pageId}:`, error);
+      return null;
     }
   }
 }

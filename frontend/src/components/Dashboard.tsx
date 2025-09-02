@@ -194,12 +194,33 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <div className="pages-grid">
                     {filteredPages.map((page) => (
                       <div key={page.page_id} className="page-card">
-                        <div 
-                          className="page-avatar-placeholder"
-                          style={{ backgroundColor: getPageAvatar(page.name) }}
-                        >
-                          {page.name.charAt(0).toUpperCase()}
-                        </div>
+                        {page.picture_cloudflare_key ? (
+                          <img 
+                            src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${page.picture_cloudflare_key}`} 
+                            alt={`${page.name} logo`}
+                            className="page-avatar"
+                            onError={(e) => {
+                              // Fallback to placeholder if image fails to load
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                const placeholder = document.createElement('div');
+                                placeholder.className = 'page-avatar-placeholder';
+                                placeholder.style.backgroundColor = getPageAvatar(page.name);
+                                placeholder.textContent = page.name.charAt(0).toUpperCase();
+                                parent.appendChild(placeholder);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div 
+                            className="page-avatar-placeholder"
+                            style={{ backgroundColor: getPageAvatar(page.name) }}
+                          >
+                            {page.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div className="page-info">
                           <div className="page-name">{page.name}</div>
                           <div className="page-id-container">

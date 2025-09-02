@@ -51,12 +51,26 @@ export class FacebookPageDto {
   category?: string;
 
   @IsOptional()
+  category_list?: Array<{ id: string; name: string }>;
+
+  @IsOptional()
   @IsNumber()
   fan_count?: number;
 
   @IsOptional()
   @IsString()
   about?: string;
+  
+  @IsOptional()
+  picture?: {
+    data: {
+      url: string;
+    }
+  };
+  
+  @IsOptional()
+  @IsArray()
+  tasks?: string[];
 }
 
 export class FacebookPagesResponseDto {
