@@ -363,6 +363,23 @@ export class FacebookService {
       let syncedCount = 0;
       const failedPages: string[] = [];
 
+      // Store existing page data for reuse
+      const existingPages = await this.facebookPageModel
+        .find({ company_id: user.company_id })
+        .exec();
+      
+      // Create a map of Facebook page IDs to their Cloudflare data for quick lookup
+      const existingPageMap = new Map();
+      existingPages.forEach(page => {
+        if (page.facebook_page_id && page.picture_cloudflare_key && page.picture_url) {
+          existingPageMap.set(page.facebook_page_id, {
+            picture_url: page.picture_url,
+            picture_cloudflare_key: page.picture_cloudflare_key,
+            picture_cloudflare_url: page.picture_cloudflare_url
+          });
+        }
+      });
+      
       // Clear existing pages for this company
       await this.facebookPageModel.deleteMany({ company_id: user.company_id }).exec();
       this.logger.log(`Cleared existing pages for company: ${user.company_id}`);
@@ -394,16 +411,25 @@ export class FacebookService {
             // Store original Facebook URL
             pageData.picture_url = page.picture.data.url;
             
-            // Download and upload to Cloudflare R2
-            const pictureResult = await this.downloadAndUploadPageProfilePicture(
-              page.id,
-              page.picture.data.url
-            );
-            
-            if (pictureResult) {
-              pageData.picture_cloudflare_key = pictureResult.cloudflareKey;
-              pageData.picture_cloudflare_url = pictureResult.cloudflareUrl;
-              this.logger.log(`Stored page profile picture for ${page.name} in Cloudflare R2`);
+            // Check if we already have this image in Cloudflare
+            const existingPageData = existingPageMap.get(page.id);
+            if (existingPageData && existingPageData.picture_url === page.picture.data.url) {
+              // Reuse existing Cloudflare image
+              pageData.picture_cloudflare_key = existingPageData.picture_cloudflare_key;
+              pageData.picture_cloudflare_url = existingPageData.picture_cloudflare_url;
+              this.logger.log(`Reusing existing profile picture for ${page.name} from Cloudflare R2`);
+            } else {
+              // Download and upload to Cloudflare R2
+              const pictureResult = await this.downloadAndUploadPageProfilePicture(
+                page.id,
+                page.picture.data.url
+              );
+              
+              if (pictureResult) {
+                pageData.picture_cloudflare_key = pictureResult.cloudflareKey;
+                pageData.picture_cloudflare_url = pictureResult.cloudflareUrl;
+                this.logger.log(`Stored page profile picture for ${page.name} in Cloudflare R2`);
+              }
             }
           }
           
@@ -685,6 +711,21 @@ export class FacebookService {
         return null;
       }
 
+      // Check if we already have a profile picture for this page in our database
+      const existingPage = await this.facebookPageModel.findOne({ 
+        facebook_page_id: pageId,
+        picture_cloudflare_key: { $exists: true, $ne: null }
+      }).exec();
+
+      // If we already have a profile picture and it's the same URL, reuse it
+      if (existingPage?.picture_url === pictureUrl && existingPage?.picture_cloudflare_key) {
+        this.logger.log(`Reusing existing profile picture for page ${pageId}: ${existingPage.picture_cloudflare_key}`);
+        return {
+          cloudflareKey: existingPage.picture_cloudflare_key,
+          cloudflareUrl: existingPage.picture_cloudflare_url || this.cloudflareR2Service.getPublicUrl(existingPage.picture_cloudflare_key)
+        };
+      }
+
       this.logger.log(`Downloading profile picture for page ${pageId}: ${pictureUrl}`);
       
       // Download the image
@@ -701,7 +742,8 @@ export class FacebookService {
                            contentType.includes('gif') ? '.gif' : 
                            contentType.includes('svg') ? '.svg' : '.jpg';
       
-      const fileName = `fb_page_${pageId}_${Date.now()}${fileExtension}`;
+      // Use a consistent naming scheme without timestamp to avoid duplicates
+      const fileName = `fb_page_${pageId}${fileExtension}`;
       const key = `facebook/page_images/${fileName}`;
       
       // Upload to Cloudflare R2
