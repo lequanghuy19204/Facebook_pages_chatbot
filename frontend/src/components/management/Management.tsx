@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import ApiService, { User, PendingUser, UserStats } from '@/services/api';
+import ApiService, { User, PendingUser, UserStats, FacebookPage } from '@/services/api';
 import Header from '../shared/Header';
 import PendingUsers from './PendingUsers';
 import UserTable from './UserTable';
@@ -18,6 +18,7 @@ export default function Management({ onLogout }: ManagementProps) {
   const { user, logout, token } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
+  const [facebookPages, setFacebookPages] = useState<FacebookPage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [stats, setStats] = useState<UserStats>({
@@ -27,15 +28,18 @@ export default function Management({ onLogout }: ManagementProps) {
     pendingUsers: 0,
     adminUsers: 0,
     facebookUsers: 0,
-    inactiveUsers: 0
+    inactiveUsers: 0,
+    onlineUsers: 0,
+    offlineUsers: 0
   });
   const [error, setError] = useState<string | null>(null);
   
-  // Load users and pending users on component mount
+  // Load users, pending users, and Facebook pages on component mount
   useEffect(() => {
     if (token) {
       fetchUsers();
       fetchPendingUsers();
+      fetchFacebookPages();
     }
   }, [token]);
 
@@ -182,6 +186,42 @@ export default function Management({ onLogout }: ManagementProps) {
       setLoading(false);
     }
   };
+  
+  // Handle Facebook pages access update
+  const handleUpdateFacebookPagesAccess = async (userId: string, pageIds: string[]) => {
+    if (!token) return;
+    
+    try {
+      setLoading(true);
+      await ApiService.users.updateFacebookPagesAccess(token, userId, pageIds);
+      
+      // Update local state - update facebook_pages count
+      setUsers(prev => prev.map(user => 
+        user.id === userId ? { ...user, facebook_pages: pageIds.length, facebook_pages_access: pageIds } : user
+      ));
+    } catch (err: any) {
+      setError(err.message || 'Failed to update Facebook pages access');
+      console.error('Error updating Facebook pages access:', err);
+      // Refresh data to ensure consistency
+      await fetchUsers();
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Fetch Facebook pages
+  const fetchFacebookPages = async () => {
+    if (!token) return;
+    
+    try {
+      const pages = await ApiService.facebook.getPages(token);
+      setFacebookPages(pages);
+    } catch (err: any) {
+      console.error('Error fetching Facebook pages:', err);
+      // Don't set error state here to avoid disrupting the main UI
+      setFacebookPages([]);
+    }
+  };
 
   // Handle user activation toggle
   const handleToggleUserStatus = async (userId: string) => {
@@ -260,7 +300,7 @@ export default function Management({ onLogout }: ManagementProps) {
             </div>
 
             {/* Statistics Cards */}
-            <UserStatsCards stats={stats} />
+            <UserStatsCards stats={stats} users={users} />
 
             {/* Pending Users Section */}
             {pendingUsers.length > 0 && (
@@ -282,7 +322,10 @@ export default function Management({ onLogout }: ManagementProps) {
               currentUser={user}
               onUpdateRoles={handleUpdateUserRoles}
               onToggleStatus={handleToggleUserStatus}
+              onUpdateFacebookPages={handleUpdateFacebookPagesAccess}
+              facebookPages={facebookPages}
               loading={loading}
+              onRefresh={fetchUsers}
             />
 
           </div>

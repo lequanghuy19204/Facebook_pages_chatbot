@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Param, Body, UseGuards, Request, Query, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Put, Post, Param, Body, UseGuards, Request, Query, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersService } from './users.service';
 import { Roles } from '../auth/roles.decorator';
@@ -89,5 +89,12 @@ export class UsersController {
   ) {
     const { user } = req;
     return this.usersService.updateFacebookPagesAccess(userId, user.company_id, body.page_ids);
+  }
+
+  @Post('heartbeat')
+  @UseGuards(AuthGuard('jwt'))
+  async sendHeartbeat(@Request() req: any) {
+    const { user } = req;
+    return this.usersService.updateHeartbeat(user.user_id);
   }
 }

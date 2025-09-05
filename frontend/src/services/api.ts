@@ -90,6 +90,15 @@ export interface FacebookSyncResult {
   failed_pages?: string[];
 }
 
+// Enum for User Roles
+export enum UserRole {
+  ADMIN = 'admin',
+  STAFF = 'staff',
+  MANAGE_USER = 'manage_user',
+  MANAGE_PRODUCTS = 'manage_products',
+  MANAGE_CHATBOT = 'manage_chatbot'
+}
+
 // User Management Types
 export interface User {
   id: string;
@@ -103,6 +112,7 @@ export interface User {
   created_at: Date;
   avatar: string | null;
   is_online: boolean;
+  facebook_pages_access?: string[];
 }
 
 export interface PendingUser {
@@ -122,6 +132,8 @@ export interface UserStats {
   adminUsers: number;
   facebookUsers: number;
   inactiveUsers: number;
+  onlineUsers: number;
+  offlineUsers: number;
 }
 
 export interface UsersResponse {
@@ -257,6 +269,29 @@ const ApiService = {
 
   // User Management
   users: {
+    // Send heartbeat to keep user online
+    sendHeartbeat: async (token: string): Promise<{ success: boolean; message: string }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/heartbeat`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to send heartbeat');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Heartbeat error:', error);
+        throw error;
+      }
+    },
+
     // Get all users in company
     getUsers: async (token: string, params?: any): Promise<UsersResponse> => {
       try {

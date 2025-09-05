@@ -69,6 +69,36 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(false);
   }, []);
 
+  // Send heartbeat every minute when authenticated
+  useEffect(() => {
+    let heartbeatInterval: NodeJS.Timeout;
+
+    if (isAuthenticated && token) {
+      // Send initial heartbeat
+      const sendHeartbeat = async () => {
+        try {
+          await ApiService.users.sendHeartbeat(token);
+          console.log('Heartbeat sent successfully');
+        } catch (err) {
+          console.error('Failed to send heartbeat:', err);
+        }
+      };
+
+      // Send immediately on login
+      sendHeartbeat();
+
+      // Set up interval to send heartbeat every minute
+      heartbeatInterval = setInterval(sendHeartbeat, 60000); // 60000ms = 1 minute
+    }
+
+    // Clean up interval on unmount or when auth state changes
+    return () => {
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
+    };
+  }, [isAuthenticated, token]);
+
   // Login function
   const login = async (email: string, password: string) => {
     setLoading(true);

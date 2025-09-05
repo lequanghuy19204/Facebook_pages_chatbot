@@ -450,6 +450,9 @@
 .filter-search {
   flex: 1;
   min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .search-input {
@@ -668,16 +671,16 @@
   font-size: 16px;
 }
 
-.status-indicator.active {
+.status-indicator.online {
   color: #10b981;
 }
 
-.status-indicator.inactive {
+.status-indicator.offline {
   color: #ef4444;
 }
 
-.login-cell {
-  min-width: 100px;
+.last-activity-cell {
+  min-width: 120px;
   color: #6b7280;
   font-size: 12px;
 }
@@ -753,7 +756,37 @@
   background-color: #f9fafb;
   font-size: 12px;
   color: #6b7280;
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.last-refresh {
+  font-style: italic;
+  color: #6b7280;
+}
+
+.refresh-btn {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #f3f4f6;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Responsive Design */

@@ -80,6 +80,18 @@ export class UsersService {
       roles: UserRole.ADMIN 
     });
     
+    const onlineUsers = await this.userModel.countDocuments({ 
+      company_id: companyId, 
+      is_active: true,
+      is_online: true 
+    });
+    
+    const offlineUsers = await this.userModel.countDocuments({ 
+      company_id: companyId, 
+      is_active: true,
+      is_online: false 
+    });
+    
     const usersWithFacebookPages = await this.userModel.countDocuments({ 
       company_id: companyId, 
       facebook_pages_access: { $exists: true, $ne: [] } 
@@ -132,6 +144,8 @@ export class UsersService {
         adminUsers,
         facebookUsers: usersWithFacebookPages,
         pendingUsers: await this.getPendingUsersCount(companyId),
+        onlineUsers,
+        offlineUsers,
       }
     };
   }
@@ -323,5 +337,29 @@ export class UsersService {
   private async getCompanyCode(companyId: string): Promise<string> {
     const company = await this.companyModel.findOne({ company_id: companyId }).exec();
     return company?.company_code || '';
+  }
+
+  async updateHeartbeat(userId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      // Update user's last_login and is_online status
+      await this.userModel.updateOne(
+        { user_id: userId },
+        { 
+          last_login: new Date(),
+          is_online: true 
+        }
+      );
+
+      return {
+        success: true,
+        message: 'Heartbeat received successfully',
+      };
+    } catch (error) {
+      console.error('Heartbeat update error:', error);
+      return {
+        success: false,
+        message: 'Failed to update heartbeat',
+      };
+    }
   }
 }

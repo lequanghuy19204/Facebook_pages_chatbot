@@ -1,14 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
-import { User } from '@/services/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { User, FacebookPage } from '@/services/api';
+import UserPermissionModal from './UserPermissionModal';
 
 interface UserTableProps {
   users: User[];
   currentUser: any;
   onUpdateRoles: (userId: string, newRoles: string[]) => void;
   onToggleStatus: (userId: string) => void;
+  onUpdateFacebookPages?: (userId: string, pageIds: string[]) => Promise<void>;
+  facebookPages: FacebookPage[];
   loading: boolean;
+  onRefresh?: () => void;
 }
 
 export default function UserTable({
@@ -16,12 +20,38 @@ export default function UserTable({
   currentUser,
   onUpdateRoles,
   onToggleStatus,
-  loading
+  onUpdateFacebookPages,
+  facebookPages,
+  loading,
+  onRefresh
 }: UserTableProps) {
+  // State to track last refresh time
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  
+  // Function to handle manual refresh
+  const handleRefresh = useCallback(() => {
+    if (onRefresh) {
+      onRefresh();
+    }
+    setLastRefresh(new Date());
+  }, [onRefresh]);
+  
+  // Set up auto-refresh every minute
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      handleRefresh();
+    }, 60000); // 60000ms = 1 minute
+    
+    return () => clearInterval(intervalId); // Cleanup on unmount
+  }, [handleRefresh]);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [facebookFilter, setFacebookFilter] = useState('all');
+  
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   // Filter users based on search and filters
   const filteredUsers = users.filter(user => {
@@ -52,19 +82,32 @@ export default function UserTable({
     return roleMap[role] || '❓';
   };
 
-  const getStatusIcon = (isActive: boolean) => {
-    return isActive ? '🟢' : '🔴';
+  // Check if user is online based on last_login time (within 2 minutes)
+  const isUserOnline = (lastLogin: Date | null): boolean => {
+    if (!lastLogin) return false;
+    
+    const now = new Date();
+    const diff = now.getTime() - new Date(lastLogin).getTime();
+    const minutes = diff / (1000 * 60);
+    
+    return minutes < 2; // Online if last activity was less than 2 minutes ago
   };
 
-  const formatLastLogin = (lastLogin: Date | null) => {
+  const getStatusIcon = (lastLogin: Date | null): string => {
+    return isUserOnline(lastLogin) ? '🟢' : '🔴';
+  };
+
+  const formatLastActivity = (lastLogin: Date | null) => {
     if (!lastLogin) return 'Chưa bao giờ';
     
     const now = new Date();
-    const diff = now.getTime() - lastLogin.getTime();
+    const diff = now.getTime() - new Date(lastLogin).getTime();
+    const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
     
-    if (hours < 1) return 'Vừa mới';
+    if (minutes < 1) return 'Vừa mới';
+    if (minutes < 60) return `${minutes} phút trước`;
     if (hours < 24) return `${hours} giờ trước`;
     return `${days} ngày trước`;
   };
@@ -94,6 +137,14 @@ export default function UserTable({
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
           />
+          <button 
+            className="refresh-btn" 
+            onClick={handleRefresh}
+            title="Làm mới dữ liệu"
+            disabled={loading}
+          >
+            🔄
+          </button>
         </div>
         
         <div className="filter-selects">
@@ -142,7 +193,7 @@ export default function UserTable({
               <th>Quyền</th>
               <th>FB Pages</th>
               <th>Trạng thái</th>
-              <th>Đăng nhập cuối</th>
+              <th>Hoạt động trước</th>
               <th>Hành động</th>
             </tr>
           </thead>
@@ -188,13 +239,13 @@ export default function UserTable({
                 </td>
                 
                 <td className="status-cell">
-                  <span className={`status-indicator ${user.is_active ? 'active' : 'inactive'}`}>
-                    {getStatusIcon(user.is_active)}
+                  <span className={`status-indicator ${isUserOnline(user.last_login) ? 'online' : 'offline'}`}>
+                    {getStatusIcon(user.last_login)} {isUserOnline(user.last_login) ? 'Online' : 'Offline'}
                   </span>
                 </td>
                 
-                <td className="login-cell">
-                  {formatLastLogin(user.last_login)}
+                <td className="last-activity-cell">
+                  {formatLastActivity(user.last_login)}
                 </td>
                 
                 <td className="actions-cell">
@@ -203,8 +254,8 @@ export default function UserTable({
                       <button 
                         className="action-btn edit-btn"
                         onClick={() => {
-                          // Open role edit modal
-                          console.log('Edit user:', user.id);
+                          setSelectedUser(user);
+                          setIsModalOpen(true);
                         }}
                         disabled={loading}
                         title="Chỉnh sửa quyền"
@@ -242,7 +293,29 @@ export default function UserTable({
       {/* Table Info */}
       <div className="table-info">
         <span>Hiển thị {filteredUsers.length} / {users.length} người dùng</span>
+        <span className="last-refresh">
+          Cập nhật lần cuối: {lastRefresh.toLocaleTimeString()}
+        </span>
       </div>
+      
+      {/* Permission Modal */}
+      <UserPermissionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        user={selectedUser}
+        facebookPages={facebookPages}
+        onUpdateRoles={async (userId, roles) => {
+          await onUpdateRoles(userId, roles);
+          setIsModalOpen(false);
+        }}
+        onUpdateFacebookPages={async (userId, pageIds) => {
+          if (onUpdateFacebookPages) {
+            await onUpdateFacebookPages(userId, pageIds);
+          }
+          setIsModalOpen(false);
+        }}
+        loading={loading}
+      />
     </div>
   );
 }
