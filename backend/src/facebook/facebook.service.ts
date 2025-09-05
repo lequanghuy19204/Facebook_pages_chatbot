@@ -322,16 +322,25 @@ export class FacebookService {
       try {
         const user = await this.userModel.findOne({ user_id: userId }).exec();
         if (user) {
+          // Get current pages count (if any pages were successfully imported)
+          const pagesCount = await this.facebookPageModel.countDocuments({ 
+            company_id: user.company_id,
+            is_active: true 
+          });
+          
           await this.companyModel.updateOne(
             { company_id: user.company_id },
             { 
               $set: { 
                 'facebook.sync_status': 'error',
                 'facebook.error_message': error.message,
-                'facebook.last_sync': new Date()
+                'facebook.last_sync': new Date(),
+                'facebook.pages_count': pagesCount
               }
             }
           ).exec();
+          
+          this.logger.log(`Updated company with error status and pages_count: ${pagesCount}`);
         }
       } catch (updateError) {
         this.logger.error('Error updating company with error status:', updateError);
@@ -595,7 +604,7 @@ export class FacebookService {
         'facebook.last_sync': null,
         'facebook.sync_status': 'idle',
         'facebook.error_message': null,
-        'facebook.pages_count': 0
+        'facebook.pages_count': 0 // Explicitly reset pages count to 0
       };
 
       await this.companyModel.updateOne(
@@ -677,16 +686,25 @@ export class FacebookService {
       try {
         const user = await this.userModel.findOne({ user_id: userId }).exec();
         if (user) {
+          // Get current pages count
+          const pagesCount = await this.facebookPageModel.countDocuments({ 
+            company_id: user.company_id,
+            is_active: true 
+          });
+          
           await this.companyModel.updateOne(
             { company_id: user.company_id },
             { 
               $set: { 
                 'facebook.sync_status': 'error',
                 'facebook.error_message': error.message,
-                'facebook.last_sync': new Date()
+                'facebook.last_sync': new Date(),
+                'facebook.pages_count': pagesCount
               }
             }
           ).exec();
+          
+          this.logger.log(`Updated company with error status and pages_count: ${pagesCount}`);
         }
       } catch (updateError) {
         this.logger.error('Error updating sync error status:', updateError);

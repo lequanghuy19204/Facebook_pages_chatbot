@@ -1,16 +1,7 @@
 'use client';
 
 import React from 'react';
-
-interface UserStats {
-  totalUsers: number;
-  maxUsers: number;
-  activeUsers: number;
-  pendingUsers: number;
-  adminUsers: number;
-  facebookUsers: number;
-  inactiveUsers: number;
-}
+import { UserStats } from '@/services/api';
 
 interface UserStatsCardsProps {
   stats: UserStats;

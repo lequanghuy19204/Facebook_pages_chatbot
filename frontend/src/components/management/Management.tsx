@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import ApiService, { User, PendingUser, UserStats } from '@/services/api';
 import Header from '../shared/Header';
 import PendingUsers from './PendingUsers';
 import UserTable from './UserTable';
@@ -12,76 +13,31 @@ interface ManagementProps {
   onLogout?: () => void;
 }
 
-// Mock data cho demo - sẽ thay thế bằng API calls
-const mockUsers = [
-  {
-    id: '1',
-    full_name: 'Nguyễn Văn Admin',
-    email: 'admin@company.com',
-    roles: ['admin'],
-    is_active: true,
-    facebook_pages: 3,
-    last_login: new Date('2024-01-20T10:30:00') as Date | null,
-    created_at: new Date('2024-01-01T00:00:00'),
-    avatar: null
-  },
-  {
-    id: '2',
-    full_name: 'Trần Thị Manager',
-    email: 'manager@company.com',
-    roles: ['manage_user'],
-    is_active: true,
-    facebook_pages: 1,
-    last_login: new Date('2024-01-20T09:15:00') as Date | null,
-    created_at: new Date('2024-01-05T00:00:00'),
-    avatar: null
-  },
-  {
-    id: '3',
-    full_name: 'Lê Văn Staff',
-    email: 'staff@company.com',
-    roles: ['staff'],
-    is_active: true,
-    facebook_pages: 0,
-    last_login: new Date('2024-01-19T14:20:00') as Date | null,
-    created_at: new Date('2024-01-10T00:00:00'),
-    avatar: null
-  }
-];
-
-const mockPendingUsers = [
-  {
-    id: 'p1',
-    full_name: 'Nguyễn Văn A',
-    email: 'a@email.com',
-    company_code: 'ABC123',
-    created_at: new Date('2024-01-18T00:00:00'),
-    requested_role: 'staff'
-  },
-  {
-    id: 'p2',
-    full_name: 'Trần Thị B',
-    email: 'b@email.com',
-    company_code: 'ABC123',
-    created_at: new Date('2024-01-19T00:00:00'),
-    requested_role: 'staff'
-  },
-  {
-    id: 'p3',
-    full_name: 'Phạm Văn C',
-    email: 'c@email.com',
-    company_code: 'ABC123',
-    created_at: new Date('2024-01-20T00:00:00'),
-    requested_role: 'manage_products'
-  }
-];
 
 export default function Management({ onLogout }: ManagementProps) {
-  const { user, logout } = useAuth();
-  const [users, setUsers] = useState(mockUsers);
-  const [pendingUsers, setPendingUsers] = useState(mockPendingUsers);
-  const [loading, setLoading] = useState(false);
+  const { user, logout, token } = useAuth();
+  const [users, setUsers] = useState<User[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [stats, setStats] = useState<UserStats>({
+    totalUsers: 0,
+    maxUsers: 10,
+    activeUsers: 0,
+    pendingUsers: 0,
+    adminUsers: 0,
+    facebookUsers: 0,
+    inactiveUsers: 0
+  });
+  const [error, setError] = useState<string | null>(null);
+  
+  // Load users and pending users on component mount
+  useEffect(() => {
+    if (token) {
+      fetchUsers();
+      fetchPendingUsers();
+    }
+  }, [token]);
 
   const handleLogout = async () => {
     await logout();
@@ -90,44 +46,49 @@ export default function Management({ onLogout }: ManagementProps) {
     }
   };
 
-  // Statistics
-  const stats = {
-    totalUsers: users.length,
-    maxUsers: 50, // từ company settings
-    activeUsers: users.filter(u => u.is_active).length,
-    pendingUsers: pendingUsers.length,
-    adminUsers: users.filter(u => u.roles.includes('admin')).length,
-    facebookUsers: users.filter(u => u.facebook_pages > 0).length,
-    inactiveUsers: users.filter(u => !u.is_active).length
+  // Fetch users from API
+  const fetchUsers = async () => {
+    if (!token) return;
+    
+    try {
+      setLoading(true);
+      const response = await ApiService.users.getUsers(token);
+      setUsers(response.users);
+      setStats(response.stats);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch users');
+      console.error('Error fetching users:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Fetch pending users from API
+  const fetchPendingUsers = async () => {
+    if (!token) return;
+    
+    try {
+      const pendingUsers = await ApiService.users.getPendingUsers(token);
+      setPendingUsers(pendingUsers);
+    } catch (err: any) {
+      console.error('Error fetching pending users:', err);
+    }
   };
 
   // Handle approve user
   const handleApproveUser = async (userId: string) => {
+    if (!token) return;
+    
     try {
       setLoading(true);
-      // API call would go here
-      console.log('Approving user:', userId);
+      await ApiService.users.approveUser(token, userId);
       
-      // Mock approval - move from pending to active users
-      const pendingUser = pendingUsers.find(u => u.id === userId);
-      if (pendingUser) {
-        const newUser = {
-          id: `user_${Date.now()}`,
-          full_name: pendingUser.full_name,
-          email: pendingUser.email,
-          roles: [pendingUser.requested_role],
-          is_active: true,
-          facebook_pages: 0,
-          last_login: null,
-          created_at: new Date(),
-          avatar: null
-        };
-        
-        setUsers(prev => [...prev, newUser]);
-        setPendingUsers(prev => prev.filter(u => u.id !== userId));
-      }
-    } catch (error) {
-      console.error('Error approving user:', error);
+      // Refresh data
+      await fetchUsers();
+      await fetchPendingUsers();
+    } catch (err: any) {
+      setError(err.message || 'Failed to approve user');
+      console.error('Error approving user:', err);
     } finally {
       setLoading(false);
     }
@@ -135,14 +96,18 @@ export default function Management({ onLogout }: ManagementProps) {
 
   // Handle reject user
   const handleRejectUser = async (userId: string) => {
+    if (!token) return;
+    
     try {
       setLoading(true);
-      // API call would go here
-      console.log('Rejecting user:', userId);
+      await ApiService.users.rejectUser(token, userId);
       
-      setPendingUsers(prev => prev.filter(u => u.id !== userId));
-    } catch (error) {
-      console.error('Error rejecting user:', error);
+      // Refresh data
+      await fetchPendingUsers();
+      await fetchUsers(); // Also refresh users to update stats
+    } catch (err: any) {
+      setError(err.message || 'Failed to reject user');
+      console.error('Error rejecting user:', err);
     } finally {
       setLoading(false);
     }
@@ -150,29 +115,23 @@ export default function Management({ onLogout }: ManagementProps) {
 
   // Handle bulk approve
   const handleBulkApprove = async () => {
+    if (!token || selectedUsers.length === 0) return;
+    
     try {
       setLoading(true);
-      console.log('Bulk approving users:', selectedUsers);
       
-      // Mock bulk approval
-      const selectedPendingUsers = pendingUsers.filter(u => selectedUsers.includes(u.id));
-      const newUsers = selectedPendingUsers.map(pendingUser => ({
-        id: `user_${Date.now()}_${Math.random()}`,
-        full_name: pendingUser.full_name,
-        email: pendingUser.email,
-        roles: [pendingUser.requested_role],
-        is_active: true,
-        facebook_pages: 0,
-        last_login: null,
-        created_at: new Date(),
-        avatar: null
-      }));
+      // Approve each selected user sequentially
+      for (const userId of selectedUsers) {
+        await ApiService.users.approveUser(token, userId);
+      }
       
-      setUsers(prev => [...prev, ...newUsers]);
-      setPendingUsers(prev => prev.filter(u => !selectedUsers.includes(u.id)));
+      // Refresh data
+      await fetchUsers();
+      await fetchPendingUsers();
       setSelectedUsers([]);
-    } catch (error) {
-      console.error('Error bulk approving users:', error);
+    } catch (err: any) {
+      setError(err.message || 'Failed to approve users');
+      console.error('Error bulk approving users:', err);
     } finally {
       setLoading(false);
     }
@@ -180,14 +139,23 @@ export default function Management({ onLogout }: ManagementProps) {
 
   // Handle bulk reject
   const handleBulkReject = async () => {
+    if (!token || selectedUsers.length === 0) return;
+    
     try {
       setLoading(true);
-      console.log('Bulk rejecting users:', selectedUsers);
       
-      setPendingUsers(prev => prev.filter(u => !selectedUsers.includes(u.id)));
+      // Reject each selected user sequentially
+      for (const userId of selectedUsers) {
+        await ApiService.users.rejectUser(token, userId);
+      }
+      
+      // Refresh data
+      await fetchUsers();
+      await fetchPendingUsers();
       setSelectedUsers([]);
-    } catch (error) {
-      console.error('Error bulk rejecting users:', error);
+    } catch (err: any) {
+      setError(err.message || 'Failed to reject users');
+      console.error('Error bulk rejecting users:', err);
     } finally {
       setLoading(false);
     }
@@ -195,16 +163,21 @@ export default function Management({ onLogout }: ManagementProps) {
 
   // Handle user role update
   const handleUpdateUserRoles = async (userId: string, newRoles: string[]) => {
+    if (!token) return;
+    
     try {
       setLoading(true);
-      // API call would go here
-      console.log('Updating user roles:', userId, newRoles);
+      await ApiService.users.updateUserRoles(token, userId, newRoles);
       
+      // Update local state
       setUsers(prev => prev.map(user => 
         user.id === userId ? { ...user, roles: newRoles } : user
       ));
-    } catch (error) {
-      console.error('Error updating user roles:', error);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update user roles');
+      console.error('Error updating user roles:', err);
+      // Refresh data to ensure consistency
+      await fetchUsers();
     } finally {
       setLoading(false);
     }
@@ -212,16 +185,41 @@ export default function Management({ onLogout }: ManagementProps) {
 
   // Handle user activation toggle
   const handleToggleUserStatus = async (userId: string) => {
+    if (!token) return;
+    
     try {
       setLoading(true);
-      // API call would go here
-      console.log('Toggling user status:', userId);
+      const userToUpdate = users.find(u => u.id === userId);
       
+      if (!userToUpdate) return;
+      
+      const newStatus = !userToUpdate.is_active;
+      await ApiService.users.toggleUserStatus(token, userId, newStatus);
+      
+      // Update local state
       setUsers(prev => prev.map(user => 
-        user.id === userId ? { ...user, is_active: !user.is_active } : user
+        user.id === userId ? { ...user, is_active: newStatus } : user
       ));
-    } catch (error) {
-      console.error('Error toggling user status:', error);
+      
+      // Update stats
+      if (newStatus) {
+        setStats(prev => ({
+          ...prev,
+          activeUsers: prev.activeUsers + 1,
+          inactiveUsers: prev.inactiveUsers - 1
+        }));
+      } else {
+        setStats(prev => ({
+          ...prev,
+          activeUsers: prev.activeUsers - 1,
+          inactiveUsers: prev.inactiveUsers + 1
+        }));
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to toggle user status');
+      console.error('Error toggling user status:', err);
+      // Refresh data to ensure consistency
+      await fetchUsers();
     } finally {
       setLoading(false);
     }
@@ -248,9 +246,6 @@ export default function Management({ onLogout }: ManagementProps) {
                 Quản lý tài khoản ({stats.totalUsers}/{stats.maxUsers} người dùng)
               </div>
               <div className="header-actions">
-                <button className="action-btn secondary">
-                  📄 Xuất danh sách
-                </button>
                 <button className="action-btn secondary">
                   ⚙️ Cài đặt quyền
                 </button>

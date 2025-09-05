@@ -90,6 +90,51 @@ export interface FacebookSyncResult {
   failed_pages?: string[];
 }
 
+// User Management Types
+export interface User {
+  id: string;
+  full_name: string;
+  email: string;
+  roles: string[];
+  is_active: boolean;
+  facebook_pages: number;
+  total_facebook_pages: number;
+  last_login: Date | null;
+  created_at: Date;
+  avatar: string | null;
+  is_online: boolean;
+}
+
+export interface PendingUser {
+  id: string;
+  full_name: string;
+  email: string;
+  company_code: string;
+  created_at: Date;
+  requested_role: string;
+}
+
+export interface UserStats {
+  totalUsers: number;
+  maxUsers: number;
+  activeUsers: number;
+  pendingUsers: number;
+  adminUsers: number;
+  facebookUsers: number;
+  inactiveUsers: number;
+}
+
+export interface UsersResponse {
+  users: User[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+  stats: UserStats;
+}
+
 // API service
 const ApiService = {
   // Authentication
@@ -205,6 +250,207 @@ const ApiService = {
         return await response.json();
       } catch (error) {
         console.error('Get profile error:', error);
+        throw error;
+      }
+    },
+  },
+
+  // User Management
+  users: {
+    // Get all users in company
+    getUsers: async (token: string, params?: any): Promise<UsersResponse> => {
+      try {
+        // Build query string from params
+        const queryParams = params ? new URLSearchParams(params).toString() : '';
+        const url = `${API_BASE_URL}/users${queryParams ? `?${queryParams}` : ''}`;
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to get users');
+        }
+
+        const data = await response.json();
+        
+        // Convert date strings to Date objects
+        const users = data.users.map((user: any) => ({
+          ...user,
+          last_login: user.last_login ? new Date(user.last_login) : null,
+          created_at: new Date(user.created_at),
+        }));
+
+        return {
+          ...data,
+          users,
+        };
+      } catch (error) {
+        console.error('Get users error:', error);
+        throw error;
+      }
+    },
+
+    // Get pending users
+    getPendingUsers: async (token: string): Promise<PendingUser[]> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/pending`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to get pending users');
+        }
+
+        const data = await response.json();
+        
+        // Convert date strings to Date objects
+        return data.map((user: any) => ({
+          ...user,
+          created_at: new Date(user.created_at),
+        }));
+      } catch (error) {
+        console.error('Get pending users error:', error);
+        throw error;
+      }
+    },
+
+    // Approve user
+    approveUser: async (token: string, userId: string): Promise<{ success: boolean; message: string }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/approve`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to approve user');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Approve user error:', error);
+        throw error;
+      }
+    },
+
+    // Reject user
+    rejectUser: async (token: string, userId: string): Promise<{ success: boolean; message: string }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/reject`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to reject user');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Reject user error:', error);
+        throw error;
+      }
+    },
+
+    // Update user roles
+    updateUserRoles: async (
+      token: string, 
+      userId: string, 
+      roles: string[]
+    ): Promise<{ success: boolean; message: string; roles: string[] }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/roles`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ roles }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update user roles');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Update user roles error:', error);
+        throw error;
+      }
+    },
+
+    // Toggle user status
+    toggleUserStatus: async (
+      token: string, 
+      userId: string, 
+      isActive: boolean
+    ): Promise<{ success: boolean; message: string; is_active: boolean }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ is_active: isActive }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to toggle user status');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Toggle user status error:', error);
+        throw error;
+      }
+    },
+
+    // Update Facebook pages access
+    updateFacebookPagesAccess: async (
+      token: string, 
+      userId: string, 
+      pageIds: string[]
+    ): Promise<{ success: boolean; message: string; facebook_pages_access: string[] }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/${userId}/facebook-pages`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ page_ids: pageIds }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update Facebook pages access');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Update Facebook pages access error:', error);
         throw error;
       }
     },

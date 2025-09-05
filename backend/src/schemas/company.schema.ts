@@ -96,3 +96,4 @@ CompanySchema.index({ owner_id: 1 });
 CompanySchema.index({ is_active: 1 });
 CompanySchema.index({ 'facebook.is_connected': 1 });
 CompanySchema.index({ 'facebook.facebook_user_id': 1 });
+CompanySchema.index({ 'facebook.pages_count': 1 });

@@ -1,18 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-
-interface User {
-  id: string;
-  full_name: string;
-  email: string;
-  roles: string[];
-  is_active: boolean;
-  facebook_pages: number;
-  last_login: Date | null;
-  created_at: Date;
-  avatar: string | null;
-}
+import { User } from '@/services/api';
 
 interface UserTableProps {
   users: User[];
@@ -192,7 +181,9 @@ export default function UserTable({
                 
                 <td className="facebook-cell">
                   <span className={`fb-count ${user.facebook_pages > 0 ? 'has-pages' : 'no-pages'}`}>
-                    {user.facebook_pages}/10
+                    {user.roles.includes('admin') || user.roles.includes('manage_user') 
+                      ? `${user.facebook_pages}/${user.total_facebook_pages} (Full)` 
+                      : `${user.facebook_pages}/${user.total_facebook_pages}`}
                   </span>
                 </td>
                 
