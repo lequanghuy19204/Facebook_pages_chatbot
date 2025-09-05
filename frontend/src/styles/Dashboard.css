@@ -5,12 +5,12 @@
   display: flex;
   flex-direction: column;
   width: 100vw;
-  min-height: 100vh;
+  height: 100vh; /* Thay đổi từ min-height thành height cố định */
   background-color: rgba(236, 237, 244, 1);
   font-family: 'Roboto', sans-serif;
+  overflow: hidden; /* Ngăn scroll toàn trang */
 }
 
-/* Header Styles */
 .dashboard-header {
   width: 100%;
   height: 56px;
@@ -21,94 +21,14 @@
   flex-shrink: 0;
 }
 
-.header-content {
-  width: 100%;
-  max-width: 1274px;
-  height: 56px;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  padding: 0 24px;
-}
-
-.user-info {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 9px;
-}
-
-.user-details {
-  border-radius: 8px;
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  padding: 3px 12px;
-  gap: 8px;
-}
-
-.user-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.user-avatar-placeholder {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.user-name {
-  font-size: 14px;
-  color: rgba(242, 244, 247, 1);
-  line-height: 21px;
-  font-weight: normal;
-  white-space: nowrap;
-}
-
-.logout-button {
-  width: 40px;
-  height: 40px;
-  border-radius: 20px;
-  background-color: rgba(29, 41, 57, 0.25);
-  border: none;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: background-color 0.3s ease;
-}
-
-.logout-button:hover {
-  background-color: rgba(29, 41, 57, 0.4);
-}
-
-.logout-icon {
-  width: 15px;
-  height: 16.25px;
-}
-
-.logout-text {
-  font-size: 16px;
-  color: rgba(242, 244, 247, 1);
-}
-
-/* Main Content Styles */
 .dashboard-main {
   flex: 1;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   padding: 26px;
+  overflow: hidden; /* Không cho scroll toàn trang */
+  min-height: 0; /* Quan trọng: cho phép flex item shrink */
 }
 
 .dashboard-content {
@@ -117,6 +37,8 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  height: 100%; /* Chiếm toàn bộ height của dashboard-main */
+  min-height: 0; /* Quan trọng: cho phép flex item shrink */
 }
 
 .content-wrapper {
@@ -125,6 +47,8 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  height: 100%; /* Chiếm toàn bộ height của dashboard-content */
+  min-height: 0; /* Quan trọng: cho phép flex item shrink */
 }
 
 /* Control Panel Header */
@@ -139,6 +63,7 @@
   align-items: flex-start;
   padding: 16px 24px;
   box-sizing: border-box;
+  flex-shrink: 0; /* Không cho phép shrink */
 }
 
 .panel-title {
@@ -327,6 +252,7 @@
   align-items: center;
   padding: 8px 24px;
   box-sizing: border-box;
+  flex-shrink: 0; /* Không cho phép shrink */
 }
 
 .tab-container {
@@ -404,7 +330,7 @@
 /* Pages Container */
 .pages-container {
   width: 100%;
-  min-height: 400px;
+  flex: 1; /* Chiếm phần còn lại của content-wrapper */
   border-radius: 8px;
   background-color: rgba(255, 255, 255, 1);
   display: flex;
@@ -413,6 +339,29 @@
   align-items: center;
   padding: 24px;
   box-sizing: border-box;
+  overflow-y: auto; /* Cho phép scroll dọc khi nội dung nhiều */
+  overflow-x: hidden; /* Ẩn scroll ngang */
+  min-height: 0; /* Quan trọng: cho phép flex shrink */
+  max-height: 100%; /* Đảm bảo không vượt quá container */
+}
+
+/* Custom Scrollbar */
+.pages-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pages-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.pages-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.pages-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .pages-grid {
@@ -644,18 +593,6 @@
 }
 
 @media (max-width: 768px) {
-  .header-content {
-    padding: 0 12px;
-  }
-  
-  .user-name {
-    display: none;
-  }
-  
-  .user-details {
-    padding: 3px 8px;
-  }
-  
   .dashboard-main {
     padding: 12px;
   }

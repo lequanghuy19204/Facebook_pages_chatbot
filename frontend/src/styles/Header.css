@@ -158,6 +158,16 @@
   color: rgba(242, 244, 247, 1);
 }
 
+@media (max-width: 1024px) {
+  .nav-item {
+    padding: 0 8px;
+  }
+  
+  .nav-text {
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 768px) {
   .header-content {
     padding: 0 12px;
@@ -168,6 +178,8 @@
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    flex: 1;
+    max-width: calc(100% - 140px); /* Reserve space for user profile */
   }
   
   .nav-menu::-webkit-scrollbar {
@@ -175,10 +187,68 @@
   }
   
   .nav-item {
-    padding: 0 8px;
+    padding: 0 6px;
+    flex-shrink: 0;
+  }
+  
+  .nav-text {
+    font-size: 12px;
   }
   
   .username {
     display: none;
+  }
+  
+  .user-pages {
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content {
+    padding: 0 8px;
+  }
+  
+  .nav-menu {
+    max-width: calc(100% - 120px);
+  }
+  
+  .nav-item {
+    padding: 0 4px;
+  }
+  
+  .nav-text {
+    font-size: 11px;
+  }
+  
+  .user-pages {
+    padding: 0 4px;
+  }
+  
+  .pages-avatars {
+    width: 50px;
+  }
+  
+  .header-page-avatar {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .header-page-avatar:nth-child(2) {
+    left: 13px;
+  }
+  
+  .header-page-avatar:nth-child(3) {
+    left: 26px;
+  }
+  
+  .more-pages {
+    width: 26px;
+    height: 26px;
+    left: 24px;
+  }
+  
+  .more-count {
+    font-size: 12px;
   }
 }
