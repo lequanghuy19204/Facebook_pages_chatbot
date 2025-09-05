@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import '@/styles/Header.css';
 
@@ -11,6 +12,8 @@ interface HeaderProps {
 
 export default function Header({ className = '', onLogout }: HeaderProps) {
   const { user, logout } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
   
   const handleLogout = async () => {
     await logout();
@@ -18,13 +21,27 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
       onLogout();
     }
   };
+
+  const navigateTo = (path: string) => {
+    window.location.href = path;
+  };
+
+  const isActive = (path: string) => {
+    return pathname === path;
+  };
+
+  // Check if user can access management page
+  const canAccessManagement = user?.roles.includes('admin') || user?.roles.includes('manage_user');
   
   return (
     <div className="header-container">
       <div className="header-content">
         {/* Navigation Menu */}
         <div className="nav-menu">
-          <div className="nav-item active">
+          <div 
+            className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}
+            onClick={() => navigateTo('/dashboard')}
+          >
             <div className="notification-badge">
               <div className="notification-count">9</div>
             </div>
@@ -33,9 +50,14 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
           <div className="nav-item">
             <div className="nav-text">Hội thoại</div>
           </div>
-          <div className="nav-item">
-            <div className="nav-text">Quản lý</div>
-          </div>
+          {canAccessManagement && (
+            <div 
+              className={`nav-item ${isActive('/management') ? 'active' : ''}`}
+              onClick={() => navigateTo('/management')}
+            >
+              <div className="nav-text">Quản lý</div>
+            </div>
+          )}
           <div className="nav-item">
             <div className="nav-text">Sản phẩm</div>
           </div>

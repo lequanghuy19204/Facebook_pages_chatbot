@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import LoginPage from '@/components/LoginPage';
-import RegisterPage from '@/components/RegisterPage';
+import LoginPage from '@/components/auth/LoginPage';
+import RegisterPage from '@/components/auth/RegisterPage';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Home() {

@@ -9,6 +9,7 @@
   background-color: rgba(236, 237, 244, 1);
   font-family: 'Roboto', sans-serif;
   overflow: hidden; /* Ngăn scroll toàn trang */
+  padding-top: 56px; /* Thêm padding-top bằng chiều cao của header */
 }
 
 .dashboard-header {
