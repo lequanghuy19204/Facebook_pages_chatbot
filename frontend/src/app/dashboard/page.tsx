@@ -4,7 +4,7 @@ import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFacebook } from '@/contexts/FacebookContext';
-import Dashboard from '@/components/Dashboard';
+import Dashboard from '@/components/dashboard/Dashboard';
 
 function DashboardContent() {
   const { isAuthenticated } = useAuth();

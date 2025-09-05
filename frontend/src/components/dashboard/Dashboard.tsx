@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useFacebook } from '@/contexts/FacebookContext';
 import FacebookConnect from './FacebookConnect';
 import FacebookPages from './FacebookPages';
-import Header from './Header';
+import Header from '../shared/Header';
 import '@/styles/Dashboard.css';
 import { toast } from 'react-toastify';
 
@@ -268,53 +268,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           </div>
         </div>
       </div>
-
-      <style jsx>{`
-
-        
-        .action-button {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 32px;
-          height: 32px;
-          border-radius: 6px;
-          border: none;
-          background-color: rgba(234, 236, 240, 1);
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .action-button:hover:not(:disabled) {
-          background-color: rgba(224, 226, 230, 1);
-        }
-
-        .action-button:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-          background-color: rgba(234, 236, 240, 0.5);
-        }
-
-        .action-button .loading-spinner {
-          width: 16px;
-          height: 16px;
-          border: 2px solid rgba(52, 64, 84, 0.2);
-          border-top: 2px solid rgba(52, 64, 84, 0.8);
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
-        .action-button .action-icon {
-          width: 16px;
-          height: 16px;
-          opacity: 0.8;
-        }
-
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

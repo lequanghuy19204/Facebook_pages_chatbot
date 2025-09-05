@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense } from 'react';
-import FacebookCallback from '@/components/FacebookCallback';
+import FacebookCallback from '@/components/dashboard/FacebookCallback';
 
 function FacebookCallbackContent() {
   return <FacebookCallback />;

@@ -243,25 +243,41 @@
 }
 
 .action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  background: none;
   border: none;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: background-color 0.3s ease;
-}
-
-.action-button:hover {
   background-color: rgba(234, 236, 240, 1);
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.action-icon {
-  width: 16.25px;
-  height: 15px;
+.action-button:hover:not(:disabled) {
+  background-color: rgba(224, 226, 230, 1);
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: rgba(234, 236, 240, 0.5);
+}
+
+.action-button .loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(52, 64, 84, 0.2);
+  border-top: 2px solid rgba(52, 64, 84, 0.8);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.action-button .action-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
 }
 
 .connect-facebook-button,
