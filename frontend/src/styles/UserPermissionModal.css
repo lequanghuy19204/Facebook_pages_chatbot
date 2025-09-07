@@ -1,9 +1,4 @@
-/* =============================================================================
-   User Permission Modal Styles
-   Modal Overlay with Backdrop, Focus Trap, and Responsive Design
-   ============================================================================= */
 
-/* Screen Reader Only Content */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -15,10 +10,6 @@
   white-space: nowrap;
   border: 0;
 }
-
-/* =============================================================================
-   Modal Backdrop & Container
-   ============================================================================= */
 
 .modal-backdrop {
   position: fixed;
@@ -70,10 +61,6 @@
     transform: scale(1) translateY(0);
   }
 }
-
-/* =============================================================================
-   Modal Header
-   ============================================================================= */
 
 .modal-header {
   display: flex;
@@ -127,10 +114,6 @@
   cursor: not-allowed;
 }
 
-/* =============================================================================
-   Modal Content
-   ============================================================================= */
-
 .modal-content {
   flex: 1;
   overflow-y: auto;
@@ -139,7 +122,7 @@
 }
 
 .permission-section {
-  padding: 20px;
+  padding: 16px;
   border-bottom: 1px solid #f3f4f6;
 }
 
@@ -167,10 +150,6 @@
   margin: 0;
 }
 
-/* =============================================================================
-   Account Permissions Section (Roles)
-   ============================================================================= */
-
 .roles-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -183,7 +162,7 @@
   background: #f9fafb;
   border: 2px solid #e5e7eb;
   border-radius: 12px;
-  padding: 16px;
+  padding: 10px;
   transition: all 0.2s ease;
   position: relative;
 }
@@ -258,9 +237,49 @@
   line-height: 1.4;
 }
 
-/* =============================================================================
-   Facebook Pages Section
-   ============================================================================= */
+.full-access-notice {
+  background: #059669;
+  border: 2px solid #047857;
+  border-radius: 12px;
+  padding: 5px;
+  margin-bottom: 24px;
+  color: white;
+}
+
+.notice-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.notice-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.notice-text {
+  flex: 1;
+}
+
+.notice-title {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.notice-description {
+  font-size: 14px;
+  opacity: 0.9;
+  line-height: 1.4;
+}
 
 .pages-controls {
   display: flex;
@@ -318,10 +337,6 @@
   cursor: not-allowed;
 }
 
-/* =============================================================================
-   Pages Grid
-   ============================================================================= */
-
 .pages-scroll-container {
   max-height: 400px;
   overflow-y: auto;
@@ -343,7 +358,7 @@
   background: white;
   border: 2px solid #e5e7eb;
   border-radius: 12px;
-  padding: 16px;
+  padding: 10px;
   transition: all 0.2s ease;
   position: relative;
   min-height: 100px;
@@ -369,6 +384,22 @@
 .page-card:has(input:checked) {
   border-color: #667eea;
   background: linear-gradient(135deg, #667eea10, #764ba210);
+}
+
+.page-card.full-access {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #10b98110, #05966910);
+  opacity: 0.8;
+}
+
+.page-card.full-access input[type="checkbox"] {
+  accent-color: #10b981;
+}
+
+.page-card.full-access:hover {
+  border-color: #10b981;
+  transform: none;
+  cursor: default;
 }
 
 .page-content {
@@ -424,6 +455,7 @@
   margin-bottom: 8px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -458,6 +490,7 @@
   font-size: 12px;
   display: -webkit-box;
   -webkit-line-clamp: 1;
+  line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -483,10 +516,6 @@
   font-size: 11px;
 }
 
-/* =============================================================================
-   Empty State
-   ============================================================================= */
-
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -508,13 +537,9 @@
   max-width: 300px;
 }
 
-/* =============================================================================
-   Selection Summary
-   ============================================================================= */
-
 .selection-summary {
-  margin-top: 16px;
-  padding: 8px;
+  margin-top: 10px;
+  padding: 5px;
   background: #f0f9ff;
   border: 1px solid #bae6fd;
   border-radius: 8px;
@@ -524,9 +549,15 @@
   text-align: center;
 }
 
-/* =============================================================================
-   Modal Footer
-   ============================================================================= */
+.full-access-summary {
+  color: #065f46;
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+  padding: 5px;
+  border-radius: 8px;
+  font-weight: 600;
+  display: inline-block;
+}
 
 .modal-footer {
   display: flex;
@@ -576,7 +607,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #506DAD;
   color: white;
   border-color: transparent;
 }
@@ -586,11 +617,6 @@
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-/* =============================================================================
-   Responsive Design
-   ============================================================================= */
-
-/* Tablet */
 @media (max-width: 768px) {
   .modal-backdrop {
     padding: 16px;
@@ -709,11 +735,6 @@
   }
 }
 
-/* =============================================================================
-   Focus and Accessibility Enhancements
-   ============================================================================= */
-
-/* Focus visible for better keyboard navigation */
 .modal-container:focus-within {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(102, 126, 234, 0.3);
 }

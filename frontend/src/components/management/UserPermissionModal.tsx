@@ -50,6 +50,11 @@ export default function UserPermissionModal({
     }
   }, [user]);
 
+  // Check if user has manage_user role (should have full access to all pages)
+  const hasManageUserRole = user?.roles.includes('manage_user') || false;
+  const hasAdminRole = user?.roles.includes('admin') || false;
+  const hasFullPageAccess = hasAdminRole || hasManageUserRole;
+
   // Focus trap implementation
   useEffect(() => {
     if (!isOpen) return;
@@ -172,8 +177,14 @@ export default function UserPermissionModal({
       // Update roles
       await onUpdateRoles(user.id, selectedRoles);
       
-      // Update Facebook pages access
-      await onUpdateFacebookPages(user.id, selectedPages);
+      // Update Facebook pages access only if user doesn't have full access
+      if (!hasFullPageAccess) {
+        await onUpdateFacebookPages(user.id, selectedPages);
+      } else {
+        // For users with full access, clear their facebook_pages_access array 
+        // since they don't need specific page permissions
+        await onUpdateFacebookPages(user.id, []);
+      }
       
       onClose();
     } catch (error) {
@@ -272,6 +283,21 @@ export default function UserPermissionModal({
               </div>
             </div>
 
+            {/* Show full access notice for manage_user role */}
+            {hasFullPageAccess && (
+              <div className="full-access-notice">
+                <div className="notice-content">
+                  <span className="notice-icon">🔓</span>
+                  <div className="notice-text">
+                    <div className="notice-title">Quyền truy cập đầy đủ</div>
+                    <div className="notice-description">
+                      Tài khoản này có quyền {hasAdminRole ? 'Admin' : 'Quản lý User'} nên tự động có thể truy cập tất cả Facebook Pages của công ty.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Search and Select All */}
             <div className="pages-controls">
               <div className="search-container">
@@ -281,16 +307,17 @@ export default function UserPermissionModal({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="search-input"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || hasFullPageAccess}
                 />
               </div>
               
               <button
                 className="select-all-btn"
                 onClick={handleSelectAllPages}
-                disabled={filteredPages.length === 0 || isSubmitting}
+                disabled={filteredPages.length === 0 || isSubmitting || hasFullPageAccess}
               >
-                {areAllFilteredPagesSelected ? '☑️ Bỏ chọn tất cả' : '☐ Chọn tất cả'}
+                {hasFullPageAccess ? '✅ Tất cả đã được chọn' : 
+                  (areAllFilteredPagesSelected ? '☑️ Bỏ chọn tất cả' : '☐ Chọn tất cả')}
                 {filteredPages.length > 0 && ` (${filteredPages.length})`}
               </button>
             </div>
@@ -307,12 +334,12 @@ export default function UserPermissionModal({
               ) : (
                 <div className="pages-grid">
                   {filteredPages.map(page => (
-                    <label key={page.page_id} className="page-card">
+                    <label key={page.page_id} className={`page-card ${hasFullPageAccess ? 'full-access' : ''}`}>
                       <input
                         type="checkbox"
-                        checked={selectedPages.includes(page.page_id)}
+                        checked={hasFullPageAccess || selectedPages.includes(page.page_id)}
                         onChange={() => handlePageChange(page.page_id)}
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || hasFullPageAccess}
                       />
                       <div className="page-content">
                         <div className="page-avatar">
@@ -389,10 +416,18 @@ export default function UserPermissionModal({
 
             {/* Selection Summary */}
             <div className="selection-summary">
-              Đã chọn: {selectedPages.length} / {facebookPages.length} trang
-              {searchQuery && filteredPages.length !== facebookPages.length && 
-                ` (${filteredPages.filter(page => selectedPages.includes(page.page_id)).length} / ${filteredPages.length} trong kết quả tìm kiếm)`
-              }
+              {hasFullPageAccess ? (
+                <span className="full-access-summary">
+                  ✅ Quyền truy cập đầy đủ: {facebookPages.length} / {facebookPages.length} trang
+                </span>
+              ) : (
+                <>
+                  Đã chọn: {selectedPages.length} / {facebookPages.length} trang
+                  {searchQuery && filteredPages.length !== facebookPages.length && 
+                    ` (${filteredPages.filter(page => selectedPages.includes(page.page_id)).length} / ${filteredPages.length} trong kết quả tìm kiếm)`
+                  }
+                </>
+              )}
             </div>
           </div>
         </div>

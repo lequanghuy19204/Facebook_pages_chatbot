@@ -3,22 +3,22 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument, UserRole } from '../schemas/user.schema';
 import { Company, CompanyDocument } from '../schemas/company.schema';
+import { FacebookPage, FacebookPageDocument } from '../schemas/facebook-page.schema';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
+    @InjectModel(FacebookPage.name) private facebookPageModel: Model<FacebookPageDocument>,
   ) {}
 
   async getAllUsers(companyId: string, query?: any): Promise<any> {
     const { search, role, status, facebook, limit = 50, page = 1 } = query || {};
     const skip = (page - 1) * limit;
 
-    // Build filter
     const filter: any = { company_id: companyId };
     
-    // Add search filter
     if (search) {
       filter.$or = [
         { full_name: { $regex: search, $options: 'i' } },
@@ -26,19 +26,16 @@ export class UsersService {
       ];
     }
 
-    // Add role filter
     if (role && role !== 'all') {
       filter.roles = role;
     }
 
-    // Add status filter
-    if (status === 'active') {
-      filter.is_active = true;
-    } else if (status === 'inactive') {
-      filter.is_active = false;
+    if (status === 'online') {
+      filter.is_online = true;
+    } else if (status === 'offline') {
+      filter.is_online = false;
     }
 
-    // Add Facebook pages filter
     if (facebook === 'has_fb') {
       filter.facebook_pages_access = { $exists: true, $ne: [] };
     } else if (facebook === 'no_fb') {
@@ -48,7 +45,6 @@ export class UsersService {
       ];
     }
 
-    // Get users
     const users = await this.userModel
       .find(filter)
       .select('-password_hash') // Exclude password hash
@@ -57,14 +53,11 @@ export class UsersService {
       .limit(parseInt(limit))
       .exec();
 
-    // Get total count
     const totalUsers = await this.userModel.countDocuments(filter);
     
-    // Get company settings
     const company = await this.companyModel.findOne({ company_id: companyId }).exec();
     const maxUsers = company?.settings?.max_users || 10;
 
-    // Get counts for different user types
     const activeUsers = await this.userModel.countDocuments({ 
       company_id: companyId, 
       is_active: true 
@@ -97,12 +90,12 @@ export class UsersService {
       facebook_pages_access: { $exists: true, $ne: [] } 
     });
 
-    // Get total Facebook pages count from company
-    const totalFacebookPages = company?.facebook?.pages_count || 0;
+    const totalFacebookPages = await this.facebookPageModel.countDocuments({ 
+      company_id: companyId, 
+      is_active: true 
+    });
     
-    // Format response
     const formattedUsers = await Promise.all(users.map(async user => {
-      // Determine Facebook pages access based on role
       let facebookPages = 0;
       
       // Admin and manage_user have access to all pages
@@ -125,6 +118,7 @@ export class UsersService {
         created_at: user.created_at,
         avatar: user.avatar_url,
         is_online: user.is_online,
+        facebook_pages_access: user.facebook_pages_access || [],
       };
     }));
 
@@ -348,6 +342,15 @@ export class UsersService {
           last_login: new Date(),
           is_online: true 
         }
+      );
+
+      const threeMinutesAgo = new Date(Date.now() - 1.5 * 60 * 1000);
+      await this.userModel.updateMany(
+        { 
+          last_login: { $lt: threeMinutesAgo },
+          is_online: true
+        },
+        { is_online: false }
       );
 
       return {

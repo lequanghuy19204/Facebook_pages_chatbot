@@ -61,8 +61,8 @@ export default function UserTable({
     const matchesRole = roleFilter === 'all' || user.roles.includes(roleFilter);
     
     const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && user.is_active) ||
-                         (statusFilter === 'inactive' && !user.is_active);
+                         (statusFilter === 'online' && user.is_online) ||
+                         (statusFilter === 'offline' && !user.is_online);
     
     const matchesFacebook = facebookFilter === 'all' ||
                            (facebookFilter === 'has_fb' && user.facebook_pages > 0) ||
@@ -82,19 +82,8 @@ export default function UserTable({
     return roleMap[role] || '❓';
   };
 
-  // Check if user is online based on last_login time (within 2 minutes)
-  const isUserOnline = (lastLogin: Date | null): boolean => {
-    if (!lastLogin) return false;
-    
-    const now = new Date();
-    const diff = now.getTime() - new Date(lastLogin).getTime();
-    const minutes = diff / (1000 * 60);
-    
-    return minutes < 2; // Online if last activity was less than 2 minutes ago
-  };
-
-  const getStatusIcon = (lastLogin: Date | null): string => {
-    return isUserOnline(lastLogin) ? '🟢' : '🔴';
+  const getStatusIcon = (isOnline: boolean): string => {
+    return isOnline ? '🟢' : '🔴';
   };
 
   const formatLastActivity = (lastLogin: Date | null) => {
@@ -167,8 +156,8 @@ export default function UserTable({
             className="filter-select"
           >
             <option value="all">🟢 Trạng thái</option>
-            <option value="active">🟢 Hoạt động</option>
-            <option value="inactive">🔴 Ngừng hoạt động</option>
+            <option value="online">🟢 Online</option>
+            <option value="offline">🔴 Offline</option>
           </select>
 
           <select 
@@ -203,7 +192,7 @@ export default function UserTable({
                 <td className="name-cell">
                   <div className="user-info">
                     {user.avatar ? (
-                      <img src={user.avatar} alt={user.full_name} className="user-avatar" />
+                      <img src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${user.avatar}`} alt={user.full_name} className="user-avatar" />
                     ) : (
                       <div className="user-avatar-placeholder">
                         {user.full_name.charAt(0).toUpperCase()}
@@ -233,14 +222,14 @@ export default function UserTable({
                 <td className="facebook-cell">
                   <span className={`fb-count ${user.facebook_pages > 0 ? 'has-pages' : 'no-pages'}`}>
                     {user.roles.includes('admin') || user.roles.includes('manage_user') 
-                      ? `${user.facebook_pages}/${user.total_facebook_pages} (Full)` 
+                      ? `Full (${user.total_facebook_pages})` 
                       : `${user.facebook_pages}/${user.total_facebook_pages}`}
                   </span>
                 </td>
                 
                 <td className="status-cell">
-                  <span className={`status-indicator ${isUserOnline(user.last_login) ? 'online' : 'offline'}`}>
-                    {getStatusIcon(user.last_login)} {isUserOnline(user.last_login) ? 'Online' : 'Offline'}
+                  <span className={`status-indicator ${user.is_online ? 'online' : 'offline'}`}>
+                    {getStatusIcon(user.is_online)} {user.is_online ? 'Online' : 'Offline'}
                   </span>
                 </td>
                 

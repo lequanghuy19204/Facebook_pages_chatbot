@@ -529,7 +529,7 @@ export class FacebookService {
       };
 
       // If user is not admin, filter by facebook_pages_access
-      if (!user.roles.includes(UserRole.ADMIN)) {
+      if (!user.roles.includes(UserRole.ADMIN) && !user.roles.includes(UserRole.MANAGE_USER)) {
         query.page_id = { $in: user.facebook_pages_access };
       }
 

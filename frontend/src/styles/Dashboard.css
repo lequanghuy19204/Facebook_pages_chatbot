@@ -217,7 +217,7 @@
   justify-content: center;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
+  padding: 0px;
   transition: background-color 0.3s ease;
   white-space: nowrap;
 }
