@@ -8,6 +8,7 @@ interface UserPermissionModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
+  currentUser: any;
   facebookPages: FacebookPage[];
   onUpdateRoles: (userId: string, roles: string[]) => Promise<void>;
   onUpdateFacebookPages: (userId: string, pageIds: string[]) => Promise<void>;
@@ -25,6 +26,7 @@ export default function UserPermissionModal({
   isOpen,
   onClose,
   user,
+  currentUser,
   facebookPages,
   onUpdateRoles,
   onUpdateFacebookPages,
@@ -54,6 +56,9 @@ export default function UserPermissionModal({
   const hasManageUserRole = user?.roles.includes('manage_user') || false;
   const hasAdminRole = user?.roles.includes('admin') || false;
   const hasFullPageAccess = hasAdminRole || hasManageUserRole;
+  
+  // Check if current user can assign manage_user role (only admin can)
+  const canAssignManageUserRole = currentUser?.roles.includes('admin') || false;
 
   // Focus trap implementation
   useEffect(() => {
@@ -252,23 +257,39 @@ export default function UserPermissionModal({
             </div>
 
             <div className="roles-grid">
-              {ROLE_OPTIONS.map(role => (
-                <label key={role.value} className="role-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={selectedRoles.includes(role.value)}
-                    onChange={() => handleRoleChange(role.value)}
-                    disabled={isSubmitting}
-                  />
-                  <div className="role-content">
-                    <div className="role-icon">{role.icon}</div>
-                    <div className="role-info">
-                      <div className="role-name">{role.label}</div>
-                      <div className="role-description">{role.description}</div>
+              {ROLE_OPTIONS.map(role => {
+                // Chỉ admin mới có thể phân quyền "Quản lý User"
+                const isManageUserRole = role.value === UserRole.MANAGE_USER;
+                const isDisabled = isSubmitting || (isManageUserRole && !canAssignManageUserRole);
+                
+                return (
+                  <label key={role.value} className={`role-checkbox ${isDisabled && isManageUserRole ? 'restricted' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={selectedRoles.includes(role.value)}
+                      onChange={() => handleRoleChange(role.value)}
+                      disabled={isDisabled}
+                    />
+                    <div className="role-content">
+                      <div className="role-icon">{role.icon}</div>
+                      <div className="role-info">
+                        <div className="role-name">
+                          {role.label}
+                          {isManageUserRole && !canAssignManageUserRole && (
+                            <span className="restricted-badge"> 🔒</span>
+                          )}
+                        </div>
+                        <div className="role-description">
+                          {isManageUserRole && !canAssignManageUserRole 
+                            ? 'Chỉ Admin mới có thể phân quyền này'
+                            : role.description
+                          }
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </label>
-              ))}
+                  </label>
+                );
+              })}
             </div>
           </div>
 

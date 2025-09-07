@@ -185,7 +185,7 @@
   accent-color: #667eea;
 }
 
-.role-checkbox input[type="checkbox"]:checked + .role-content {
+.role-checkbox input[type="checkbox"]:checked {
   background: linear-gradient(135deg, #667eea20, #764ba220);
 }
 
@@ -197,6 +197,29 @@
 .role-checkbox:has(input:checked) {
   border-color: #667eea;
   background: linear-gradient(135deg, #667eea10, #764ba210);
+}
+
+.role-checkbox.restricted {
+  opacity: 0.6;
+  background: #f9f9f9;
+  border-color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.role-checkbox.restricted:hover {
+  border-color: #d1d5db;
+  background: #f9f9f9;
+  transform: none;
+  box-shadow: none;
+}
+
+.role-checkbox.restricted input[type="checkbox"] {
+  cursor: not-allowed;
+}
+
+.restricted-badge {
+  font-size: 12px;
+  opacity: 0.7;
 }
 
 .role-content {

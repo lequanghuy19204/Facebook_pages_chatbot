@@ -53,7 +53,7 @@ export default function UserTable({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  // Filter users based on search and filters
+  // Filter and sort users based on search and filters
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchQuery.toLowerCase());
@@ -69,6 +69,17 @@ export default function UserTable({
                            (facebookFilter === 'no_fb' && user.facebook_pages === 0);
     
     return matchesSearch && matchesRole && matchesStatus && matchesFacebook;
+  }).sort((a, b) => {
+    // Sắp xếp: tài khoản bản thân lên đầu
+    if (a.id === currentUser?.id) return -1;
+    if (b.id === currentUser?.id) return 1;
+    
+    // Sau đó sắp xếp theo trạng thái online (online trước, offline sau)
+    if (a.is_online && !b.is_online) return -1;
+    if (!a.is_online && b.is_online) return 1;
+    
+    // Nếu cùng trạng thái online/offline, sắp xếp theo tên
+    return a.full_name.localeCompare(b.full_name);
   });
 
   const getRoleDisplayName = (role: string) => {
@@ -292,6 +303,7 @@ export default function UserTable({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         user={selectedUser}
+        currentUser={currentUser}
         facebookPages={facebookPages}
         onUpdateRoles={async (userId, roles) => {
           await onUpdateRoles(userId, roles);
