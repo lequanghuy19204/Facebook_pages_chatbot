@@ -3,7 +3,7 @@
 import React from 'react';
 import { useFacebook } from '@/contexts/FacebookContext';
 import { useAuth } from '@/contexts/AuthContext';
-import '@/styles/FacebookConnect.css';
+import '@/styles/dashboard/FacebookConnect.css';
 
 interface FacebookConnectProps {
   className?: string;

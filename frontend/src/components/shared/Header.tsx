@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import '@/styles/Header.css';
+import '@/styles/shared/Header.css';
 
 interface HeaderProps {
   className?: string;

@@ -7,7 +7,7 @@ import Header from '../shared/Header';
 import PendingUsers from './PendingUsers';
 import UserTable from './UserTable';
 import UserStatsCards from './UserStatsCards';
-import '@/styles/Management.css';
+import '@/styles/management/Management.css';
 
 interface ManagementProps {
   onLogout?: () => void;

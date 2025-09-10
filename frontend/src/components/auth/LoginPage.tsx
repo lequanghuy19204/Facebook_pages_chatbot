@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import "@/styles/LoginPage.css";
+import "@/styles/auth/LoginPage.css";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface LoginPageProps {

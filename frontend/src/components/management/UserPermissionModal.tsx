@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { User, FacebookPage, UserRole } from '@/services/api';
-import '@/styles/UserPermissionModal.css';
+import '@/styles/management/UserPermissionModal.css';
 
 interface UserPermissionModalProps {
   isOpen: boolean;

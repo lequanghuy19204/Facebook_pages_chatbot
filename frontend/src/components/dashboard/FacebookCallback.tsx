@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useFacebook } from '@/contexts/FacebookContext';
-import '@/styles/FacebookCallback.css';
+import '@/styles/dashboard/FacebookCallback.css';
 
 export default function FacebookCallback() {
   const router = useRouter();

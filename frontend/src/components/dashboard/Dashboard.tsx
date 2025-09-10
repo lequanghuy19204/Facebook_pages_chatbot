@@ -6,7 +6,7 @@ import { useFacebook } from '@/contexts/FacebookContext';
 import FacebookConnect from './FacebookConnect';
 import FacebookPages from './FacebookPages';
 import Header from '../shared/Header';
-import '@/styles/Dashboard.css';
+import '@/styles/dashboard/Dashboard.css';
 import { toast } from 'react-toastify';
 
 interface DashboardProps {

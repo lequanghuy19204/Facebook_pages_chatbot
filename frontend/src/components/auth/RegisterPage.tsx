@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import "@/styles/RegisterPage.css";
+import "@/styles/auth/RegisterPage.css";
 import { useAuth } from "@/contexts/AuthContext";
 
 export interface RegisterPageProps {
