@@ -1,7 +1,6 @@
-// API configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-// Types
+
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -44,7 +43,7 @@ export interface AuthResponse {
   };
 }
 
-// Facebook Types
+
 export interface FacebookOAuthUrl {
   oauth_url: string;
   state: string;
@@ -90,7 +89,7 @@ export interface FacebookSyncResult {
   failed_pages?: string[];
 }
 
-// Enum for User Roles
+
 export enum UserRole {
   ADMIN = 'admin',
   STAFF = 'staff',
@@ -99,7 +98,7 @@ export enum UserRole {
   MANAGE_CHATBOT = 'manage_chatbot'
 }
 
-// User Management Types
+
 export interface User {
   id: string;
   full_name: string;
@@ -147,11 +146,49 @@ export interface UsersResponse {
   stats: UserStats;
 }
 
-// API service
+
+export interface CompanyInfo {
+  company_id: string;
+  company_name: string;
+  company_code: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+  settings: {
+    timezone: string;
+    language: string;
+    currency: string;
+    max_users: number;
+    current_users: number;
+  };
+  facebook?: {
+    is_connected: boolean;
+    connected_by?: string;
+    connected_at?: string;
+    facebook_user_name?: string;
+    last_sync?: string;
+    sync_status?: string;
+    pages_count?: number;
+  };
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpdateCompanyDto {
+  company_name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  settings?: {
+    max_users?: number;
+  };
+}
+
 const ApiService = {
-  // Authentication
+  
   auth: {
-    // Login
     login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
       try {
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -174,7 +211,6 @@ const ApiService = {
       }
     },
 
-    // Register Admin (create new company)
     registerAdmin: async (data: RegisterAdminData): Promise<AuthResponse> => {
       try {
         const response = await fetch(`${API_BASE_URL}/auth/register/admin`, {
@@ -197,7 +233,6 @@ const ApiService = {
       }
     },
 
-    // Register Staff (join existing company)
     registerStaff: async (data: RegisterStaffData): Promise<{ message: string }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/auth/register/staff`, {
@@ -220,7 +255,6 @@ const ApiService = {
       }
     },
 
-    // Logout
     logout: async (token: string): Promise<{ message: string }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/auth/logout`, {
@@ -243,7 +277,6 @@ const ApiService = {
       }
     },
 
-    // Get user profile
     getProfile: async (token: string): Promise<any> => {
       try {
         const response = await fetch(`${API_BASE_URL}/auth/profile`, {
@@ -267,9 +300,7 @@ const ApiService = {
     },
   },
 
-  // User Management
   users: {
-    // Send heartbeat to keep user online
     sendHeartbeat: async (token: string): Promise<{ success: boolean; message: string }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/users/heartbeat`, {
@@ -292,10 +323,10 @@ const ApiService = {
       }
     },
 
-    // Get all users in company
+    
     getUsers: async (token: string, params?: any): Promise<UsersResponse> => {
       try {
-        // Build query string from params
+        
         const queryParams = params ? new URLSearchParams(params).toString() : '';
         const url = `${API_BASE_URL}/users${queryParams ? `?${queryParams}` : ''}`;
         
@@ -314,7 +345,7 @@ const ApiService = {
 
         const data = await response.json();
         
-        // Convert date strings to Date objects
+        
         const users = data.users.map((user: any) => ({
           ...user,
           last_login: user.last_login ? new Date(user.last_login) : null,
@@ -331,7 +362,7 @@ const ApiService = {
       }
     },
 
-    // Get pending users
+    
     getPendingUsers: async (token: string): Promise<PendingUser[]> => {
       try {
         const response = await fetch(`${API_BASE_URL}/users/pending`, {
@@ -349,7 +380,7 @@ const ApiService = {
 
         const data = await response.json();
         
-        // Convert date strings to Date objects
+        
         return data.map((user: any) => ({
           ...user,
           created_at: new Date(user.created_at),
@@ -360,7 +391,7 @@ const ApiService = {
       }
     },
 
-    // Approve user
+    
     approveUser: async (token: string, userId: string): Promise<{ success: boolean; message: string }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/approve`, {
@@ -383,7 +414,7 @@ const ApiService = {
       }
     },
 
-    // Reject user
+    
     rejectUser: async (token: string, userId: string): Promise<{ success: boolean; message: string }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/reject`, {
@@ -406,7 +437,7 @@ const ApiService = {
       }
     },
 
-    // Update user roles
+    
     updateUserRoles: async (
       token: string, 
       userId: string, 
@@ -434,7 +465,7 @@ const ApiService = {
       }
     },
 
-    // Toggle user status
+    
     toggleUserStatus: async (
       token: string, 
       userId: string, 
@@ -462,7 +493,7 @@ const ApiService = {
       }
     },
 
-    // Update Facebook pages access
+    
     updateFacebookPagesAccess: async (
       token: string, 
       userId: string, 
@@ -491,9 +522,59 @@ const ApiService = {
     },
   },
 
-  // Facebook Integration
+  
+  company: {
+    
+    getInfo: async (token: string): Promise<CompanyInfo> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/company`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Không thể lấy thông tin công ty');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Get company info error:', error);
+        throw error;
+      }
+    },
+
+    
+    update: async (token: string, data: UpdateCompanyDto): Promise<{success: boolean; message: string; company: CompanyInfo}> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/company`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Không thể cập nhật thông tin công ty');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Update company error:', error);
+        throw error;
+      }
+    },
+  },
+
+  
   facebook: {
-    // Get Facebook OAuth URL
+    
     getOAuthUrl: async (token: string): Promise<FacebookOAuthUrl> => {
       try {
         const response = await fetch(`${API_BASE_URL}/facebook/oauth-url`, {
@@ -516,7 +597,7 @@ const ApiService = {
       }
     },
 
-    // Connect Facebook account
+    
     connect: async (token: string, code: string, state?: string): Promise<FacebookConnectionStatus> => {
       try {
         const response = await fetch(`${API_BASE_URL}/facebook/connect`, {
@@ -540,7 +621,7 @@ const ApiService = {
       }
     },
 
-    // Get Facebook connection status
+    
     getStatus: async (token: string): Promise<FacebookConnectionStatus> => {
       try {
         const response = await fetch(`${API_BASE_URL}/facebook/status`, {
@@ -563,7 +644,7 @@ const ApiService = {
       }
     },
 
-    // Get Facebook pages
+    
     getPages: async (token: string): Promise<FacebookPage[]> => {
       try {
         const response = await fetch(`${API_BASE_URL}/facebook/pages`, {
@@ -586,7 +667,7 @@ const ApiService = {
       }
     },
 
-    // Sync Facebook pages
+    
     sync: async (token: string): Promise<FacebookSyncResult> => {
       try {
         const response = await fetch(`${API_BASE_URL}/facebook/sync`, {
@@ -609,7 +690,7 @@ const ApiService = {
       }
     },
 
-    // Disconnect Facebook
+    
     disconnect: async (token: string): Promise<{ success: boolean; message: string }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/facebook/disconnect`, {

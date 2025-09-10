@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { FacebookModule } from './facebook/facebook.module';
 import { CloudflareR2Module } from './cloudflare/cloudflare-r2.module';
 import { UsersModule } from './users/users.module';
+import { CompanyModule } from './company/company.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { UsersModule } from './users/users.module';
     FacebookModule,
     CloudflareR2Module,
     UsersModule,
+    CompanyModule,
   ],
   controllers: [AppController],
   providers: [AppService],
