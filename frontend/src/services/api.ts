@@ -35,6 +35,9 @@ export interface AuthResponse {
     roles: string[];
     company_id: string;
     is_active: boolean;
+    phone?: string;
+    avatar_cloudflare_url?: string;
+    avatar_cloudflare_key?: string;
   };
   company: {
     company_id: string;
@@ -109,7 +112,8 @@ export interface User {
   total_facebook_pages: number;
   last_login: Date | null;
   created_at: Date;
-  avatar: string | null;
+  avatar_cloudflare_url?: string;
+  avatar_cloudflare_key?: string;
   is_online: boolean;
   facebook_pages_access?: string[];
   phone?: string;
@@ -350,7 +354,8 @@ const ApiService = {
 
     uploadAvatar: async (token: string, formData: FormData): Promise<any> => {
       try {
-        const response = await fetch(`${API_BASE_URL}/storage/upload/image`, {
+        // Upload to Cloudflare R2
+        const uploadResponse = await fetch(`${API_BASE_URL}/storage/upload/image?folder=avatars`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -358,14 +363,36 @@ const ApiService = {
           body: formData,
         });
 
-        if (!response.ok) {
-          const errorData = await response.json();
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
           throw new Error(errorData.message || 'Failed to upload avatar');
         }
 
-        const result = await response.json();
+        const uploadResult = await uploadResponse.json();
+        
+        // Update user avatar in database
+        const updateResponse = await fetch(`${API_BASE_URL}/users/avatar`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            avatar_cloudflare_url: uploadResult.data.publicUrl,
+            avatar_cloudflare_key: uploadResult.data.key
+          }),
+        });
+
+        if (!updateResponse.ok) {
+          const errorData = await updateResponse.json();
+          throw new Error(errorData.message || 'Failed to update avatar');
+        }
+
+        const updateResult = await updateResponse.json();
         return {
-          avatar_url: result.data.publicUrl
+          avatar_cloudflare_url: uploadResult.data.publicUrl,
+          avatar_cloudflare_key: uploadResult.data.key,
+          user: updateResult.user
         };
       } catch (error) {
         console.error('Upload avatar error:', error);

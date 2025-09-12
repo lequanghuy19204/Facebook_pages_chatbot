@@ -21,7 +21,8 @@ export default function Settings({ onLogout }: SettingsProps) {
     full_name: user?.full_name || '',
     email: user?.email || '',
     phone: user?.phone || '',
-    avatar_url: user?.avatar_url || '',
+    avatar_cloudflare_url: user?.avatar_cloudflare_url || '',
+    avatar_cloudflare_key: user?.avatar_cloudflare_key || '',
   });
   
   const [passwordData, setPasswordData] = useState({
@@ -39,7 +40,8 @@ export default function Settings({ onLogout }: SettingsProps) {
         full_name: user.full_name || '',
         email: user.email || '',
         phone: user.phone || '',
-        avatar_url: user.avatar_url || '',
+        avatar_cloudflare_url: user.avatar_cloudflare_url || '',
+        avatar_cloudflare_key: user.avatar_cloudflare_key || '',
       });
     }
   }, [user]);
@@ -72,7 +74,8 @@ export default function Settings({ onLogout }: SettingsProps) {
         full_name: user.full_name || '',
         email: user.email || '',
         phone: user.phone || '',
-        avatar_url: user.avatar_url || '',
+        avatar_cloudflare_url: user.avatar_cloudflare_url || '',
+        avatar_cloudflare_key: user.avatar_cloudflare_key || '',
       });
     }
     setError(null);
@@ -202,14 +205,16 @@ export default function Settings({ onLogout }: SettingsProps) {
       // Update local state
       setUserInfo(prev => ({
         ...prev,
-        avatar_url: response.avatar_url
+        avatar_cloudflare_url: response.avatar_cloudflare_url,
+        avatar_cloudflare_key: response.avatar_cloudflare_key
       }));
       
       // Update context with new avatar
       if (updateUserInfo && user) {
         updateUserInfo({
           ...user,
-          avatar_url: response.avatar_url
+          avatar_cloudflare_url: response.avatar_cloudflare_url,
+          avatar_cloudflare_key: response.avatar_cloudflare_key
         });
       }
       
@@ -272,9 +277,10 @@ export default function Settings({ onLogout }: SettingsProps) {
             {/* Avatar Section */}
             <div className="avatar-section">
               <div className="avatar-container" onClick={handleAvatarClick}>
-                {userInfo.avatar_url ? (
+                {userInfo.avatar_cloudflare_key ? (
                   <img 
-                    src={userInfo.avatar_url} 
+                    src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${userInfo.avatar_cloudflare_key}`} 
+                    
                     alt={user?.full_name || 'User'} 
                     className="user-avatar"
                   />

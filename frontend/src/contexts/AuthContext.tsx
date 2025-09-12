@@ -10,7 +10,8 @@ interface User {
   roles: string[];
   company_id: string;
   is_active: boolean;
-  avatar_url?: string;
+  avatar_cloudflare_url?: string;
+  avatar_cloudflare_key?: string;
   phone?: string;
   company_name?: string;
 }

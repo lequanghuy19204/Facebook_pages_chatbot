@@ -88,6 +88,9 @@ export class AuthResponseDto {
     roles: string[];
     company_id: string;
     is_active: boolean;
+    phone?: string;
+    avatar_cloudflare_url?: string;
+    avatar_cloudflare_key?: string;
   };
   company: {
     company_id: string;

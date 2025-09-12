@@ -6,6 +6,7 @@ import { User, UserSchema } from '../schemas/user.schema';
 import { Company, CompanySchema } from '../schemas/company.schema';
 import { FacebookPage, FacebookPageSchema } from '../schemas/facebook-page.schema';
 import { AuthModule } from '../auth/auth.module';
+import { CloudflareR2Module } from '../cloudflare/cloudflare-r2.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AuthModule } from '../auth/auth.module';
       { name: FacebookPage.name, schema: FacebookPageSchema },
     ]),
     AuthModule,
+    CloudflareR2Module,
   ],
   controllers: [UsersController],
   providers: [UsersService],

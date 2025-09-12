@@ -85,6 +85,12 @@
   align-items: center;
   padding: 0 12px;
   gap: 7px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.user-pages:hover {
+  background-color: rgba(29, 41, 57, 0.25);
 }
 
 .pages-avatars {
@@ -133,6 +139,38 @@
 .more-count {
   font-size: 15px;
   color: rgba(242, 244, 247, 1);
+}
+
+.user-avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: border-color 0.2s ease;
+}
+
+.user-pages:hover .user-avatar-circle {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.user-avatar-placeholder-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: border-color 0.2s ease;
+}
+
+.user-pages:hover .user-avatar-placeholder-circle {
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .username {
@@ -207,6 +245,13 @@
   .user-pages {
     padding: 0 8px;
   }
+  
+  .user-avatar-circle,
+  .user-avatar-placeholder-circle {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -228,6 +273,13 @@
   
   .user-pages {
     padding: 0 4px;
+  }
+  
+  .user-avatar-circle,
+  .user-avatar-placeholder-circle {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
   }
   
   .pages-avatars {

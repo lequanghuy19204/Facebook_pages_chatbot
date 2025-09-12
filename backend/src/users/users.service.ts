@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { User, UserDocument, UserRole } from '../schemas/user.schema';
 import { Company, CompanyDocument } from '../schemas/company.schema';
 import { FacebookPage, FacebookPageDocument } from '../schemas/facebook-page.schema';
+import { CloudflareR2Service } from '../cloudflare/cloudflare-r2.service';
 
 @Injectable()
 export class UsersService {
@@ -12,6 +13,7 @@ export class UsersService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel(FacebookPage.name) private facebookPageModel: Model<FacebookPageDocument>,
+    private cloudflareR2Service: CloudflareR2Service,
   ) {}
 
   async getAllUsers(companyId: string, query?: any): Promise<any> {
@@ -118,7 +120,8 @@ export class UsersService {
         total_facebook_pages: totalFacebookPages,
         last_login: user.last_login,
         created_at: user.created_at,
-        avatar: user.avatar_url,
+        avatar_cloudflare_url: user.avatar_cloudflare_url,
+        avatar_cloudflare_key: user.avatar_cloudflare_key,
         is_online: user.is_online,
         facebook_pages_access: user.facebook_pages_access || [],
       };
@@ -431,6 +434,51 @@ export class UsersService {
         success: false,
         message: 'Failed to update heartbeat',
       };
+    }
+  }
+
+  async updateAvatar(userId: string, avatarUrl: string, avatarKey: string): Promise<{ success: boolean; message: string; user: any }> {
+    try {
+      const user = await this.userModel.findOne({ user_id: userId }).exec();
+      
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      
+      // Xóa avatar cũ từ Cloudflare R2 nếu có
+      if (user.avatar_cloudflare_key) {
+        try {
+          await this.cloudflareR2Service.deleteFile(user.avatar_cloudflare_key);
+          console.log(`Deleted old avatar: ${user.avatar_cloudflare_key}`);
+        } catch (error) {
+          console.error('Error deleting old avatar:', error);
+          // Không throw error để không block việc upload avatar mới
+        }
+      }
+      
+      // Cập nhật avatar mới
+      await this.userModel.updateOne(
+        { user_id: userId },
+        { 
+          $set: { 
+            avatar_cloudflare_url: avatarUrl,
+            avatar_cloudflare_key: avatarKey
+          }
+        }
+      );
+      
+      const updatedUser = await this.userModel.findOne({ user_id: userId })
+        .select('-password_hash')
+        .exec();
+      
+      return {
+        success: true,
+        message: 'Avatar updated successfully',
+        user: updatedUser,
+      };
+    } catch (error) {
+      console.error('Avatar update error:', error);
+      throw error;
     }
   }
 }

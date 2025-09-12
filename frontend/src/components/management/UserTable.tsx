@@ -203,8 +203,8 @@ export default function UserTable({
               <tr key={user.id} className={user.is_active ? 'active-row' : 'inactive-row'}>
                 <td className="name-cell">
                   <div className="user-info">
-                    {user.avatar ? (
-                      <img src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${user.avatar}`} alt={user.full_name} className="user-avatar" />
+                    {user.avatar_cloudflare_key ? (
+                      <img src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${user.avatar_cloudflare_key}`} alt={user.full_name} className="user-avatar" />
                     ) : (
                       <div className="user-avatar-placeholder">
                         {user.full_name.charAt(0).toUpperCase()}

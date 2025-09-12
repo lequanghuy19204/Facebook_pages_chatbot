@@ -117,4 +117,14 @@ export class UsersController {
     const { user } = req;
     return this.usersService.changePassword(user.user_id, body.new_password);
   }
+
+  @Put('avatar')
+  @UseGuards(AuthGuard('jwt'))
+  async updateAvatar(
+    @Request() req: any,
+    @Body() body: { avatar_cloudflare_url: string; avatar_cloudflare_key: string }
+  ) {
+    const { user } = req;
+    return this.usersService.updateAvatar(user.user_id, body.avatar_cloudflare_url, body.avatar_cloudflare_key);
+  }
 }

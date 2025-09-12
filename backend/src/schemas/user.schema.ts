@@ -33,7 +33,10 @@ export class User {
   company_id: string;
 
   @Prop()
-  avatar_url?: string;
+  avatar_cloudflare_url?: string;
+
+  @Prop()
+  avatar_cloudflare_key?: string;
 
   @Prop()
   phone?: string;

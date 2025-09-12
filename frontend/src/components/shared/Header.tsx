@@ -72,9 +72,9 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
         {/* User Profile */}
         <div className="user-profile">
           <div className="user-pages" onClick={() => navigateTo('/settings')}>
-            {user?.avatar_url ? (
+            {user?.avatar_cloudflare_key ? (
               <img 
-                src={user.avatar_url} 
+                src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${user.avatar_cloudflare_key}`} 
                 alt={user.full_name || 'User'} 
                 className="user-avatar-circle" 
               />

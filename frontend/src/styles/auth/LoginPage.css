@@ -73,7 +73,6 @@
 
 .form-input {
   width: 100%;
-  max-width: 460px;
   height: 42px;
   border-radius: 6px;
   border: 2px solid rgba(241, 243, 246, 1);
@@ -117,7 +116,6 @@
 
 .sign-in-button {
   width: 100%;
-  max-width: 460px;
   height: 42px;
   border-radius: 8px;
   background-color: rgba(45, 101, 195, 1);
