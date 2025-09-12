@@ -96,14 +96,6 @@ export default function LoginPage(props: LoginPageProps) {
               >
                 {isLoading ? "Đang xử lý..." : "Đăng nhập"}
               </button>
-              <button 
-                type="button" 
-                className="forgot-password-button"
-                onClick={props.onForgotPassword}
-                disabled={isLoading}
-              >
-                Quên mật khẩu
-              </button>
             </div>
           </form>
 

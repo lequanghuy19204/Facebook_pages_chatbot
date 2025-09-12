@@ -110,8 +110,8 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 8px;
+  border-radius: 8px;
   border: 2px solid rgba(241, 243, 246, 1);
   background-color: rgba(255, 255, 255, 1);
   transition: all 0.3s ease;
@@ -141,6 +141,7 @@
   color: rgba(74, 85, 105, 1);
   font-weight: normal;
   transition: all 0.3s ease;
+  padding-left: 4px;
 }
 
 /* Form hint styles */
