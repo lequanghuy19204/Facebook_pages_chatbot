@@ -721,7 +721,7 @@
 }
 
 .name-cell {
-  min-width: 200px;
+  min-width: 150px;
 }
 
 .user-info {
@@ -769,6 +769,12 @@
 
 .email-cell {
   min-width: 200px;
+  color: #6b7280;
+  font-family: monospace;
+}
+
+.phone-cell {
+  min-width: 100px;
   color: #6b7280;
   font-family: monospace;
 }

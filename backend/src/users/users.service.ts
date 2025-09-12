@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import * as bcrypt from 'bcrypt';
 import { User, UserDocument, UserRole } from '../schemas/user.schema';
 import { Company, CompanyDocument } from '../schemas/company.schema';
 import { FacebookPage, FacebookPageDocument } from '../schemas/facebook-page.schema';
@@ -110,6 +111,7 @@ export class UsersService {
         id: user.user_id,
         full_name: user.full_name,
         email: user.email,
+        phone: user.phone,
         roles: user.roles,
         is_active: user.is_active,
         facebook_pages: facebookPages,
@@ -331,6 +333,72 @@ export class UsersService {
   private async getCompanyCode(companyId: string): Promise<string> {
     const company = await this.companyModel.findOne({ company_id: companyId }).exec();
     return company?.company_code || '';
+  }
+
+  async updateProfile(userId: string, data: { full_name?: string; phone?: string }): Promise<{ success: boolean; message: string; user: any }> {
+    try {
+      const user = await this.userModel.findOne({ user_id: userId }).exec();
+      
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      
+      const updateData: any = {};
+      
+      if (data.full_name) {
+        updateData.full_name = data.full_name;
+      }
+      
+      if (data.phone !== undefined) {
+        updateData.phone = data.phone;
+      }
+      
+      await this.userModel.updateOne(
+        { user_id: userId },
+        { $set: updateData }
+      );
+      
+      const updatedUser = await this.userModel.findOne({ user_id: userId })
+        .select('-password_hash')
+        .exec();
+      
+      return {
+        success: true,
+        message: 'Profile updated successfully',
+        user: updatedUser,
+      };
+    } catch (error) {
+      console.error('Profile update error:', error);
+      throw error;
+    }
+  }
+  
+  async changePassword(userId: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const user = await this.userModel.findOne({ user_id: userId }).exec();
+      
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      
+      // Hash new password
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+      
+      // Update password
+      await this.userModel.updateOne(
+        { user_id: userId },
+        { password_hash: passwordHash }
+      );
+      
+      return {
+        success: true,
+        message: 'Password changed successfully',
+      };
+    } catch (error) {
+      console.error('Password change error:', error);
+      throw error;
+    }
   }
 
   async updateHeartbeat(userId: string): Promise<{ success: boolean; message: string }> {

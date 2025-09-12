@@ -97,4 +97,24 @@ export class UsersController {
     const { user } = req;
     return this.usersService.updateHeartbeat(user.user_id);
   }
+
+  @Put('profile')
+  @UseGuards(AuthGuard('jwt'))
+  async updateProfile(
+    @Request() req: any,
+    @Body() body: { full_name?: string; phone?: string }
+  ) {
+    const { user } = req;
+    return this.usersService.updateProfile(user.user_id, body);
+  }
+
+  @Put('change-password')
+  @UseGuards(AuthGuard('jwt'))
+  async changePassword(
+    @Request() req: any,
+    @Body() body: { new_password: string }
+  ) {
+    const { user } = req;
+    return this.usersService.changePassword(user.user_id, body.new_password);
+  }
 }

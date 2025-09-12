@@ -112,6 +112,7 @@ export interface User {
   avatar: string | null;
   is_online: boolean;
   facebook_pages_access?: string[];
+  phone?: string;
 }
 
 export interface PendingUser {
@@ -301,6 +302,77 @@ const ApiService = {
   },
 
   users: {
+    changePassword: async (token: string, data: { new_password: string }): Promise<{ success: boolean; message: string }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/change-password`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to change password');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Change password error:', error);
+        throw error;
+      }
+    },
+
+    updateProfile: async (token: string, data: { full_name?: string; phone?: string }): Promise<any> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/profile`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update profile');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Update profile error:', error);
+        throw error;
+      }
+    },
+
+    uploadAvatar: async (token: string, formData: FormData): Promise<any> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/storage/upload/image`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to upload avatar');
+        }
+
+        const result = await response.json();
+        return {
+          avatar_url: result.data.publicUrl
+        };
+      } catch (error) {
+        console.error('Upload avatar error:', error);
+        throw error;
+      }
+    },
+    
     sendHeartbeat: async (token: string): Promise<{ success: boolean; message: string }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/users/heartbeat`, {

@@ -61,22 +61,28 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
           <div className="nav-item">
             <div className="nav-text">Sản phẩm</div>
           </div>
-          <div className="nav-item">
+          <div 
+            className={`nav-item ${isActive('/settings') ? 'active' : ''}`}
+            onClick={() => navigateTo('/settings')}
+          >
             <div className="nav-text">Cài đặt</div>
           </div>
         </div>
         
         {/* User Profile */}
         <div className="user-profile">
-          <div className="user-pages">
-            <div className="pages-avatars">
-              <img src="/page-avatar-1.png" className="header-page-avatar" alt="Page 1" />
-              <img src="/page-avatar-2.png" className="header-page-avatar" alt="Page 2" />
-              <img src="/page-avatar-3.png" className="header-page-avatar" alt="Page 3" />
-              <div className="more-pages">
-                <div className="more-count">+20</div>
+          <div className="user-pages" onClick={() => navigateTo('/settings')}>
+            {user?.avatar_url ? (
+              <img 
+                src={user.avatar_url} 
+                alt={user.full_name || 'User'} 
+                className="user-avatar-circle" 
+              />
+            ) : (
+              <div className="user-avatar-placeholder-circle">
+                {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
               </div>
-            </div>
+            )}
             <div className="username">
               {user?.full_name?.split(' ').pop() || 'User'}
             </div>

@@ -10,6 +10,9 @@ interface User {
   roles: string[];
   company_id: string;
   is_active: boolean;
+  avatar_url?: string;
+  phone?: string;
+  company_name?: string;
 }
 
 interface Company {
@@ -29,6 +32,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   loading: boolean;
   error: string | null;
+  updateUserInfo: (updatedUser: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,7 +57,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Check if user is already logged in (from localStorage)
+  
   useEffect(() => {
     const storedToken = localStorage.getItem('auth_token');
     const storedUser = localStorage.getItem('auth_user');
@@ -69,12 +73,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setLoading(false);
   }, []);
 
-  // Send heartbeat every minute when authenticated
+  
   useEffect(() => {
     let heartbeatInterval: NodeJS.Timeout;
 
     if (isAuthenticated && token) {
-      // Send initial heartbeat
+      
       const sendHeartbeat = async () => {
         try {
           await ApiService.users.sendHeartbeat(token);
@@ -84,14 +88,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
       };
 
-      // Send immediately on login
+      
       sendHeartbeat();
 
-      // Set up interval to send heartbeat every minute
-      heartbeatInterval = setInterval(sendHeartbeat, 60000); // 60000ms = 1 minute
+      
+      heartbeatInterval = setInterval(sendHeartbeat, 60000); 
     }
 
-    // Clean up interval on unmount or when auth state changes
+    
     return () => {
       if (heartbeatInterval) {
         clearInterval(heartbeatInterval);
@@ -99,14 +103,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, [isAuthenticated, token]);
 
-  // Login function
+  
   const login = async (email: string, password: string) => {
     setLoading(true);
     setError(null);
     try {
       const response: AuthResponse = await ApiService.auth.login({ email, password });
       
-      // Save auth data
+      
       localStorage.setItem('auth_token', response.access_token);
       localStorage.setItem('auth_user', JSON.stringify(response.user));
       localStorage.setItem('auth_company', JSON.stringify(response.company));
@@ -123,14 +127,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // Register Admin function
+  
   const registerAdmin = async (data: any) => {
     setLoading(true);
     setError(null);
     try {
       const response: AuthResponse = await ApiService.auth.registerAdmin(data);
       
-      // Save auth data
+      
       localStorage.setItem('auth_token', response.access_token);
       localStorage.setItem('auth_user', JSON.stringify(response.user));
       localStorage.setItem('auth_company', JSON.stringify(response.company));
@@ -147,7 +151,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // Register Staff function
+  
   const registerStaff = async (data: any) => {
     setLoading(true);
     setError(null);
@@ -162,7 +166,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // Logout function
+  
+  const updateUserInfo = (updatedUser: User) => {
+    setUser(updatedUser);
+    localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+  };
+
+  
   const logout = async () => {
     setLoading(true);
     try {
@@ -172,7 +182,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
-      // Clear auth data regardless of API success
+      
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
       localStorage.removeItem('auth_company');
@@ -196,6 +206,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     logout,
     loading,
     error,
+    updateUserInfo,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

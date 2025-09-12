@@ -190,6 +190,7 @@ export default function UserTable({
             <tr>
               <th>Tên</th>
               <th>Email</th>
+              <th>Số đt</th>
               <th>Quyền</th>
               <th>FB Pages</th>
               <th>Trạng thái</th>
@@ -219,6 +220,8 @@ export default function UserTable({
                 </td>
                 
                 <td className="email-cell">{user.email}</td>
+
+                <td className="phone-cell">{user.phone}</td>
                 
                 <td className="roles-cell">
                   <div className="roles-list">

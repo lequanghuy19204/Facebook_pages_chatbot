@@ -475,9 +475,11 @@ export default function Management({ onLogout }: ManagementProps) {
                         <label htmlFor="settings.max_users">Số người dùng tối đa</label>
                         <input
                           type="number"
+                          min={1}
+                          max={100}
                           id="settings.max_users"
                           name="settings.max_users"
-                          value={editedCompanyInfo?.settings.max_users || 10}
+                          value={editedCompanyInfo?.settings.max_users}
                           onChange={handleCompanyInfoChange}
                           className="form-control"
                         />
