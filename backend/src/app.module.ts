@@ -8,6 +8,7 @@ import { FacebookModule } from './facebook/facebook.module';
 import { CloudflareR2Module } from './cloudflare/cloudflare-r2.module';
 import { UsersModule } from './users/users.module';
 import { CompanyModule } from './company/company.module';
+import { ProductsModule } from './products/products.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { CompanyModule } from './company/company.module';
     CloudflareR2Module,
     UsersModule,
     CompanyModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -191,6 +191,96 @@ export interface UpdateCompanyDto {
   };
 }
 
+
+export interface Product {
+  product_id: string;
+  company_id: string;
+  name: string;
+  code: string;
+  price: number;
+  currency: string;
+  colors: string[];
+  brand?: string;
+  notes?: string;
+  images: ProductImage[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by: string;
+  updated_by: string;
+}
+
+export interface ProductImage {
+  image_id: string;
+  cloudflare_url: string;
+  cloudflare_key: string;
+  display_order: number;
+  alt_text?: string;
+  created_at: string;
+  created_by: string;
+}
+
+export interface CreateProductDto {
+  name: string;
+  code: string;
+  price: number;
+  currency?: string;
+  colors: string[];
+  brand?: string;
+  notes?: string;
+}
+
+export interface UpdateProductDto {
+  name?: string;
+  code?: string;
+  price?: number;
+  currency?: string;
+  colors?: string[];
+  brand?: string;
+  notes?: string;
+  is_active?: boolean;
+}
+
+export interface AddProductImageDto {
+  cloudflare_url: string;
+  cloudflare_key: string;
+  display_order: number;
+  alt_text?: string;
+}
+
+export interface ProductQueryDto {
+  page?: number;
+  limit?: number;
+  search?: string;
+  brand?: string;
+  category?: string;
+  min_price?: number;
+  max_price?: number;
+  is_active?: boolean;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+}
+
+export interface ProductsResponse {
+  products: Product[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+  stats: ProductStats;
+}
+
+export interface ProductStats {
+  total_products: number;
+  active_products: number;
+  inactive_products: number;
+  brands_count: number;
+  products_with_images: number;
+  products_without_images: number;
+}
+
 const ApiService = {
   
   auth: {
@@ -354,7 +444,7 @@ const ApiService = {
 
     uploadAvatar: async (token: string, formData: FormData): Promise<any> => {
       try {
-        // Upload to Cloudflare R2
+        
         const uploadResponse = await fetch(`${API_BASE_URL}/storage/upload/image?folder=avatars`, {
           method: 'POST',
           headers: {
@@ -370,7 +460,7 @@ const ApiService = {
 
         const uploadResult = await uploadResponse.json();
         
-        // Update user avatar in database
+        
         const updateResponse = await fetch(`${API_BASE_URL}/users/avatar`, {
           method: 'PUT',
           headers: {
@@ -808,6 +898,284 @@ const ApiService = {
         return await response.json();
       } catch (error) {
         console.error('Facebook disconnect error:', error);
+        throw error;
+      }
+    },
+  },
+
+  
+  products: {
+    
+    getProducts: async (token: string, query?: ProductQueryDto): Promise<ProductsResponse> => {
+      try {
+        const queryParams = new URLSearchParams();
+        if (query) {
+          Object.entries(query).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              queryParams.append(key, value.toString());
+            }
+          });
+        }
+
+        const response = await fetch(`${API_BASE_URL}/products?${queryParams}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch products');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Get products error:', error);
+        throw error;
+      }
+    },
+
+    
+    getProduct: async (token: string, productId: string): Promise<Product> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch product');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Get product error:', error);
+        throw error;
+      }
+    },
+
+    
+    createProduct: async (token: string, productData: CreateProductDto): Promise<Product> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/products`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(productData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create product');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Create product error:', error);
+        throw error;
+      }
+    },
+
+    
+    updateProduct: async (token: string, productId: string, productData: UpdateProductDto): Promise<Product> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(productData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update product');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Update product error:', error);
+        throw error;
+      }
+    },
+
+    
+    deleteProduct: async (token: string, productId: string): Promise<void> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/products/${productId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to delete product');
+        }
+      } catch (error) {
+        console.error('Delete product error:', error);
+        throw error;
+      }
+    },
+
+    
+    getBrands: async (token: string): Promise<string[]> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/products/brands`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch brands');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Get brands error:', error);
+        throw error;
+      }
+    },
+
+    
+    getStats: async (token: string): Promise<ProductStats> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/products/stats`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch product stats');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Get product stats error:', error);
+        throw error;
+      }
+    },
+
+    
+    uploadImage: async (token: string, file: File, folder?: string): Promise<{key: string; publicUrl: string}> => {
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const queryParams = folder ? `?folder=${encodeURIComponent(folder)}` : '';
+        const response = await fetch(`${API_BASE_URL}/storage/upload/image${queryParams}`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to upload image');
+        }
+
+        const result = await response.json();
+        return {
+          key: result.data.key,
+          publicUrl: result.data.publicUrl
+        };
+      } catch (error) {
+        console.error('Upload image error:', error);
+        throw error;
+      }
+    },
+
+    
+    addProductImage: async (token: string, productId: string, imageData: AddProductImageDto): Promise<Product> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/products/${productId}/images`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(imageData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to add product image');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Add product image error:', error);
+        throw error;
+      }
+    },
+
+    
+    updateProductImage: async (token: string, productId: string, imageId: string, imageData: {display_order?: number; alt_text?: string}): Promise<Product> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/products/${productId}/images/${imageId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...imageData,
+            image_id: imageId
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update product image');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Update product image error:', error);
+        throw error;
+      }
+    },
+
+    
+    deleteProductImage: async (token: string, productId: string, imageId: string): Promise<Product> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/products/${productId}/images/${imageId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to delete product image');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Delete product image error:', error);
         throw error;
       }
     },

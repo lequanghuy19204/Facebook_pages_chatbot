@@ -31,21 +31,21 @@ export default function RegisterPage(props: RegisterPageProps) {
     setErrorMessage("");
     setSuccessMessage("");
     
-    // Validation
+    
     if (password !== confirmPassword) {
       setErrorMessage("Mật khẩu không khớp!");
       setIsLoading(false);
       return;
     }
     
-    // Validation cho Admin
+    
     if (accountType === 'admin' && (!companyName.trim() || !companyCode.trim())) {
       setErrorMessage("Vui lòng nhập đầy đủ tên công ty và mã công ty!");
       setIsLoading(false);
       return;
     }
     
-    // Validation cho Staff
+    
     if (accountType === 'staff' && !companyCode.trim()) {
       setErrorMessage("Vui lòng nhập mã công ty để tham gia!");
       setIsLoading(false);
@@ -54,7 +54,7 @@ export default function RegisterPage(props: RegisterPageProps) {
     
     try {
       if (accountType === 'admin') {
-        // Đăng ký Admin (tạo công ty mới)
+        
         const adminData = {
           email,
           password,
@@ -65,10 +65,10 @@ export default function RegisterPage(props: RegisterPageProps) {
         
         await registerAdmin(adminData);
         
-        // Nếu đăng ký admin thành công, chuyển hướng đến dashboard
+        
         router.push("/dashboard");
       } else {
-        // Đăng ký Staff (tham gia công ty)
+        
         const staffData = {
           email,
           password,
@@ -79,10 +79,10 @@ export default function RegisterPage(props: RegisterPageProps) {
         
         const response = await registerStaff(staffData);
         
-        // Hiển thị thông báo thành công cho staff
+        
         setSuccessMessage(response.message || "Đăng ký thành công! Vui lòng chờ admin duyệt tài khoản.");
         
-        // Reset form sau 3 giây và quay lại trang đăng nhập
+        
         setTimeout(() => {
           if (props.onBackToLogin) {
             props.onBackToLogin();
@@ -90,7 +90,7 @@ export default function RegisterPage(props: RegisterPageProps) {
         }, 3000);
       }
       
-      // Gọi callback nếu có
+      
       if (props.onRegister) {
         props.onRegister(email, password, confirmPassword, fullName, accountType, companyName, companyCode);
       }

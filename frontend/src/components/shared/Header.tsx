@@ -23,7 +23,7 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
   };
 
   const navigateTo = (path: string) => {
-    // window.location.href = path;
+    
     router.push(path);
   };
 
@@ -31,8 +31,11 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
     return pathname === path;
   };
 
-  // Check if user can access management page
+  
   const canAccessManagement = user?.roles.includes('admin') || user?.roles.includes('manage_user');
+  
+  
+  const canAccessProducts = user?.roles.includes('admin') || user?.roles.includes('manage_products');
   
   return (
     <div className="header-container">
@@ -59,9 +62,14 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
               <div className="nav-text">Quản lý</div>
             </div>
           )}
-          <div className="nav-item">
-            <div className="nav-text">Sản phẩm</div>
-          </div>
+          {canAccessProducts && (
+            <div 
+              className={`nav-item ${isActive('/products') ? 'active' : ''}`}
+              onClick={() => navigateTo('/products')}
+            >
+              <div className="nav-text">Sản phẩm</div>
+            </div>
+          )}
           <div 
             className={`nav-item ${isActive('/settings') ? 'active' : ''}`}
             onClick={() => navigateTo('/settings')}

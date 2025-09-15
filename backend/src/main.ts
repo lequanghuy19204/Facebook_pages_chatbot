@@ -2,10 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
+  const configService = app.get(ConfigService);
   
   app.useGlobalPipes(
     new ValidationPipe({
@@ -17,7 +18,7 @@ async function bootstrap() {
   
   
   app.enableCors({
-    origin: ['http://localhost:3000'], 
+    origin: [configService.get('FRONTEND_URL')], 
     credentials: true,
   });
 

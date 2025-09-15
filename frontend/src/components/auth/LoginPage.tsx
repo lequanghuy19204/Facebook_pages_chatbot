@@ -26,13 +26,13 @@ export default function LoginPage(props: LoginPageProps) {
     setErrorMessage("");
     
     try {
-      // Use the auth context login
+      
       await login(email, password);
       
-      // If login is successful, redirect to dashboard
+      
       router.push("/dashboard");
       
-      // Also call the prop callback if provided
+      
       if (props.onLogin) {
         props.onLogin(email, password);
       }
