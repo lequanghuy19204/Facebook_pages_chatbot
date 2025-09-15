@@ -25,7 +25,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     }
   };
 
-  // Filter pages based on search query
+  
   const filteredPages = useMemo(() => {
     if (!searchQuery.trim()) {
       return pages;
@@ -39,17 +39,17 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     );
   }, [pages, searchQuery]);
 
-  // Handle search input change
+  
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
 
-  // Clear search
+  
   const clearSearch = () => {
     setSearchQuery('');
   };
 
-  // Handle sync pages
+  
   const handleSyncPages = async () => {
     if (!isConnected) {
       toast.warning('Vui lòng kết nối Facebook trước khi đồng bộ');
@@ -76,7 +76,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     }
   };
 
-  // Generate avatar placeholder for pages
+  
   const getPageAvatar = (pageName: string) => {
     const colors = [
       '#667eea', '#764ba2', '#f093fb', '#f5576c',
@@ -130,7 +130,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     title={!isConnected ? "Vui lòng kết nối Facebook trước" : "Đồng bộ Pages từ Facebook"}
                   >
                     {syncing ? (
-                      <div className="loading-spinner"></div>
+                      <div className="dashboard-loading-spinner"></div>
                     ) : (
                       <img src="/load.svg" alt="Sync" className="action-icon" />
                     )}
@@ -172,8 +172,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             {/* Pages Grid */}
             <div className="pages-container">
               {pagesLoading ? (
-                <div className="loading-pages">
-                  <div className="loading-spinner"></div>
+                <div className="dashboard-loading-pages">
+                  <div className="dashboard-loading-spinner"></div>
                   <span>Đang tải Facebook Pages...</span>
                 </div>
               ) : pages.length > 0 ? (
@@ -187,7 +187,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                             alt={`${page.name} logo`}
                             className="page-avatar"
                             onError={(e) => {
-                              // Fallback to placeholder if image fails to load
+                              
                               const target = e.target as HTMLImageElement;
                               target.style.display = 'none';
                               const parent = target.parentElement;
@@ -208,14 +208,14 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                             {page.name.charAt(0).toUpperCase()}
                           </div>
                         )}
-                        <div className="page-info">
-                          <div className="page-name">{page.name}</div>
-                          <div className="page-id-container">
-                            <span className="link-icon">🔗</span>
-                            <div className="page-id">{page.facebook_page_id}</div>
+                        <div className="dashboard-page-info">
+                          <div className="dashboard-page-name">{page.name}</div>
+                          <div className="dashboard-page-id-container">
+                            <span className="dashboard-link-icon">🔗</span>
+                            <div className="dashboard-page-id">{page.facebook_page_id}</div>
                           </div>
                           {page.category && (
-                            <div className="page-category">
+                            <div className="dashboard-page-category">
                               📂 {page.category}
                             </div>
                           )}
@@ -224,11 +224,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     ))}
                   </div>
                 ) : (
-                  <div className="empty-pages">
-                    <div className="empty-state">
-                      <div className="empty-icon">🔍</div>
-                      <div className="empty-title">Không tìm thấy kết quả</div>
-                      <div className="empty-description">
+                  <div className="dashboard-empty-pages">
+                    <div className="dashboard-empty-state">
+                      <div className="dashboard-empty-icon">🔍</div>
+                      <div className="dashboard-empty-title">Không tìm thấy kết quả</div>
+                      <div className="dashboard-empty-description">
                         Không có page nào phù hợp với từ khóa "{searchQuery}"
                       </div>
                       <button 
@@ -241,20 +241,20 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   </div>
                 )
               ) : (
-                <div className="empty-pages">
+                <div className="dashboard-empty-pages">
                   {isConnected ? (
-                    <div className="empty-state">
-                      <div className="empty-icon">📄</div>
-                      <div className="empty-title">Không có Pages nào</div>
-                      <div className="empty-description">
+                    <div className="dashboard-empty-state">
+                      <div className="dashboard-empty-icon">📄</div>
+                      <div className="dashboard-empty-title">Không có Pages nào</div>
+                      <div className="dashboard-empty-description">
                         Tài khoản Facebook chưa có Pages nào hoặc chưa được cấp quyền truy cập
                       </div>
                     </div>
                   ) : (
-                    <div className="empty-state">
-                      <div className="empty-icon">📱</div>
-                      <div className="empty-title">Chưa kết nối Facebook</div>
-                      <div className="empty-description">
+                    <div className="dashboard-empty-state">
+                      <div className="dashboard-empty-icon">📱</div>
+                      <div className="dashboard-empty-title">Chưa kết nối Facebook</div>
+                      <div className="dashboard-empty-description">
                         {user?.roles.includes('admin') 
                           ? 'Vui lòng kết nối Facebook để xem danh sách Pages'
                           : 'Admin cần kết nối Facebook trước để xem Pages'

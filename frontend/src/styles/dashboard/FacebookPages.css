@@ -106,7 +106,7 @@
   min-height: 200px;
 }
 
-.loading-state {
+.facebook-pages-loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -116,22 +116,22 @@
   color: #6b7280;
 }
 
-.loading-spinner {
+.facebook-pages-loading-spinner {
   width: 20px;
   height: 20px;
   border: 2px solid #e5e7eb;
   border-top: 2px solid #3b82f6;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: facebook-pages-spin 1s linear infinite;
 }
 
-.loading-spinner.large {
+.facebook-pages-loading-spinner.large {
   width: 32px;
   height: 32px;
   border-width: 3px;
 }
 
-.empty-state {
+.facebook-pages-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -141,20 +141,20 @@
   color: #6b7280;
 }
 
-.empty-icon {
+.facebook-pages-empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
   opacity: 0.5;
 }
 
-.empty-title {
+.facebook-pages-empty-title {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 8px;
   color: #374151;
 }
 
-.empty-description {
+.facebook-pages-empty-description {
   font-size: 14px;
   max-width: 300px;
   line-height: 1.5;
@@ -268,7 +268,7 @@
   color: #9ca3af;
 }
 
-@keyframes spin {
+@keyframes facebook-pages-spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }

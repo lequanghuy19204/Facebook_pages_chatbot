@@ -25,10 +25,10 @@ export default function UserTable({
   loading,
   onRefresh
 }: UserTableProps) {
-  // State to track last refresh time
+  
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   
-  // Function to handle manual refresh
+  
   const handleRefresh = useCallback(() => {
     if (onRefresh) {
       onRefresh();
@@ -36,24 +36,24 @@ export default function UserTable({
     setLastRefresh(new Date());
   }, [onRefresh]);
   
-  // Set up auto-refresh every minute
+  
   useEffect(() => {
     const intervalId = setInterval(() => {
       handleRefresh();
-    }, 60000); // 60000ms = 1 minute
+    }, 60000); 
     
-    return () => clearInterval(intervalId); // Cleanup on unmount
+    return () => clearInterval(intervalId); 
   }, [handleRefresh]);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [facebookFilter, setFacebookFilter] = useState('all');
   
-  // Modal state
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  // Filter and sort users based on search and filters
+  
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchQuery.toLowerCase());
@@ -70,15 +70,15 @@ export default function UserTable({
     
     return matchesSearch && matchesRole && matchesStatus && matchesFacebook;
   }).sort((a, b) => {
-    // Sắp xếp: tài khoản bản thân lên đầu
+    
     if (a.id === currentUser?.id) return -1;
     if (b.id === currentUser?.id) return 1;
     
-    // Sau đó sắp xếp theo trạng thái online (online trước, offline sau)
+    
     if (a.is_online && !b.is_online) return -1;
     if (!a.is_online && b.is_online) return 1;
     
-    // Nếu cùng trạng thái online/offline, sắp xếp theo tên
+    
     return a.full_name.localeCompare(b.full_name);
   });
 
@@ -113,8 +113,8 @@ export default function UserTable({
   };
 
   const canEditUser = (user: User) => {
-    // Admin can edit everyone except other admins (unless they're super admin)
-    // Manage_user can edit staff and manage_* roles but not admins
+    
+    
     if (currentUser?.roles.includes('admin')) {
       return !user.roles.includes('admin') || user.id === currentUser.id;
     }
@@ -284,9 +284,9 @@ export default function UserTable({
         </table>
 
         {filteredUsers.length === 0 && (
-          <div className="empty-table">
-            <div className="empty-icon">👥</div>
-            <div className="empty-message">
+          <div className="mgmt-empty-table">
+            <div className="mgmt-empty-icon">👥</div>
+            <div className="mgmt-empty-message">
               {users.length === 0 ? 'Chưa có người dùng nào' : 'Không tìm thấy người dùng phù hợp'}
             </div>
           </div>

@@ -24,10 +24,10 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
   const [syncResult, setSyncResult] = useState<any>(null);
   const [showSyncResult, setShowSyncResult] = useState(false);
 
-  // Check if user is admin
+  
   const isAdmin = user?.roles.includes('admin');
 
-  // Handle sync pages
+  
   const handleSync = async () => {
     if (error) clearError();
     
@@ -36,7 +36,7 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
       setSyncResult(result);
       setShowSyncResult(true);
       
-      // Auto hide sync result after 5 seconds
+      
       setTimeout(() => {
         setShowSyncResult(false);
         setSyncResult(null);
@@ -46,7 +46,7 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
     }
   };
 
-  // Format sync status
+  
   const getSyncStatusColor = (status: string) => {
     switch (status) {
       case 'success': return '#28a745';
@@ -56,7 +56,7 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
     }
   };
 
-  // Render sync result
+  
   const renderSyncResult = () => {
     if (!showSyncResult || !syncResult) return null;
 
@@ -90,14 +90,14 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
     );
   };
 
-  // Render empty state
+  
   const renderEmptyState = () => {
     if (!isConnected) {
       return (
-        <div className="empty-state">
-          <div className="empty-icon">📱</div>
-          <div className="empty-title">Chưa kết nối Facebook</div>
-          <div className="empty-description">
+        <div className="facebook-pages-empty-state">
+          <div className="facebook-pages-empty-icon">📱</div>
+          <div className="facebook-pages-empty-title">Chưa kết nối Facebook</div>
+          <div className="facebook-pages-empty-description">
             {isAdmin 
               ? 'Vui lòng kết nối Facebook để xem danh sách Pages'
               : 'Admin cần kết nối Facebook trước để xem Pages'
@@ -109,10 +109,10 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
 
     if (pages.length === 0 && !pagesLoading) {
       return (
-        <div className="empty-state">
-          <div className="empty-icon">📄</div>
-          <div className="empty-title">Không có Pages nào</div>
-          <div className="empty-description">
+        <div className="facebook-pages-empty-state">
+          <div className="facebook-pages-empty-icon">📄</div>
+          <div className="facebook-pages-empty-title">Không có Pages nào</div>
+          <div className="facebook-pages-empty-description">
             Tài khoản Facebook chưa có Pages nào hoặc chưa được cấp quyền truy cập
           </div>
         </div>
@@ -122,7 +122,7 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
     return null;
   };
 
-  // Render page card
+  
   const renderPageCard = (page: any) => {
     return (
     <div key={page.page_id} className="page-card">
@@ -133,9 +133,9 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
             alt={`${page.name} logo`}
             className="avatar-image"
             onError={(e) => {
-              // Fallback to placeholder if image fails to load
+              
               const target = e.target as HTMLImageElement;
-              target.onerror = null; // Prevent infinite loop
+              target.onerror = null; 
               target.parentElement!.innerHTML = `<div class="avatar-placeholder">${page.name.charAt(0).toUpperCase()}</div>`;
             }}
           />
@@ -212,7 +212,7 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
           >
             {syncing ? (
               <>
-                <div className="loading-spinner"></div>
+                <div className="facebook-pages-loading-spinner"></div>
                 <span>Đang đồng bộ...</span>
               </>
             ) : (
@@ -231,8 +231,8 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
       {/* Content */}
       <div className="pages-content">
         {pagesLoading ? (
-          <div className="loading-state">
-            <div className="loading-spinner large"></div>
+          <div className="facebook-pages-loading-state">
+            <div className="facebook-pages-loading-spinner large"></div>
             <span>Đang tải Pages...</span>
           </div>
         ) : pages.length > 0 ? (

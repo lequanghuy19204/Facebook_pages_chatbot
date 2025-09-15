@@ -116,7 +116,7 @@
   padding-bottom: 8px;
 }
 
-.success-message {
+.mgmt-success-message {
   background-color: #dcfce7;
   border: 1px solid #86efac;
   color: #166534;
@@ -127,10 +127,10 @@
   align-items: center;
   gap: 8px;
   font-weight: 500;
-  animation: fadeIn 0.3s ease-in-out;
+  animation: mgmt-fadeIn 0.3s ease-in-out;
 }
 
-.error-message {
+.mgmt-error-message {
   background-color: #fee2e2;
   border: 1px solid #fecaca;
   color: #b91c1c;
@@ -141,10 +141,10 @@
   align-items: center;
   gap: 8px;
   font-weight: 500;
-  animation: fadeIn 0.3s ease-in-out;
+  animation: mgmt-fadeIn 0.3s ease-in-out;
 }
 
-@keyframes fadeIn {
+@keyframes mgmt-fadeIn {
   from {
     opacity: 0;
     transform: translateY(-10px);
@@ -908,19 +908,19 @@
   color: #9ca3af;
 }
 
-.empty-table {
+.mgmt-empty-table {
   padding: 40px;
   text-align: center;
   color: #6b7280;
 }
 
-.empty-icon {
+.mgmt-empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
   opacity: 0.5;
 }
 
-.empty-message {
+.mgmt-empty-message {
   font-size: 16px;
 }
 

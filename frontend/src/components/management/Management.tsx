@@ -394,12 +394,12 @@ export default function Management({ onLogout }: ManagementProps) {
                 
                 {/* Hiển thị thông báo thành công hoặc lỗi */}
                 {successMessage && (
-                  <div className="success-message">
+                  <div className="mgmt-success-message">
                     ✅ {successMessage}
                   </div>
                 )}
                 {error && (
-                  <div className="error-message">
+                  <div className="mgmt-error-message">
                     ❌ {error}
                   </div>
                 )}

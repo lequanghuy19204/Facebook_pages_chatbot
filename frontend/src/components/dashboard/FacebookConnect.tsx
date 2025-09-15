@@ -22,16 +22,16 @@ export default function FacebookConnect({ className = '' }: FacebookConnectProps
     clearError
   } = useFacebook();
 
-  // Check if user is admin
+  
   const isAdmin = user?.roles.includes('admin');
 
-  // Handle connect button click
+  
   const handleConnect = async () => {
     if (error) clearError();
     await connectFacebook();
   };
 
-  // Handle disconnect button click
+  
   const handleDisconnect = async () => {
     if (error) clearError();
     
@@ -66,7 +66,7 @@ export default function FacebookConnect({ className = '' }: FacebookConnectProps
         >
           {(connecting || disconnecting) ? (
             <>
-              <div className="loading-spinner"></div>
+              <div className="facebook-loading-spinner"></div>
               <span>{connecting ? 'Đang kết nối...' : 'Đang hủy kết nối...'}</span>
             </>
           ) : (

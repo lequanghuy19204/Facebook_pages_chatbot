@@ -23,7 +23,8 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
   };
 
   const navigateTo = (path: string) => {
-    window.location.href = path;
+    // window.location.href = path;
+    router.push(path);
   };
 
   const isActive = (path: string) => {

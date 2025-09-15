@@ -375,7 +375,7 @@
   gap: 16px;
 }
 
-.page-card {
+.mgmt-modal-page-card {
   display: block;
   cursor: pointer;
   background: white;
@@ -425,7 +425,7 @@
   cursor: default;
 }
 
-.page-content {
+.mgmt-modal-page-content {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -433,7 +433,7 @@
 }
 
 /* Page avatar styling matching FacebookPages.tsx */
-.page-avatar {
+.mgmt-modal-page-avatar {
   width: 56px;
   height: 56px;
   border-radius: 8px;
@@ -446,13 +446,13 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.avatar-image {
+.mgmt-modal-avatar-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.avatar-placeholder {
+.mgmt-modal-avatar-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
@@ -733,22 +733,22 @@
     padding-right: 35px;
   }
   
-  .page-card {
+  .mgmt-modal-page-card {
     padding: 12px;
     min-height: 90px;
   }
   
-  .page-content {
+  .mgmt-modal-page-content {
     padding-right: 25px;
     gap: 8px;
   }
   
-  .page-avatar {
+  .mgmt-modal-page-avatar {
     width: 48px;
     height: 48px;
   }
   
-  .avatar-placeholder {
+  .mgmt-modal-avatar-placeholder {
     font-size: 18px;
   }
   
@@ -773,7 +773,7 @@
   }
   
   .role-checkbox,
-  .page-card {
+  .mgmt-modal-page-card {
     border-width: 2px;
   }
 }

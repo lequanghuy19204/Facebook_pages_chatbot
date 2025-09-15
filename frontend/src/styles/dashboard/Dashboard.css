@@ -191,13 +191,13 @@
   background-color: rgba(234, 236, 240, 0.5);
 }
 
-.action-button .loading-spinner {
+.action-button .dashboard-loading-spinner {
   width: 16px;
   height: 16px;
   border: 2px solid rgba(52, 64, 84, 0.2);
   border-top: 2px solid rgba(52, 64, 84, 0.8);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: dashboard-spin 1s linear infinite;
 }
 
 .action-button .action-icon {
@@ -428,7 +428,7 @@
   flex-shrink: 0;
 }
 
-.loading-pages {
+.dashboard-loading-pages {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -438,58 +438,58 @@
   color: #6b7280;
 }
 
-.loading-spinner {
+.dashboard-loading-spinner {
   width: 32px;
   height: 32px;
   border: 3px solid #f3f4f6;
   border-top: 3px solid #3b82f6;
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: dashboard-spin 1s linear infinite;
 }
 
-@keyframes spin {
+@keyframes dashboard-spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-.empty-pages {
+.dashboard-empty-pages {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 300px;
 }
 
-.empty-state {
+.dashboard-empty-state {
   text-align: center;
   color: #6b7280;
   max-width: 400px;
 }
 
-.empty-icon {
+.dashboard-empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
   opacity: 0.5;
 }
 
-.empty-title {
+.dashboard-empty-title {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 8px;
   color: #374151;
 }
 
-.empty-description {
+.dashboard-empty-description {
   font-size: 14px;
   line-height: 1.5;
 }
 
-.page-category {
+.dashboard-page-category {
   font-size: 12px;
   color: #6b7280;
   margin-top: 4px;
 }
 
-.page-info {
+.dashboard-page-info {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -499,7 +499,7 @@
   min-width: 0;
 }
 
-.page-name {
+.dashboard-page-name {
   font-size: 14px;
   color: rgba(0, 0, 0, 1);
   line-height: 22px;
@@ -510,14 +510,14 @@
   width: 100%;
 }
 
-.page-id-container {
+.dashboard-page-id-container {
   display: flex;
   justify-content: flex-start;
   align-items: center;
   gap: 6px;
 }
 
-.link-icon {
+.dashboard-link-icon {
   width: 18px;
   height: 20px;
   flex-shrink: 0;
@@ -527,7 +527,7 @@
   justify-content: center;
 }
 
-.page-id {
+.dashboard-page-id {
   font-size: 12px;
   color: rgba(102, 112, 133, 1);
   line-height: 20px;

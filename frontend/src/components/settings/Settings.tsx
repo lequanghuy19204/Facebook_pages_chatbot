@@ -263,12 +263,12 @@ export default function Settings({ onLogout }: SettingsProps) {
               
               {/* Hiển thị thông báo thành công hoặc lỗi */}
               {successMessage && (
-                <div className="success-message">
+                <div className="settings-success-message">
                   ✅ {successMessage}
                 </div>
               )}
               {error && (
-                <div className="error-message">
+                <div className="settings-error-message">
                   ❌ {error}
                 </div>
               )}
@@ -282,7 +282,7 @@ export default function Settings({ onLogout }: SettingsProps) {
                     src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${userInfo.avatar_cloudflare_key}`} 
                     
                     alt={user?.full_name || 'User'} 
-                    className="user-avatar"
+                    className="settings-user-avatar"
                   />
                 ) : (
                   <div className="avatar-placeholder">
@@ -292,7 +292,7 @@ export default function Settings({ onLogout }: SettingsProps) {
                 <div className="avatar-overlay">
                   <div className="avatar-edit-icon">
                     {isUploading ? (
-                      <div className="avatar-spinner"></div>
+                      <div className="settings-avatar-spinner"></div>
                     ) : (
                       <span>📷</span>
                     )}
@@ -312,8 +312,8 @@ export default function Settings({ onLogout }: SettingsProps) {
                 </h3>
                 <div className="user-role-badges">
                   {user?.roles.map((role, index) => (
-                    <span key={index} className={`role-badge ${role}`}>
-                      <span className="role-icon">Vai trò: </span>
+                    <span key={index} className={`settings-role-badge ${role}`}>
+                      <span className="settings-role-icon">Vai trò: </span>
                       {role === 'admin' && '- 👑 Admin -'}
                       {role === 'staff' && '- 💬 Staff -'}
                       {role === 'manage_user' && '- 👥 Quản lý User -'}

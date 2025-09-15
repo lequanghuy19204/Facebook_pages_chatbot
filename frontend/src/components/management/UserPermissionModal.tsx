@@ -15,7 +15,7 @@ interface UserPermissionModalProps {
   loading: boolean;
 }
 
-// Available role options (excluding admin and staff)
+
 const ROLE_OPTIONS = [
   { value: UserRole.MANAGE_USER, label: 'Quản lý User', icon: '👥', description: 'Quản lý tài khoản người dùng' },
   { value: UserRole.MANAGE_PRODUCTS, label: 'Quản lý Sản phẩm', icon: '📦', description: 'Quản lý danh mục sản phẩm' },
@@ -32,18 +32,18 @@ export default function UserPermissionModal({
   onUpdateFacebookPages,
   loading
 }: UserPermissionModalProps) {
-  // State management
+  
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedPages, setSelectedPages] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Refs for focus management
+  
   const modalRef = useRef<HTMLDivElement>(null);
   const firstFocusableRef = useRef<HTMLButtonElement>(null);
   const lastFocusableRef = useRef<HTMLButtonElement>(null);
 
-  // Initialize state when user changes
+  
   useEffect(() => {
     if (user) {
       setSelectedRoles([...user.roles]);
@@ -52,15 +52,15 @@ export default function UserPermissionModal({
     }
   }, [user]);
 
-  // Check if user has manage_user role (should have full access to all pages)
+  
   const hasManageUserRole = user?.roles.includes('manage_user') || false;
   const hasAdminRole = user?.roles.includes('admin') || false;
   const hasFullPageAccess = hasAdminRole || hasManageUserRole;
   
-  // Check if current user can assign manage_user role (only admin can)
+  
   const canAssignManageUserRole = currentUser?.roles.includes('admin') || false;
 
-  // Focus trap implementation
+  
   useEffect(() => {
     if (!isOpen) return;
 
@@ -96,7 +96,7 @@ export default function UserPermissionModal({
 
     document.addEventListener('keydown', handleKeyDown);
     
-    // Focus the first focusable element
+    
     setTimeout(() => {
       firstFocusableRef.current?.focus();
     }, 100);
@@ -106,7 +106,7 @@ export default function UserPermissionModal({
     };
   }, [isOpen, onClose]);
 
-  // Prevent body scroll when modal is open
+  
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -119,12 +119,12 @@ export default function UserPermissionModal({
     };
   }, [isOpen]);
 
-  // Filter pages based on search query
+  
   const filteredPages = facebookPages.filter(page =>
     page.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Handle role selection
+  
   const handleRoleChange = (role: string) => {
     setSelectedRoles(prev => {
       if (prev.includes(role)) {
@@ -135,7 +135,7 @@ export default function UserPermissionModal({
     });
   };
 
-  // Handle page selection
+  
   const handlePageChange = (pageId: string) => {
     setSelectedPages(prev => {
       if (prev.includes(pageId)) {
@@ -146,16 +146,16 @@ export default function UserPermissionModal({
     });
   };
 
-  // Handle select all pages (for filtered results)
+  
   const handleSelectAllPages = () => {
     const filteredPageIds = filteredPages.map(page => page.page_id);
     const allFilteredSelected = filteredPageIds.every(id => selectedPages.includes(id));
 
     if (allFilteredSelected) {
-      // Deselect all filtered pages
+      
       setSelectedPages(prev => prev.filter(id => !filteredPageIds.includes(id)));
     } else {
-      // Select all filtered pages
+      
       setSelectedPages(prev => {
         const newSelected = [...prev];
         filteredPageIds.forEach(id => {
@@ -168,26 +168,26 @@ export default function UserPermissionModal({
     }
   };
 
-  // Check if all filtered pages are selected
+  
   const areAllFilteredPagesSelected = filteredPages.length > 0 && 
     filteredPages.every(page => selectedPages.includes(page.page_id));
 
-  // Handle form submission
+  
   const handleSubmit = async () => {
     if (!user) return;
 
     try {
       setIsSubmitting(true);
       
-      // Update roles
+      
       await onUpdateRoles(user.id, selectedRoles);
       
-      // Update Facebook pages access only if user doesn't have full access
+      
       if (!hasFullPageAccess) {
         await onUpdateFacebookPages(user.id, selectedPages);
       } else {
-        // For users with full access, clear their facebook_pages_access array 
-        // since they don't need specific page permissions
+        
+        
         await onUpdateFacebookPages(user.id, []);
       }
       
@@ -199,7 +199,7 @@ export default function UserPermissionModal({
     }
   };
 
-  // Handle backdrop click
+  
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -258,7 +258,7 @@ export default function UserPermissionModal({
 
             <div className="roles-grid">
               {ROLE_OPTIONS.map(role => {
-                // Chỉ admin mới có thể phân quyền "Quản lý User"
+                
                 const isManageUserRole = role.value === UserRole.MANAGE_USER;
                 const isDisabled = isSubmitting || (isManageUserRole && !canAssignManageUserRole);
                 
@@ -355,30 +355,30 @@ export default function UserPermissionModal({
               ) : (
                 <div className="pages-grid">
                   {filteredPages.map(page => (
-                    <label key={page.page_id} className={`page-card ${hasFullPageAccess ? 'full-access' : ''}`}>
+                    <label key={page.page_id} className={`mgmt-modal-page-card ${hasFullPageAccess ? 'full-access' : ''}`}>
                       <input
                         type="checkbox"
                         checked={hasFullPageAccess || selectedPages.includes(page.page_id)}
                         onChange={() => handlePageChange(page.page_id)}
                         disabled={isSubmitting || hasFullPageAccess}
                       />
-                      <div className="page-content">
-                        <div className="page-avatar">
+                      <div className="mgmt-modal-page-content">
+                        <div className="mgmt-modal-page-avatar">
                           {page.picture_cloudflare_key ? (
                             <img 
                               src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${page.picture_cloudflare_key}`} 
                               alt={`${page.name} logo`}
-                              className="avatar-image"
+                              className="mgmt-modal-avatar-image"
                               loading="lazy"
                               onError={(e) => {
-                                // Fallback to placeholder if image fails to load
+                                
                                 const target = e.target as HTMLImageElement;
-                                target.onerror = null; // Prevent infinite loop
-                                target.parentElement!.innerHTML = `<div class="avatar-placeholder">${page.name.charAt(0).toUpperCase()}</div>`;
+                                target.onerror = null; 
+                                target.parentElement!.innerHTML = `<div class="mgmt-modal-avatar-placeholder">${page.name.charAt(0).toUpperCase()}</div>`;
                               }}
                             />
                           ) : (
-                            <div className="avatar-placeholder">
+                            <div className="mgmt-modal-avatar-placeholder">
                               {page.name.charAt(0).toUpperCase()}
                             </div>
                           )}
