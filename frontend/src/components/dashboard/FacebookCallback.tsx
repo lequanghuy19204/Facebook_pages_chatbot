@@ -16,13 +16,13 @@ export default function FacebookCallback() {
   useEffect(() => {
     const processCallback = async () => {
       try {
-        // Get parameters from URL
+        
         const code = searchParams.get('code');
         const state = searchParams.get('state');
         const error = searchParams.get('error');
         const errorDescription = searchParams.get('error_description');
 
-        // Handle OAuth error
+        
         if (error) {
           setStatus('error');
           setMessage(errorDescription || `Lỗi Facebook OAuth: ${error}`);
@@ -32,7 +32,7 @@ export default function FacebookCallback() {
           return;
         }
 
-        // Handle missing authorization code
+        
         if (!code) {
           setStatus('error');
           setMessage('Không nhận được mã xác thực từ Facebook');
@@ -42,13 +42,13 @@ export default function FacebookCallback() {
           return;
         }
 
-        // Process the authorization code
+        
         await handleOAuthCallback(code, state || undefined);
         
         setStatus('success');
         setMessage('Kết nối Facebook thành công! Đang chuyển hướng...');
         
-        // Redirect to dashboard after success
+        
         setTimeout(() => {
           router.push('/dashboard');
         }, 2000);

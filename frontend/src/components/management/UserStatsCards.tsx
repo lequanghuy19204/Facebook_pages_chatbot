@@ -9,7 +9,6 @@ interface UserStatsCardsProps {
 }
 
 export default function UserStatsCards({ stats, users = [] }: UserStatsCardsProps) {
-  // Count online/offline users based on is_online field
   const onlineUsers = users.filter(user => user.is_online).length;
   const offlineUsers = users.filter(user => user.is_active && !user.is_online).length;
   return (
