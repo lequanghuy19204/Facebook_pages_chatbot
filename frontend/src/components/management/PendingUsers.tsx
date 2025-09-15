@@ -145,9 +145,6 @@ export default function PendingUsers({
                 >
                   ❌ Từ chối
                 </button>
-                <button className="action-btn detail-btn">
-                  👁️ Chi tiết
-                </button>
               </div>
             </div>
           ))}

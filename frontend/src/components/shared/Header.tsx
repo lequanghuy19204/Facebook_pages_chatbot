@@ -42,9 +42,9 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
             className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}
             onClick={() => navigateTo('/dashboard')}
           >
-            <div className="notification-badge">
+            {/* <div className="notification-badge">
               <div className="notification-count">9</div>
-            </div>
+            </div> */}
             <div className="nav-text">Bảng điều khiển</div>
           </div>
           <div className="nav-item">

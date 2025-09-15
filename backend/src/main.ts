@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Configure route params to capture path segments with slashes
+  
   app.useGlobalPipes(
     new ValidationPipe({
       transformOptions: {
@@ -15,23 +15,23 @@ async function bootstrap() {
     }),
   );
   
-  // Enable CORS
+  
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://localhost:3000'], // Frontend URLs
+    origin: ['https://6c82hn37-3000.asse.devtunnels.ms'], 
     credentials: true,
   });
 
-  // Global validation pipe
+  
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
     transform: true,
   }));
 
-  // Global prefix for API routes
+  
   app.setGlobalPrefix('api');
 
-  // Swagger configuration
+  
   const config = new DocumentBuilder()
     .setTitle('Facebook Page Chatbot API')
     .setDescription('The Facebook Page Chatbot API documentation')

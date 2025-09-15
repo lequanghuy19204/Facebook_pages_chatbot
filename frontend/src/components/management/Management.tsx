@@ -546,15 +546,6 @@ export default function Management({ onLogout }: ManagementProps) {
                       >
                         ✏️ Chỉnh sửa thông tin
                       </button>
-                      {pendingUsers.length > 0 && (
-                        <button 
-                          className="action-btn primary"
-                          onClick={handleBulkApprove}
-                          disabled={selectedUsers.length === 0 || loading}
-                        >
-                          ✅ Phê duyệt người dùng ({selectedUsers.length})
-                        </button>
-                      )}
                     </div>
                   </div>
                 )}
