@@ -117,7 +117,7 @@
   flex-shrink: 0;
 }
 
-.search-input {
+.dashboard-search-input {
   flex: 1;
   height: 22px;
   border: none;
@@ -128,7 +128,7 @@
   font-weight: normal;
 }
 
-.search-input::placeholder {
+.dashboard-search-input::placeholder {
   color: rgba(102, 112, 133, 1);
 }
 

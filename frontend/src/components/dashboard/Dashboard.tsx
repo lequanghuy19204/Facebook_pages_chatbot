@@ -105,7 +105,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     <img src="/search.svg" alt="Search" className="search-icon" />
                     <input
                       type="text"
-                      className="search-input"
+                      className="dashboard-search-input"
                       placeholder="Tìm kiếm theo tên page..."
                       value={searchQuery}
                       onChange={handleSearchChange}
