@@ -737,21 +737,22 @@
     height: 48px;
   }
   
-  .page-info {
+  .dashboard-page-info {
     align-items: center;
     width: 100%;
+    text-align: center;
   }
   
-  .page-name {
+  .dashboard-page-name {
     text-align: center;
     font-size: 12px;
   }
   
-  .page-id-container {
+  .dashboard-page-id-container {
     justify-content: center;
   }
   
-  .page-id {
+  .dashboard-page-id {
     font-size: 10px;
   }
 }
