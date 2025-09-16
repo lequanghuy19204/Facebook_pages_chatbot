@@ -5,8 +5,6 @@ import { Product, CreateProductDto, UpdateProductDto, ProductImage } from '@/ser
 import { useAuth } from '@/contexts/AuthContext';
 import ApiService from '@/services/api';
 import '@/styles/products/ProductForm.css';
-import Viewer from 'viewerjs';
-import 'viewerjs/dist/viewer.css';
 
 interface ProductFormProps {
   product?: Product | null; 
@@ -14,6 +12,7 @@ interface ProductFormProps {
   onCancel: () => void;
   brands?: string[];
   loading?: boolean;
+  onProductCreated?: () => void; 
 }
 
 export default function ProductForm({
@@ -21,7 +20,8 @@ export default function ProductForm({
   onSubmit,
   onCancel,
   brands = [],
-  loading = false
+  loading = false,
+  onProductCreated
 }: ProductFormProps) {
   const { token } = useAuth();
   const [formData, setFormData] = useState<CreateProductDto | UpdateProductDto>({
@@ -44,11 +44,9 @@ export default function ProductForm({
   const [editingImage, setEditingImage] = useState<string | null>(null);
   const [editingAltText, setEditingAltText] = useState('');
   const [tempImagePreviews, setTempImagePreviews] = useState<{file: File, preview: string}[]>([]);
-  const [viewerInstance, setViewerInstance] = useState<Viewer | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
-  const galleryRef = useRef<HTMLDivElement>(null);
 
   
   useEffect(() => {
@@ -194,6 +192,15 @@ export default function ProductForm({
           }
           
           setImageUploading(false);
+        }
+        
+        
+        
+        if (newProduct && newProduct.product_id && token) {
+          
+          if (onProductCreated) {
+            onProductCreated();
+          }
         }
       } else {
         
@@ -448,56 +455,6 @@ export default function ProductForm({
   const sortedImages = [...images].sort((a, b) => a.display_order - b.display_order);
   
   
-  useEffect(() => {
-    if (galleryRef.current && (images.length > 0 || tempImagePreviews.length > 0)) {
-      
-      if (viewerInstance) {
-        viewerInstance.destroy();
-      }
-      
-      
-      const viewer = new Viewer(galleryRef.current, {
-        inline: false,
-        title: false,
-        toolbar: {
-          zoomIn: true,
-          zoomOut: true,
-          oneToOne: true,
-          reset: true,
-          prev: true,
-          play: false,
-          next: true,
-          rotateLeft: true,
-          rotateRight: true,
-          flipHorizontal: true,
-          flipVertical: true,
-        },
-        navbar: true,
-        button: true,
-        url: 'data-original',
-        keyboard: true,
-        backdrop: true,
-        zoomRatio: 0.2,
-        minZoomRatio: 0.1,
-        maxZoomRatio: 10,
-        zIndex: 2000,
-        className: 'product-image-viewer-productform'
-      });
-      
-      setViewerInstance(viewer);
-      
-      return () => {
-        if (viewer) {
-          viewer.destroy();
-        }
-      };
-    }
-  }, [images, tempImagePreviews]);
-  
-  
-  const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
-    e.stopPropagation();
-  };
 
   return (
     <div className="product-form-container">
@@ -702,7 +659,7 @@ export default function ProductForm({
                 )}
               </div>
             ) : (
-              <div className="images-grid-productform" ref={galleryRef}>
+              <div className="images-grid-productform">
                 {/* Hiển thị ảnh tạm thời khi đang tạo sản phẩm mới */}
                 {!product && tempImagePreviews.map((item, index) => (
                   <div
@@ -712,11 +669,9 @@ export default function ProductForm({
                     <div className="image-wrapper-productform">
                       <img
                         src={item.preview}
-                        data-original={item.preview}
                         alt={`Ảnh tạm ${index + 1}`}
                         title={item.file.name}
                         className="product-image-productform"
-                        onClick={handleImageClick}
                       />
                       <div className="image-overlay-productform">
                         <div className="image-order-productform">{index + 1}</div>
@@ -751,11 +706,9 @@ export default function ProductForm({
                     <div className="image-wrapper-productform">
                       <img
                         src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${image.cloudflare_key}`}
-                        data-original={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${image.cloudflare_key}`}
                         alt={image.alt_text || `Ảnh sản phẩm ${index + 1}`}
                         className="product-image-productform"
                         title={image.alt_text || `Ảnh sản phẩm ${index + 1}`}
-                        onClick={handleImageClick}
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgdmlld0JveD0iMCAwIDEwMCAxMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0zNSA2NUw1MCA0NUw2NSA2NUgzNVoiIGZpbGw9IiM5Q0EzQUYiLz4KPGNpcmNsZSBjeD0iNDAiIGN5PSIzNSIgcj0iNSIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';

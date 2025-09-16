@@ -143,14 +143,24 @@ export default function Products({ onLogout }: ProductsProps) {
       const newProduct = await ApiService.products.createProduct(token, productData);
       
       toast.success('Thêm sản phẩm thành công!');
-      await fetchProducts(true);
-      await fetchBrands(); 
+      
+      
       setIsModalOpen(false);
     } catch (error: any) {
       toast.error(error.message || 'Không thể thêm sản phẩm');
       throw error;
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  
+  const handleProductCreated = async () => {
+    try {
+      await fetchProducts(true);
+      await fetchBrands();
+    } catch (error) {
+      console.error('Error refreshing data after product creation:', error);
     }
   };
 
@@ -256,9 +266,9 @@ export default function Products({ onLogout }: ProductsProps) {
 
             {/* Control Panel */}
             <div className="products-control-panel">
-              <div className="panel-header">
-                <div className="panel-title">Danh sách sản phẩm</div>
-                <div className="panel-actions">
+              <div className="products-panel-header">
+                <div className="products-panel-title">Danh sách sản phẩm</div>
+                <div className="products-panel-actions">
                   <button 
                     className="add-product-btn"
                     onClick={() => setIsModalOpen(true)}
@@ -387,6 +397,7 @@ export default function Products({ onLogout }: ProductsProps) {
             onCancel={handleModalClose}
             loading={modalLoading}
             brands={brands}
+            onProductCreated={handleProductCreated}
           />
         </div>
       )}

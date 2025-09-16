@@ -83,6 +83,14 @@ export class ProductsService {
       limit: number;
       pages: number;
     };
+    stats: {
+      total_products: number;
+      active_products: number;
+      inactive_products: number;
+      brands_count: number;
+      products_with_images: number;
+      products_without_images: number;
+    };
   }> {
     try {
       const {
@@ -128,6 +136,8 @@ export class ProductsService {
 
       const total = await this.productModel.countDocuments(filter);
 
+      const stats = await this.getProductStats(companyId);
+
       return {
         products,
         pagination: {
@@ -136,6 +146,7 @@ export class ProductsService {
           limit,
           pages: Math.ceil(total / limit),
         },
+        stats,
       };
     } catch (error) {
       this.logger.error(`Lỗi khi lấy danh sách sản phẩm: ${error.message}`, error.stack);

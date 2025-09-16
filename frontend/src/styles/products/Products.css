@@ -49,7 +49,7 @@
 .products-header {
   background: white;
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(226, 232, 240, 1);
 }
@@ -59,7 +59,7 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .breadcrumb-item {
@@ -216,21 +216,21 @@
   border: 1px solid rgba(226, 232, 240, 1);
 }
 
-.panel-header {
+.products-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px;
+  padding: 10px;
   border-bottom: 1px solid rgba(226, 232, 240, 1);
 }
 
-.panel-title {
+.products-panel-title {
   font-size: 18px;
   font-weight: 600;
   color: #1f2937;
 }
 
-.panel-actions {
+.products-panel-actions {
   display: flex;
   gap: 12px;
 }
@@ -256,7 +256,7 @@
 
 /* Filters Section */
 .filters-section {
-  padding: 20px;
+  padding: 10px;
 }
 
 .filters-row {
@@ -337,7 +337,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px;
+  padding: 10px;
   border-bottom: 1px solid rgba(226, 232, 240, 1);
 }
 
@@ -358,7 +358,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 4px 12px;
   background: #f3f4f6;
   border-radius: 8px;
 }
@@ -436,7 +436,7 @@
 .products-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .products-table th {
@@ -519,7 +519,7 @@
 }
 
 .product-image-thumbnail {
-  width: 80px;
+  width: 100px;
   height: auto;
   flex-shrink: 0;
   border-radius: 4px;
@@ -599,7 +599,7 @@
 .no-notes {
   color: #9ca3af;
   font-style: italic;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 /* Creator Cell */
@@ -621,12 +621,13 @@
 
 .creator-date {
   color: #6b7280;
-  font-size: 11px;
+  font-size: 15px;
 }
 
 /* Code Cell */
 .code-cell {
   min-width: 100px;
+  max-width: 200px;
 }
 
 .product-code {
@@ -634,7 +635,7 @@
   background: #f3f4f6;
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 15px;
   color: #374151;
 }
 
@@ -665,7 +666,7 @@
 .no-brand {
   color: #9ca3af;
   font-style: italic;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 /* Colors Cell */
@@ -685,7 +686,7 @@
   color: #7c3aed;
   padding: 2px 6px;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 500;
 }
 
@@ -701,7 +702,7 @@
 .no-colors {
   color: #9ca3af;
   font-style: italic;
-  font-size: 12px;
+  font-size: 15px;
 }
 
 /* Status Cell */
@@ -728,7 +729,7 @@
 
 /* Date Cell */
 .date-cell {
-  min-width: 140px;
+  min-width: 100px;
 }
 
 .created-date {
@@ -1122,7 +1123,7 @@
     font-size: 16px;
   }
   
-  .panel-header {
+  .products-panel-header {
     flex-direction: column;
     gap: 12px;
     align-items: flex-start;
@@ -1173,7 +1174,7 @@
   }
   
   .products-header,
-  .panel-header,
+  .products-panel-header,
   .filters-section {
     padding: 12px;
   }

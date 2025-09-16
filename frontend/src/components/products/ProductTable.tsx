@@ -21,8 +21,7 @@ export default function ProductTable({
   onRefresh
 }: ProductTableProps) {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
-  const [viewerInstance, setViewerInstance] = useState<Viewer | null>(null);
-  const galleryRef = useRef<HTMLDivElement>(null);
+  const viewersRef = useRef<Map<string, Viewer>>(new Map());
 
   const formatCurrency = (amount: number, currency: string = 'VND') => {
     return new Intl.NumberFormat('vi-VN', {
@@ -75,55 +74,61 @@ export default function ProductTable({
   const getProductInitials = (name: string) => {
     return name.split(' ').map(word => word.charAt(0)).join('').substring(0, 2).toUpperCase();
   };
-  
-  
+
+  // Setup viewers for all products
   useEffect(() => {
-    if (galleryRef.current && products.length > 0) {
-      
-      if (viewerInstance) {
-        viewerInstance.destroy();
-      }
-      
-      
-      const viewer = new Viewer(galleryRef.current, {
-        inline: false,
-        title: false,
-        toolbar: {
-          zoomIn: true,
-          zoomOut: true,
-          oneToOne: true,
-          reset: true,
-          prev: true,
-          play: false,
-          next: true,
-          rotateLeft: true,
-          rotateRight: true,
-          flipHorizontal: true,
-          flipVertical: true,
-        },
-        navbar: true,
-        button: true,
-        url: 'data-original',
-        keyboard: true,
-        backdrop: true,
-        zoomRatio: 0.2,
-        minZoomRatio: 0.1,
-        maxZoomRatio: 10,
-        zIndex: 2000,
-        className: 'product-image-viewer-productTable'
-      });
-      
-      setViewerInstance(viewer);
-      
-      return () => {
-        if (viewer) {
-          viewer.destroy();
+    // Cleanup existing viewers
+    viewersRef.current.forEach(viewer => viewer.destroy());
+    viewersRef.current.clear();
+
+    // Use timeout to ensure DOM is fully rendered
+    const timer = setTimeout(() => {
+      products.forEach(product => {
+        if (product.images && product.images.length > 0) {
+          const galleryElement = document.querySelector(`[data-product-gallery="${product.product_id}"]`) as HTMLElement;
+          if (galleryElement) {
+            const viewer = new Viewer(galleryElement, {
+              inline: false,
+              title: false,
+              toolbar: {
+                zoomIn: true,
+                zoomOut: true,
+                oneToOne: true,
+                reset: true,
+                prev: true,
+                play: false,
+                next: true,
+                rotateLeft: true,
+                rotateRight: true,
+                flipHorizontal: true,
+                flipVertical: true,
+              },
+              navbar: true,
+              button: true,
+              url: 'data-original',
+              keyboard: true,
+              backdrop: true,
+              zoomRatio: 0.2,
+              minZoomRatio: 0.1,
+              maxZoomRatio: 10,
+              zIndex: 2000,
+              className: 'product-image-viewer-productTable'
+            });
+            
+            viewersRef.current.set(product.product_id, viewer);
+          }
         }
-      };
-    }
+      });
+    }, 100);
+
+    // Cleanup on unmount
+    return () => {
+      clearTimeout(timer);
+      viewersRef.current.forEach(viewer => viewer.destroy());
+      viewersRef.current.clear();
+    };
   }, [products]);
-  
-  
+
   const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
     e.stopPropagation();
   };
@@ -208,7 +213,7 @@ export default function ProductTable({
                 />
               </th>
               <th>Hình ảnh</th>
-              <th>Mã SP</th>
+              <th>Tên / Mã SP</th>
               <th>Giá</th>
               <th>Màu sắc</th>
               <th>Thương hiệu</th>
@@ -234,7 +239,7 @@ export default function ProductTable({
                   <div className="product-images-container">
                     {product.images && product.images.length > 0 ? (
                       <div className="product-images-list">
-                        <div ref={galleryRef} className="product-images-gallery">
+                        <div data-product-gallery={product.product_id} className="product-images-gallery">
                           {product.images.map((image) => (
                             <div key={image.image_id} className="product-image-thumbnail">
                               <img 
@@ -259,6 +264,8 @@ export default function ProductTable({
                   </div>
                 </td>
                 <td className="code-cell">
+                  <span className="product-code-name">{product.name}</span>
+                  <span className="product-code-separator"> /</span>
                   <span className="product-code">{product.code}</span>
                 </td>
                 <td className="price-cell">
