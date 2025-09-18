@@ -59,7 +59,7 @@
 .management-header {
   background-color: white;
   border-radius: 8px;
-  padding: 20px 24px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -270,7 +270,7 @@
 }
 
 .action-btn {
-  padding: 8px 16px;
+  padding: 8px 10px;
   border-radius: 6px;
   border: none;
   font-size: 14px;
@@ -871,10 +871,14 @@
 }
 
 .edit-btn {
-  background-color: #f3f4f6;
+  background: #f3f4f6;
   color: #374151;
-  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
   font-size: 12px;
+  transition: all 0.2s ease;
 }
 
 .edit-btn:hover:not(:disabled) {
@@ -896,12 +900,12 @@
 }
 
 .toggle-btn.deactivate {
-  background-color: #ef4444;
+  background-color: #fecaca;
   color: white;
 }
 
 .toggle-btn.deactivate:hover:not(:disabled) {
-  background-color: #dc2626;
+  background-color: #fca5a5;
 }
 
 .no-permission {

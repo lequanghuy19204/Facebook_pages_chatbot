@@ -46,6 +46,7 @@ export default function Products({ onLogout }: ProductsProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
   const limit = 20;
 
   
@@ -109,14 +110,17 @@ export default function Products({ onLogout }: ProductsProps) {
 
   
   useEffect(() => {
-    if (token) {
+    if (token && !isInitialized) {
       fetchProducts(true);
       fetchBrands();
+      setIsInitialized(true);
     }
-  }, [token]);
+  }, [token, isInitialized]);
 
   
   useEffect(() => {
+    if (!isInitialized) return; // Skip initial load
+    
     const debounceTimer = setTimeout(() => {
       if (token) {
         fetchProducts(true);
@@ -124,14 +128,14 @@ export default function Products({ onLogout }: ProductsProps) {
     }, 500);
 
     return () => clearTimeout(debounceTimer);
-  }, [searchQuery, selectedBrand, statusFilter, sortBy, sortOrder]);
+  }, [searchQuery, selectedBrand, statusFilter, sortBy, sortOrder, isInitialized]);
 
   
   useEffect(() => {
     if (token && currentPage > 1) {
       fetchProducts(false);
     }
-  }, [currentPage]);
+  }, [currentPage, token]);
 
 
   

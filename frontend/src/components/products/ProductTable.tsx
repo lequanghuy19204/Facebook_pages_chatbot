@@ -201,7 +201,7 @@ export default function ProductTable({
         </div>
       </div>
 
-      <div className="table-container">
+      <div className="products-table-container">
         <table className="products-table">
           <thead>
             <tr>
