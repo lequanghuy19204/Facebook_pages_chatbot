@@ -51,7 +51,10 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
             </div> */}
             <div className="nav-text">Bảng điều khiển</div>
           </div>
-          <div className="nav-item">
+          <div 
+            className={`nav-item ${isActive('/chat') ? 'active' : ''}`}
+            onClick={() => navigateTo('/chat')}
+          >
             <div className="nav-text">Hội thoại</div>
           </div>
           {canAccessManagement && (

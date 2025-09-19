@@ -1,0 +1,46 @@
+/* MessageList.css */
+.message-list-component {
+  flex: 1;
+  overflow-y: auto;
+  background-color: #E5DED8;
+  padding: 16px 0;
+}
+
+.message-list-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px;
+  max-width: 963px;
+  margin: 0 auto;
+}
+
+/* Scrollbar styling for message list */
+.message-list-component::-webkit-scrollbar {
+  width: 6px;
+}
+
+.message-list-component::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.message-list-component::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.message-list-component::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .message-list-component {
+    padding: 8px 0;
+  }
+  
+  .message-list-content {
+    padding: 0 8px;
+    max-width: none;
+  }
+}

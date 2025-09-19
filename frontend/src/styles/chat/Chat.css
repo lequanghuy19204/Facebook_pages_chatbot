@@ -1,0 +1,61 @@
+/* Chat.css - Main chat layout */
+.chat-component-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #E5DED8;
+  font-family: 'Roboto', sans-serif;
+}
+
+.chat-component-main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+  .chat-component-main-content {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  .chat-component-container {
+    height: 100vh;
+  }
+}
+
+/* Loading states */
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #506DAD;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

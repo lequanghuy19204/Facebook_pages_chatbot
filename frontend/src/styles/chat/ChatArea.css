@@ -1,0 +1,70 @@
+/* ChatArea.css */
+.chat-area-component {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #E5DED8;
+  overflow: hidden;
+  padding-top: 56px;
+}
+
+.chat-area-no-conversation {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #E5DED8;
+}
+
+.chat-area-empty-state {
+  text-align: center;
+  color: #666E85;
+}
+
+.chat-area-empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.chat-area-empty-state h3 {
+  font-family: 'Roboto', sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  color: #344054;
+  margin: 0 0 8px 0;
+}
+
+.chat-area-empty-state p {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  color: #666E85;
+  margin: 0;
+}
+
+.chat-area-messages {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Chat header is styled in ChatHeader.css */
+/* Tag management is styled in TagManagement.css */
+/* Message input is styled in MessageInput.css */
+
+/* Responsive */
+@media (max-width: 768px) {
+  .chat-area-component {
+    height: calc(100vh - 116px); /* Account for header + mobile nav */
+  }
+  
+  .chat-area-empty-state h3 {
+    font-size: 18px;
+  }
+  
+  .chat-area-empty-state p {
+    font-size: 13px;
+    padding: 0 20px;
+  }
+}

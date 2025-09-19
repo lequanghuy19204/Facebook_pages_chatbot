@@ -1,0 +1,56 @@
+/* SystemMessage.css */
+.system-message-component {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+}
+
+.system-message-content {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.system-message-bubble {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+  border-radius: 8px;
+  padding: 4px 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.system-message-text {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  color: #344054;
+  font-weight: normal;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Add decorative lines on sides */
+.system-message-content::before,
+.system-message-content::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: rgba(0, 0, 0, 0.1);
+  margin: 0 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .system-message-bubble {
+    padding: 3px 10px;
+  }
+  
+  .system-message-text {
+    font-size: 13px;
+  }
+  
+  .system-message-content::before,
+  .system-message-content::after {
+    margin: 0 12px;
+  }
+}

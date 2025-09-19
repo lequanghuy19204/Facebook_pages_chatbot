@@ -1,0 +1,149 @@
+/* TextMessage.css */
+.text-message-component {
+  margin-bottom: 8px;
+}
+
+.text-message-component.customer {
+  align-self: flex-start;
+}
+
+.text-message-component.admin {
+  align-self: flex-end;
+}
+
+.text-message-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: 70%;
+}
+
+.customer .text-message-row {
+  flex-direction: row;
+  justify-content: flex-start;
+}
+
+.admin .text-message-row {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.text-message-customer-avatar,
+.text-message-admin-avatar {
+  flex-shrink: 0;
+}
+
+.text-message-customer-avatar img,
+.text-message-admin-avatar img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.text-message-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: #506DAD;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.text-message-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.text-message-bubble {
+  padding: 8px 12px;
+  border-radius: 12px;
+  word-wrap: break-word;
+  position: relative;
+  max-width: 100%;
+}
+
+.text-message-bubble.customer-bubble {
+  background-color: white;
+  color: #000;
+  border-bottom-left-radius: 4px;
+}
+
+.text-message-bubble.admin-bubble {
+  background-color: #DCF8C6;
+  color: #000;
+  border-bottom-right-radius: 4px;
+}
+
+.text-message-text {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.text-message-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #666E85;
+}
+
+.customer .text-message-info {
+  justify-content: flex-start;
+  margin-left: 8px;
+}
+
+.admin .text-message-info {
+  justify-content: flex-end;
+  margin-right: 8px;
+}
+
+.text-message-time {
+  font-family: 'Roboto', sans-serif;
+  font-size: 11px;
+  color: #666E85;
+}
+
+.text-message-read-status {
+  font-size: 10px;
+}
+
+.text-message-read-status.read {
+  color: #4caf50;
+}
+
+.text-message-read-status.unread {
+  color: #666E85;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .text-message-row {
+    max-width: 85%;
+  }
+  
+  .text-message-bubble {
+    padding: 6px 10px;
+  }
+  
+  .text-message-text {
+    font-size: 13px;
+  }
+  
+  .text-message-customer-avatar img,
+  .text-message-admin-avatar img,
+  .text-message-avatar-placeholder {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+}
