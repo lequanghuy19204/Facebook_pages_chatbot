@@ -167,7 +167,7 @@ export class FacebookService {
       const params = new URLSearchParams({
         access_token: accessToken,
         fields: 'id,name,access_token,category,category_list,fan_count,about,tasks,picture.width(512).height(512){url}',
-        limit: '50'
+        limit: '100'
       });
 
       const url = `${this.facebookGraphUrl}/me/accounts?${params.toString()}`;
@@ -393,13 +393,14 @@ export class FacebookService {
       await this.facebookPageModel.deleteMany({ company_id: user.company_id }).exec();
       this.logger.log(`Cleared existing pages for company: ${user.company_id}`);
 
-      // Sync each page
-      for (const page of pages) {
-        try {
-          const pageId = `page_${uuidv4().replace(/-/g, '').substring(0, 12)}`;
-          
-          // Prepare page data
-          const pageData: any = {
+      // Step 1: Prepare all page data without image processing
+      const pageDataList = pages.map(page => {
+        const pageId = `page_${uuidv4().replace(/-/g, '').substring(0, 12)}`;
+        
+        return {
+          pageId,
+          page,
+          pageData: {
             page_id: pageId,
             company_id: user.company_id,
             facebook_page_id: page.id,
@@ -412,47 +413,105 @@ export class FacebookService {
             sync_status: 'success',
             imported_by: userId,
             imported_at: new Date(),
-            tasks: page.tasks
-          };
-          
-          // Handle profile picture if available
-          if (page.picture?.data?.url) {
-            // Store original Facebook URL
-            pageData.picture_url = page.picture.data.url;
-            
+            tasks: page.tasks,
+            // Will be filled later if image processing succeeds
+            picture_url: page.picture?.data?.url || null,
+            picture_cloudflare_key: null as string | null,
+            picture_cloudflare_url: null as string | null
+          }
+        };
+      });
+
+      // Step 2: Process images in parallel for all pages that have pictures
+      // This is a major performance improvement - instead of processing images sequentially,
+      // we now download and upload all images in parallel, significantly reducing total sync time
+      const imageProcessingPromises = pageDataList
+        .filter(item => item.page.picture?.data?.url)
+        .map(async (item) => {
+          try {
+            const pictureUrl = item.page.picture?.data?.url;
+            if (!pictureUrl) return { pageId: item.pageId, success: false, reused: false };
+
             // Check if we already have this image in Cloudflare
-            const existingPageData = existingPageMap.get(page.id);
-            if (existingPageData && existingPageData.picture_url === page.picture.data.url) {
+            const existingPageData = existingPageMap.get(item.page.id);
+            if (existingPageData && existingPageData.picture_url === pictureUrl) {
               // Reuse existing Cloudflare image
-              pageData.picture_cloudflare_key = existingPageData.picture_cloudflare_key;
-              pageData.picture_cloudflare_url = existingPageData.picture_cloudflare_url;
-              this.logger.log(`Reusing existing profile picture for ${page.name} from Cloudflare R2`);
+              item.pageData.picture_cloudflare_key = existingPageData.picture_cloudflare_key;
+              item.pageData.picture_cloudflare_url = existingPageData.picture_cloudflare_url;
+              this.logger.log(`Reusing existing profile picture for ${item.page.name} from Cloudflare R2`);
+              return { pageId: item.pageId, success: true, reused: true };
             } else {
-              // Download and upload to Cloudflare R2
+              // Download and upload to Cloudflare R2 in parallel
               const pictureResult = await this.downloadAndUploadPageProfilePicture(
-                page.id,
-                page.picture.data.url
+                item.page.id,
+                pictureUrl
               );
               
               if (pictureResult) {
-                pageData.picture_cloudflare_key = pictureResult.cloudflareKey;
-                pageData.picture_cloudflare_url = pictureResult.cloudflareUrl;
-                this.logger.log(`Stored page profile picture for ${page.name} in Cloudflare R2`);
+                item.pageData.picture_cloudflare_key = pictureResult.cloudflareKey;
+                item.pageData.picture_cloudflare_url = pictureResult.cloudflareUrl;
+                this.logger.log(`Stored page profile picture for ${item.page.name} in Cloudflare R2`);
+                return { pageId: item.pageId, success: true, reused: false };
+              } else {
+                this.logger.warn(`Failed to process profile picture for ${item.page.name}`);
+                return { pageId: item.pageId, success: false, reused: false };
               }
             }
+          } catch (error) {
+            this.logger.error(`Error processing image for page ${item.page.name}:`, error);
+            return { pageId: item.pageId, success: false, error: error.message, reused: false };
           }
-          
-          const facebookPage = new this.facebookPageModel(pageData);
-          await facebookPage.save();
-          syncedCount++;
-          
-          this.logger.log(`Synced page: ${page.name} (${page.id})`);
+        });
 
-        } catch (pageError) {
-          this.logger.error(`Failed to sync page ${page.name}:`, pageError);
-          failedPages.push(page.name);
+      // Execute image processing in parallel
+      this.logger.log(`Starting parallel image processing for ${imageProcessingPromises.length} pages with pictures...`);
+      const imageResults = await Promise.allSettled(imageProcessingPromises);
+
+      // Log image processing results
+      let imageSuccessCount = 0;
+      let imageReusedCount = 0;
+      imageResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          if (result.value.success) {
+            imageSuccessCount++;
+            if (result.value.reused) imageReusedCount++;
+          }
         }
-      }
+      });
+      this.logger.log(`Image processing completed: ${imageSuccessCount} successful (${imageReusedCount} reused), ${imageResults.length - imageSuccessCount} failed`);
+
+      // Step 3: Save all pages to database in parallel
+      const dbSavePromises = pageDataList.map(async (item) => {
+        try {
+          const facebookPage = new this.facebookPageModel(item.pageData);
+          await facebookPage.save();
+          this.logger.log(`Saved page to database: ${item.page.name} (${item.page.id})`);
+          return { success: true, page: item.page.name };
+        } catch (saveError) {
+          this.logger.error(`Failed to save page ${item.page.name} to database:`, saveError);
+          return { success: false, page: item.page.name, error: saveError.message };
+        }
+      });
+
+      // Execute database saves in parallel
+      this.logger.log(`Starting parallel database saves for ${pageDataList.length} pages...`);
+      const dbResults = await Promise.allSettled(dbSavePromises);
+      
+      // Process final results
+      dbResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          if (result.value.success) {
+            syncedCount++;
+          } else {
+            failedPages.push(result.value.page);
+          }
+        } else {
+          // Promise was rejected
+          const pageName = pageDataList[index]?.page?.name || `Unknown Page ${index}`;
+          failedPages.push(pageName);
+          this.logger.error(`Database save promise rejected for page ${pageName}:`, result.reason);
+        }
+      });
 
       const result: FacebookPageSyncResultDto = {
         pages_synced: syncedCount,
@@ -718,69 +777,118 @@ export class FacebookService {
   }
 
   /**
-   * Download and upload Facebook page profile picture to Cloudflare R2
+   * Download and upload Facebook page profile picture to Cloudflare R2 with retry logic
    */
   async downloadAndUploadPageProfilePicture(pageId: string, pictureUrl: string): Promise<{
     cloudflareKey: string;
     cloudflareUrl: string;
   } | null> {
-    try {
-      if (!pictureUrl) {
-        return null;
-      }
+    const maxRetries = 3;
+    const timeoutMs = 15000; // 15 seconds timeout
 
-      // Check if we already have a profile picture for this page in our database
-      const existingPage = await this.facebookPageModel.findOne({ 
-        facebook_page_id: pageId,
-        picture_cloudflare_key: { $exists: true, $ne: null }
-      }).exec();
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        if (!pictureUrl) {
+          return null;
+        }
 
-      // If we already have a profile picture and it's the same URL, reuse it
-      if (existingPage?.picture_url === pictureUrl && existingPage?.picture_cloudflare_key) {
-        this.logger.log(`Reusing existing profile picture for page ${pageId}: ${existingPage.picture_cloudflare_key}`);
-        return {
-          cloudflareKey: existingPage.picture_cloudflare_key,
-          cloudflareUrl: existingPage.picture_cloudflare_url || this.cloudflareR2Service.getPublicUrl(existingPage.picture_cloudflare_key)
-        };
-      }
+        // Note: We don't check existing pages here anymore since it's done at the caller level
+        // for better performance in parallel processing
 
-      this.logger.log(`Downloading profile picture for page ${pageId}: ${pictureUrl}`);
-      
-      // Download the image
-      const response = await fetch(pictureUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to download profile picture: ${response.status} ${response.statusText}`);
+        this.logger.log(`Downloading profile picture for page ${pageId} (attempt ${attempt}): ${pictureUrl}`);
+        
+        // Create AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        
+        try {
+          // Download the image with timeout
+          const response = await fetch(pictureUrl, {
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; FacebookPageChatbot/1.0)'
+            }
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status} ${response.statusText}`);
+          }
+          
+          const imageBuffer = Buffer.from(await response.arrayBuffer());
+          const contentType = response.headers.get('content-type') || 'image/jpeg';
+          
+          // Validate image size (max 10MB)
+          if (imageBuffer.length > 10 * 1024 * 1024) {
+            throw new Error(`Image too large: ${imageBuffer.length} bytes`);
+          }
+          
+          // Generate a unique key for Cloudflare R2
+          const fileExtension = contentType.includes('png') ? '.png' : 
+                               contentType.includes('gif') ? '.gif' : 
+                               contentType.includes('svg') ? '.svg' : '.jpg';
+          
+          // Use a consistent naming scheme without timestamp to avoid duplicates
+          const fileName = `fb_page_${pageId}${fileExtension}`;
+          const key = `facebook/page_images/${fileName}`;
+          
+          // Upload to Cloudflare R2
+          const uploadResult = await this.cloudflareR2Service.uploadBuffer(
+            imageBuffer,
+            key,
+            contentType
+          );
+          
+          this.logger.log(`Successfully uploaded profile picture to Cloudflare R2: ${key} (${imageBuffer.length} bytes)`);
+          
+          return {
+            cloudflareKey: uploadResult.key,
+            cloudflareUrl: uploadResult.publicUrl
+          };
+          
+        } finally {
+          clearTimeout(timeoutId);
+        }
+        
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        if (attempt === maxRetries) {
+          this.logger.error(`Failed to download/upload profile picture for page ${pageId} after ${maxRetries} attempts: ${errorMessage}`);
+          return null;
+        } else {
+          this.logger.warn(`Attempt ${attempt} failed for page ${pageId}: ${errorMessage}. Retrying...`);
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+        }
       }
-      
-      const imageBuffer = Buffer.from(await response.arrayBuffer());
-      const contentType = response.headers.get('content-type') || 'image/jpeg';
-      
-      // Generate a unique key for Cloudflare R2
-      const fileExtension = contentType.includes('png') ? '.png' : 
-                           contentType.includes('gif') ? '.gif' : 
-                           contentType.includes('svg') ? '.svg' : '.jpg';
-      
-      // Use a consistent naming scheme without timestamp to avoid duplicates
-      const fileName = `fb_page_${pageId}${fileExtension}`;
-      const key = `facebook/page_images/${fileName}`;
-      
-      // Upload to Cloudflare R2
-      const uploadResult = await this.cloudflareR2Service.uploadBuffer(
-        imageBuffer,
-        key,
-        contentType
-      );
-      
-      this.logger.log(`Successfully uploaded profile picture to Cloudflare R2: ${key}`);
-      
-      return {
-        cloudflareKey: uploadResult.key,
-        cloudflareUrl: uploadResult.publicUrl
-      };
-      
-    } catch (error) {
-      this.logger.error(`Error downloading/uploading profile picture for page ${pageId}:`, error);
-      return null;
     }
+    
+    return null;
+  }
+
+  /**
+   * Execute promises with controlled concurrency
+   * This helps prevent overwhelming the server or external APIs with too many parallel requests
+   */
+  private async executeWithConcurrencyLimit<T>(
+    tasks: (() => Promise<T>)[],
+    limit: number = 5
+  ): Promise<PromiseSettledResult<T>[]> {
+    const results: PromiseSettledResult<T>[] = [];
+    
+    for (let i = 0; i < tasks.length; i += limit) {
+      const batch = tasks.slice(i, i + limit);
+      const batchPromises = batch.map(task => task());
+      const batchResults = await Promise.allSettled(batchPromises);
+      results.push(...batchResults);
+      
+      // Log progress
+      const completed = Math.min(i + limit, tasks.length);
+      this.logger.log(`Completed ${completed}/${tasks.length} parallel operations`);
+    }
+    
+    return results;
   }
 }
