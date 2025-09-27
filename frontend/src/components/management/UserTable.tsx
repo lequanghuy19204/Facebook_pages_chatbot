@@ -15,6 +15,8 @@ interface UserTableProps {
   onRefresh?: () => void;
 }
 
+const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
+
 export default function UserTable({
   users,
   currentUser,
@@ -204,7 +206,7 @@ export default function UserTable({
                 <td className="name-cell">
                   <div className="user-info">
                     {user.avatar_cloudflare_key ? (
-                      <img src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${user.avatar_cloudflare_key}`} alt={user.full_name} className="user-avatar" />
+                      <img src={`${R2_BUCKET_URL}/${user.avatar_cloudflare_key}`} alt={user.full_name} className="user-avatar" />
                     ) : (
                       <div className="user-avatar-placeholder">
                         {user.full_name.charAt(0).toUpperCase()}

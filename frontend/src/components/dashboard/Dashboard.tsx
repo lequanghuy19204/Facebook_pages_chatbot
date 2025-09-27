@@ -25,6 +25,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     }
   };
 
+  const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
+
   
   const filteredPages = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -86,6 +88,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     const colorIndex = pageName.charCodeAt(0) % colors.length;
     return colors[colorIndex];
   };
+  console.log('R2_BUCKET_URL:', R2_BUCKET_URL);
 
   return (
     <div className="dashboard-container">
@@ -183,7 +186,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                       <div key={page.page_id} className="page-card">
                         {page.picture_cloudflare_key ? (
                           <img 
-                            src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${page.picture_cloudflare_key}`} 
+                            src={`${R2_BUCKET_URL}/${page.picture_cloudflare_key}`}
                             alt={`${page.name} logo`}
                             className="page-avatar"
                             onError={(e) => {

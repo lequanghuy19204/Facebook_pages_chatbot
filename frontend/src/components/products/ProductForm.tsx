@@ -15,6 +15,8 @@ interface ProductFormProps {
   onProductCreated?: () => void; 
 }
 
+const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
+
 export default function ProductForm({
   product = null,
   onSubmit,
@@ -705,7 +707,7 @@ export default function ProductForm({
                   >
                     <div className="image-wrapper-productform">
                       <img
-                        src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${image.cloudflare_key}`}
+                        src={`${R2_BUCKET_URL}/${image.cloudflare_key}`}
                         alt={image.alt_text || `Ảnh sản phẩm ${index + 1}`}
                         className="product-image-productform"
                         title={image.alt_text || `Ảnh sản phẩm ${index + 1}`}

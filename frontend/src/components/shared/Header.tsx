@@ -9,6 +9,7 @@ interface HeaderProps {
   className?: string;
   onLogout?: () => void;
 }
+const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
 
 export default function Header({ className = '', onLogout }: HeaderProps) {
   const { user, logout } = useAuth();
@@ -86,7 +87,7 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
           <div className="user-pages" onClick={() => navigateTo('/settings')}>
             {user?.avatar_cloudflare_key ? (
               <img 
-                src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${user.avatar_cloudflare_key}`} 
+                src={`${R2_BUCKET_URL}/${user.avatar_cloudflare_key}`} 
                 alt={user.full_name || 'User'} 
                 className="user-avatar-circle" 
               />

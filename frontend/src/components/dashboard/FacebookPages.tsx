@@ -10,6 +10,7 @@ interface FacebookPagesProps {
 }
 
 export default function FacebookPages({ className = '' }: FacebookPagesProps) {
+  const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
   const { user } = useAuth();
   const {
     isConnected,
@@ -129,7 +130,7 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
       <div className="page-avatar">
         {page.picture_cloudflare_key ? (
           <img 
-            src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${page.picture_cloudflare_key}`} 
+            src={`${R2_BUCKET_URL}/${page.picture_cloudflare_key}`} 
             alt={`${page.name} logo`}
             className="avatar-image"
             onError={(e) => {

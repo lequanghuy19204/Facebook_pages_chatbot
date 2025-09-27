@@ -9,6 +9,7 @@ import '@/styles/settings/Settings.css';
 interface SettingsProps {
   onLogout?: () => void;
 }
+const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
 
 export default function Settings({ onLogout }: SettingsProps) {
   const { user, token, updateUserInfo, company } = useAuth();
@@ -279,7 +280,7 @@ export default function Settings({ onLogout }: SettingsProps) {
               <div className="avatar-container" onClick={handleAvatarClick}>
                 {userInfo.avatar_cloudflare_key ? (
                   <img 
-                    src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${userInfo.avatar_cloudflare_key}`} 
+                    src={`${R2_BUCKET_URL}/${userInfo.avatar_cloudflare_key}`} 
                     
                     alt={user?.full_name || 'User'} 
                     className="settings-user-avatar"

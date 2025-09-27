@@ -13,6 +13,8 @@ interface ProductTableProps {
   onRefresh?: () => void;
 }
 
+const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
+
 export default function ProductTable({
   products,
   loading,
@@ -243,8 +245,8 @@ export default function ProductTable({
                           {product.images.map((image) => (
                             <div key={image.image_id} className="product-image-thumbnail">
                               <img 
-                                src={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${image.cloudflare_key}`}
-                                data-original={`https://pub-29571d63ff4741baa4c864245169a1ba.r2.dev/${image.cloudflare_key}`}
+                                src={`${R2_BUCKET_URL}/${image.cloudflare_key}`}
+                                data-original={`${R2_BUCKET_URL}/${image.cloudflare_key}`}
                                 alt={image.alt_text || product.name}
                                 className="product-thumbnail"
                                 title={image.alt_text || product.name}
