@@ -64,11 +64,6 @@
   white-space: nowrap;
 }
 
-.chat-header-online-status {
-  color: #4caf50;
-  font-size: 12px;
-}
-
 .chat-header-last-seen {
   font-family: 'Roboto', sans-serif;
   font-size: 11px;

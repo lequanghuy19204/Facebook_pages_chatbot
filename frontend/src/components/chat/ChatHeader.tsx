@@ -26,20 +26,11 @@ const mockCustomer: Customer = {
 };
 
 export default function ChatHeader({ conversationId, onToggleRightPanel, showRightPanel }: ChatHeaderProps) {
-  const customer = mockCustomer; // TODO: Fetch customer data based on conversationId
-
-  const actionButtons = [
-    { icon: '📞', tooltip: 'Gọi điện', action: () => console.log('Call') },
-    { icon: '📧', tooltip: 'Email', action: () => console.log('Email') },
-    { icon: '🔗', tooltip: 'Liên kết', action: () => console.log('Link') },
-    { icon: '⭐', tooltip: 'Đánh dấu', action: () => console.log('Star') }
-  ];
+  const customer = mockCustomer;
 
   const toolButtons = [
-    { icon: '📎', tooltip: 'Đính kèm', action: () => console.log('Attach') },
-    { icon: '📷', tooltip: 'Camera', action: () => console.log('Camera') },
-    { icon: '🎵', tooltip: 'Âm thanh', action: () => console.log('Audio') },
-    { icon: '📊', tooltip: 'Thống kê', action: () => console.log('Analytics') }
+    { icon: '/apps-list-detail.svg', tooltip: 'Tất cả các cuộc hội thoại của người dùng này', action: () => console.log('Tất cả các cuộc hội thoại của người dùng này') },
+    { icon: '/mark-not-read.svg', tooltip: 'Đánh dấu chưa đọc', action: () => console.log('Đánh dấu chưa đọc') },
   ];
 
   return (
@@ -58,22 +49,8 @@ export default function ChatHeader({ conversationId, onToggleRightPanel, showRig
         <div className="chat-header-details">
           <div className="chat-header-name-section">
             <h3 className="chat-header-name">{customer.name}</h3>
-            {customer.isOnline && <div className="chat-header-online-status">●</div>}
           </div>
           <p className="chat-header-last-seen">{customer.lastSeen}</p>
-          
-          <div className="chat-header-actions">
-            {actionButtons.map((button, index) => (
-              <button
-                key={index}
-                className="chat-header-action-button"
-                onClick={button.action}
-                title={button.tooltip}
-              >
-                {button.icon}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -85,7 +62,7 @@ export default function ChatHeader({ conversationId, onToggleRightPanel, showRig
             onClick={button.action}
             title={button.tooltip}
           >
-            {button.icon}
+            <img src={button.icon} alt={button.tooltip} />
           </button>
         ))}
         
@@ -94,7 +71,7 @@ export default function ChatHeader({ conversationId, onToggleRightPanel, showRig
           onClick={onToggleRightPanel}
           title={showRightPanel ? 'Ẩn panel thông tin' : 'Hiện panel thông tin'}
         >
-          {showRightPanel ? '▶' : '◀'}
+          <img src="/info-panel.svg" alt="Toggle Info Panel" />
         </button>
       </div>
     </div>

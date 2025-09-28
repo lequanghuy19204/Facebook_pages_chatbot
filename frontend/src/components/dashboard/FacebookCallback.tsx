@@ -15,7 +15,7 @@ export default function FacebookCallback() {
 
   useEffect(() => {
     const processCallback = async () => {
-      try {
+        try {
         
         const code = searchParams.get('code');
         const state = searchParams.get('state');

@@ -67,7 +67,7 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
         <div className="chat-list-search-container">
           <div className="chat-list-search-wrapper">
             <div className="chat-list-search-icon">
-              🔍
+              <img src="/search.svg" alt="Tìm kiếm" />
             </div>
             <input
               type="text"
@@ -82,7 +82,7 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
             onClick={() => setShowFilter(!showFilter)}
           >
             <div className="chat-list-filter-icon">
-              🔽
+              <img src="/list-filter.svg" alt="Lọc theo" />
             </div>
             <span className="chat-list-filter-text">Lọc theo</span>
           </div>

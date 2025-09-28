@@ -88,7 +88,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     const colorIndex = pageName.charCodeAt(0) % colors.length;
     return colors[colorIndex];
   };
-  console.log('R2_BUCKET_URL:', R2_BUCKET_URL);
+  // console.log('R2_BUCKET_URL:', R2_BUCKET_URL);
 
   return (
     <div className="dashboard-container">

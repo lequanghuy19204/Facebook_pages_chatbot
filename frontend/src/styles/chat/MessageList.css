@@ -10,9 +10,9 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 0 16px;
-  max-width: 963px;
-  margin: 0 auto;
+  padding: 0 10px;
+  max-width: 100%;
+  margin: 0 10px;
 }
 
 /* Scrollbar styling for message list */

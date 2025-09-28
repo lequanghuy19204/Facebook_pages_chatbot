@@ -15,9 +15,9 @@ interface TagManagementProps {
   onTagSelect: (tagId: string) => void;
 }
 
-// Mock tags data theo thiết kế Figma
+
 const mockTags: Tag[] = [
-  // Row 1
+  
   { id: 'urgent', name: 'Xử lý gấp', color: '#F4383B', category: 'status' },
   { id: 'lan-anh', name: 'lan anh', color: '#717A9B', category: 'person' },
   { id: 'p-anh', name: 'P.anh', color: '#391F04', category: 'person' },
@@ -29,7 +29,7 @@ const mockTags: Tag[] = [
   { id: 'ha', name: 'Hà', color: '#FF45BF', category: 'person' },
   { id: 'risky', name: 'KHÁCH RỦI RO', color: '#8C8F5A', category: 'status' },
 
-  // Row 2
+  
   { id: 'create-money', name: 'Tạo tiền', color: '#F626B2', category: 'payment' },
   { id: 'not-create-money', name: 'Chưa tạo tiền', color: '#ED9C04', category: 'payment' },
   { id: 'customer-ck', name: 'Khách CK', color: '#BC8DA1', category: 'payment' },
@@ -41,7 +41,7 @@ const mockTags: Tag[] = [
   { id: 'trang', name: 'Trang', color: '#11CE00', category: 'person' },
   { id: 'handle', name: 'Xử lý', color: '#77149E', category: 'action' },
 
-  // Row 3
+  
   { id: 't-anh', name: 'T.Anh', color: '#D12CA4', category: 'person' },
   { id: 'le', name: 'Lệ', color: '#AC7FA3', category: 'person' },
   { id: 'consult-again', name: 'Tư vấn lại', color: '#604444', category: 'action' },
@@ -72,33 +72,51 @@ export default function TagManagement({ conversationId, onTagSelect }: TagManage
     onTagSelect(tagId);
   };
 
-  const renderTagRow = (tags: Tag[], rowIndex: number) => (
-    <div key={rowIndex} className="tag-management-row">
-      {tags.map(tag => (
-        <div
-          key={tag.id}
-          className={`tag-management-item ${selectedTags.includes(tag.id) ? 'selected' : ''}`}
-          style={{ 
-            backgroundColor: `${tag.color}66`, // 40% opacity
-            '--tag-color': tag.color
-          } as React.CSSProperties}
-          onClick={() => handleTagClick(tag.id)}
-          title={tag.name}
-        >
-          {selectedTags.includes(tag.id) && (
-            <div className="tag-management-indicator"></div>
-          )}
-          <span className="tag-management-text">{tag.name}</span>
-        </div>
-      ))}
-    </div>
-  );
+  const renderTagRow = (tags: Tag[], rowIndex: number) => {
+    
+    const paddedTags = [...tags];
+    while (paddedTags.length < 10 && paddedTags.length > 0) {
+      
+      break;
+    }
 
-  const tagRows = [
-    mockTags.slice(0, 10),  // Row 1
-    mockTags.slice(10, 20), // Row 2
-    mockTags.slice(20, 30)  // Row 3
-  ];
+    return (
+      <div key={rowIndex} className="tag-management-row">
+        {paddedTags.map((tag, index) => (
+          <div
+            key={`${tag.id}-${index}`}
+            className={`tag-management-item ${selectedTags.includes(tag.id) ? 'selected' : ''}`}
+            style={{ 
+              backgroundColor: `${tag.color}66`, 
+              '--tag-color': tag.color
+            } as React.CSSProperties}
+            onClick={() => handleTagClick(tag.id)}
+            title={tag.name}
+          >
+            {selectedTags.includes(tag.id) && (
+              <div className="tag-management-indicator"></div>
+            )}
+            <span className="tag-management-text">{tag.name}</span>
+          </div>
+        ))}
+
+        {Array.from({ length: 10 - paddedTags.length }, (_, index) => (
+          <div key={`empty-${rowIndex}-${index}`} style={{ flex: 1, minWidth: 0 }}></div>
+        ))}
+      </div>
+    );
+  };
+
+  
+  const createTagRows = (tags: Tag[], itemsPerRow: number = 10) => {
+    const rows: Tag[][] = [];
+    for (let i = 0; i < tags.length; i += itemsPerRow) {
+      rows.push(tags.slice(i, i + itemsPerRow));
+    }
+    return rows;
+  };
+
+  const tagRows = createTagRows(mockTags, 10);
 
   return (
     <div className="tag-management-component">
@@ -106,7 +124,7 @@ export default function TagManagement({ conversationId, onTagSelect }: TagManage
         {tagRows.map((tags, index) => renderTagRow(tags, index))}
       </div>
       
-      {selectedTags.length > 0 && (
+      {/* {selectedTags.length > 0 && (
         <div className="tag-management-summary">
           <span className="tag-management-summary-text">
             Đã chọn {selectedTags.length} tag{selectedTags.length > 1 ? 's' : ''}
@@ -118,7 +136,7 @@ export default function TagManagement({ conversationId, onTagSelect }: TagManage
             Xóa tất cả
           </button>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

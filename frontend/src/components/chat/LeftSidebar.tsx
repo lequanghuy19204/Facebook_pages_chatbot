@@ -11,20 +11,17 @@ interface SidebarItem {
 }
 
 const sidebarItems: SidebarItem[] = [
-  { id: 'chat', icon: '💬', tooltip: 'Hội thoại', isActive: true },
-  { id: 'messages', icon: '📨', tooltip: 'Tin nhắn' },
-  { id: 'users', icon: '👥', tooltip: 'Người dùng' },
-  { id: 'reports', icon: '📊', tooltip: 'Báo cáo' },
-  { id: 'settings', icon: '⚙️', tooltip: 'Cài đặt' },
-  { id: 'analytics', icon: '📈', tooltip: 'Thống kê' },
-  { id: 'posts', icon: '📝', tooltip: 'Bài viết' },
-  { id: 'management', icon: '🏢', tooltip: 'Quản lý' },
-  { id: 'tools', icon: '🔧', tooltip: 'Công cụ' },
-  { id: 'support', icon: '❓', tooltip: 'Hỗ trợ' }
+  { id: 'all-conversations', icon: '/all-conversations.svg', tooltip: 'Tất cả hội thoại', isActive: true },
+  { id: 'unread-filter', icon: '/unread-filter.svg', tooltip: 'Lọc chưa đọc' },
+  { id: 'comments-filter', icon: '/comments-filter.svg', tooltip: 'Lọc bình luận' },
+  { id: 'messages-filter', icon: '/messages-filte.svg', tooltip: 'Lọc tin nhắn' },
+  { id: 'phone-filter', icon: '/phone-filter.svg', tooltip: 'Lọc số điện thoại' },
+  { id: 'no-phone-filter', icon: '/no-phone-filter.svg', tooltip: 'Lọc không có số điện thoại' },
+  { id: 'time-filter', icon: '/time-filter.svg', tooltip: 'Lọc theo khoảng thời gian' },
 ];
 
 export default function LeftSidebar() {
-  const [activeItem, setActiveItem] = useState<string>('chat');
+  const [activeItem, setActiveItem] = useState<string>('all-conversations');
 
   const handleItemClick = (itemId: string) => {
     setActiveItem(itemId);
@@ -41,7 +38,7 @@ export default function LeftSidebar() {
             title={item.tooltip}
           >
             <div className="left-sidebar-icon">
-              {item.icon}
+              <img src={item.icon} alt={item.tooltip} />
             </div>
           </div>
         ))}
