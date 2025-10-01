@@ -166,7 +166,7 @@ export class FacebookService {
     try {
       const params = new URLSearchParams({
         access_token: accessToken,
-        fields: 'id,name,access_token,category,category_list,fan_count,about,tasks,picture.width(512).height(512){url}',
+        fields: 'id,name,access_token,category,category_list,fan_count,about,tasks,picture.width(256).height(256){url}',
         limit: '100'
       });
 
