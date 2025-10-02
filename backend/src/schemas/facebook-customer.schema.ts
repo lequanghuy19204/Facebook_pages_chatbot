@@ -1,0 +1,79 @@
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
+
+export type FacebookCustomerDocument = FacebookCustomer & Document;
+
+@Schema({ collection: 'facebook_customers' })
+export class FacebookCustomer {
+  @Prop({ required: true, unique: true, index: true })
+  customer_id: string; // Tự sinh unique ID
+
+  @Prop({ required: true, index: true })
+  company_id: string; // ID công ty (multi-tenant)
+
+  @Prop({ required: true, index: true })
+  page_id: string; // ID Facebook Page
+
+  @Prop({ required: true, unique: true, index: true })
+  facebook_user_id: string; // Facebook User ID từ sender.id
+
+  @Prop({ required: true })
+  name: string; // Tên khách hàng từ Facebook
+
+  @Prop()
+  first_name?: string; // Tên
+
+  @Prop()
+  last_name?: string; // Họ
+
+  @Prop()
+  profile_pic?: string; // Avatar URL từ Facebook
+
+  @Prop()
+  locale?: string; // Ngôn ngữ: "vi_VN", "en_US"
+
+  @Prop()
+  timezone?: number; // Múi giờ: +7
+
+  @Prop()
+  email?: string; // Email nếu có
+
+  @Prop()
+  phone?: string; // Số điện thoại nếu có
+
+  @Prop()
+  address?: string; // Địa chỉ nếu có
+
+  @Prop()
+  notes?: string; // Ghi chú của nhân viên
+
+  @Prop({ type: [String] })
+  tags?: string[]; // Tags: ["vip", "potential", "complaint"]
+
+  @Prop()
+  assigned_to?: string; // ID staff được phân công
+
+  @Prop({ default: 'active' })
+  status: 'active' | 'blocked' | 'archived'; // Trạng thái khách hàng
+
+  @Prop({ default: Date.now })
+  first_contact_at: Date; // Lần đầu tiên liên hệ
+
+  @Prop({ default: Date.now })
+  last_interaction_at: Date; // Tương tác cuối cùng
+
+  @Prop({ default: Date.now })
+  created_at: Date;
+
+  @Prop({ default: Date.now })
+  updated_at: Date;
+}
+
+export const FacebookCustomerSchema = SchemaFactory.createForClass(FacebookCustomer);
+
+// Indexes
+FacebookCustomerSchema.index({ customer_id: 1 }, { unique: true });
+FacebookCustomerSchema.index({ company_id: 1, facebook_user_id: 1 }, { unique: true });
+FacebookCustomerSchema.index({ company_id: 1, page_id: 1 });
+FacebookCustomerSchema.index({ assigned_to: 1 });
+FacebookCustomerSchema.index({ company_id: 1, last_interaction_at: -1 });

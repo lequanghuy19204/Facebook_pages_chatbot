@@ -3,10 +3,14 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
+  
+  // Raw body middleware for webhook signature verification
+  app.use('/api/webhook/facebook', express.raw({ type: 'application/json' }));
   
   app.useGlobalPipes(
     new ValidationPipe({
