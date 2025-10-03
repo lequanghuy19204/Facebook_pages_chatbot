@@ -10,6 +10,7 @@ import { FacebookCustomer, FacebookCustomerSchema } from '../schemas/facebook-cu
 import { FacebookConversation, FacebookConversationSchema } from '../schemas/facebook-conversation.schema';
 import { FacebookMessage, FacebookMessageSchema } from '../schemas/facebook-message.schema';
 import { FacebookPage, FacebookPageSchema } from '../schemas/facebook-page.schema';
+import { WebsocketModule } from '../websocket/websocket.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { FacebookPage, FacebookPageSchema } from '../schemas/facebook-page.schem
       { name: FacebookMessage.name, schema: FacebookMessageSchema },
       { name: FacebookPage.name, schema: FacebookPageSchema },
     ]),
+    WebsocketModule,
   ],
   controllers: [FacebookMessagingController, FacebookWebhookController],
   providers: [FacebookMessagingService],

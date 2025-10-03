@@ -10,6 +10,7 @@ import { FacebookConversation, FacebookConversationDocument } from '../schemas/f
 import { FacebookMessage, FacebookMessageDocument } from '../schemas/facebook-message.schema';
 import { FacebookPage, FacebookPageDocument } from '../schemas/facebook-page.schema';
 import { CreateMessageDto, UpdateConversationDto, UpdateCustomerDto, GetConversationsQuery } from '../dto/facebook-messaging.dto';
+import { MessagingGateway } from '../websocket/messaging.gateway';
 
 @Injectable()
 export class FacebookMessagingService {
@@ -29,6 +30,7 @@ export class FacebookMessagingService {
     private readonly pageModel: Model<FacebookPageDocument>,
     
     private readonly configService: ConfigService,
+    private readonly messagingGateway: MessagingGateway,
   ) {}
 
   // ===== CUSTOMER MANAGEMENT =====
@@ -170,6 +172,16 @@ export class FacebookMessagingService {
       conversation = new this.conversationModel(conversationData);
       await conversation.save();
       this.logger.log(`Created new conversation: ${conversationId} (source: ${source})`);
+      
+      // Emit WebSocket event for new conversation
+      this.messagingGateway.emitNewConversation(companyId, {
+        conversation_id: conversationId,
+        customer_id: customerId,
+        page_id: pageId,
+        source: source,
+        status: 'open',
+        created_at: conversation.created_at,
+      });
     }
     
     // Cập nhật thông tin bài đăng cho comment (CHỈ cập nhật trường có dữ liệu)
@@ -237,11 +249,18 @@ export class FacebookMessagingService {
       throw new NotFoundException('Conversation not found');
     }
 
+    // Emit WebSocket event for conversation update
+    this.messagingGateway.emitConversationUpdate(companyId, {
+      conversation_id: conversationId,
+      ...updateData,
+      updated_at: conversation.updated_at,
+    });
+
     return conversation;
   }
 
   async getConversations(companyId: string, query: GetConversationsQuery): Promise<{
-    conversations: FacebookConversationDocument[];
+    conversations: any[];
     total: number;
     page: number;
     limit: number;
@@ -252,24 +271,49 @@ export class FacebookMessagingService {
     if (query.handler) filter.current_handler = query.handler;
     if (query.assignedTo) filter.assigned_to = query.assignedTo;
     if (query.needsAttention !== undefined) filter.needs_attention = query.needsAttention;
-    if (query.source) filter.source = query.source; // Filter theo source: messenger hoặc comment
+    if (query.source) filter.source = query.source;
+    if (query.pageId) filter.page_id = query.pageId;
 
     const page = query.page || 1;
     const limit = query.limit || 20;
     const skip = (page - 1) * limit;
 
-    // Sắp xếp theo: needs_attention desc, last_message_at desc
+    // Get conversations
     const conversations = await this.conversationModel.find(filter)
       .sort({ needs_attention: -1, last_message_at: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('customer_id', 'name profile_pic')
+      .lean()
       .exec();
+
+    // Get customer info for each conversation
+    const customerIds = conversations.map(c => c.customer_id);
+    const customers = await this.customerModel.find({
+      customer_id: { $in: customerIds }
+    }).lean().exec();
+
+    // Create a map for quick lookup
+    const customerMap = new Map();
+    customers.forEach(customer => {
+      customerMap.set(customer.customer_id, customer);
+    });
+
+    // Merge customer info into conversations
+    const conversationsWithCustomers = conversations.map(conv => {
+      const customer = customerMap.get(conv.customer_id);
+      return {
+        ...conv,
+        customer_name: customer?.name || 'Unknown User',
+        customer_profile_pic: customer?.profile_pic,
+        customer_email: customer?.email,
+        customer_phone: customer?.phone,
+      };
+    });
 
     const total = await this.conversationModel.countDocuments(filter);
 
     return {
-      conversations,
+      conversations: conversationsWithCustomers,
       total,
       page,
       limit,
@@ -354,6 +398,21 @@ export class FacebookMessagingService {
     await this.updateConversationLastMessage(conversationId, message);
     
     this.logger.log(`Created message: ${messageId} in conversation: ${conversationId}`);
+    
+    // Emit WebSocket event for new message
+    this.messagingGateway.emitNewMessage(companyId, {
+      message_id: messageId,
+      conversation_id: conversationId,
+      customer_id: customerId,
+      page_id: pageId,
+      message_type: messageData.messageType,
+      text: message.text,
+      sender_type: messageData.senderType,
+      sender_id: messageData.senderId,
+      sent_at: message.sent_at,
+      attachments: message.attachments,
+    });
+    
     return message;
   }
 

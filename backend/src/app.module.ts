@@ -10,6 +10,7 @@ import { CloudflareR2Module } from './cloudflare/cloudflare-r2.module';
 import { UsersModule } from './users/users.module';
 import { CompanyModule } from './company/company.module';
 import { ProductsModule } from './products/products.module';
+import { WebsocketModule } from './websocket/websocket.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ProductsModule } from './products/products.module';
     UsersModule,
     CompanyModule,
     ProductsModule,
+    WebsocketModule,
   ],
   controllers: [AppController],
   providers: [AppService],

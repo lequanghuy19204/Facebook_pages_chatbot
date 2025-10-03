@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 
 export interface LoginCredentials {
@@ -1176,6 +1176,285 @@ const ApiService = {
         return await response.json();
       } catch (error) {
         console.error('Delete product image error:', error);
+        throw error;
+      }
+    },
+  },
+
+  // ===== MESSAGING API =====
+  messaging: {
+    // Get conversations list
+    getConversations: async (
+      token: string, 
+      params?: {
+        status?: string;
+        handler?: string;
+        needsAttention?: boolean;
+        assignedTo?: string;
+        source?: string;
+        pageId?: string;
+        search?: string;
+        page?: number;
+        limit?: number;
+      }
+    ): Promise<{
+      conversations: any[];
+      pagination: {
+        total: number;
+        page: number;
+        limit: number;
+        pages: number;
+      };
+    }> => {
+      try {
+        const queryParams = new URLSearchParams();
+        if (params) {
+          Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+              queryParams.append(key, String(value));
+            }
+          });
+        }
+
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations?${queryParams}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to get conversations');
+        }
+
+        const data = await response.json();
+        return {
+          conversations: data.data,
+          pagination: data.pagination,
+        };
+      } catch (error) {
+        console.error('Get conversations error:', error);
+        throw error;
+      }
+    },
+
+    // Get single conversation
+    getConversation: async (token: string, conversationId: string): Promise<any> => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to get conversation');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Get conversation error:', error);
+        throw error;
+      }
+    },
+
+    // Get messages for a conversation
+    getMessages: async (
+      token: string, 
+      conversationId: string,
+      page?: number,
+      limit?: number
+    ): Promise<{
+      messages: any[];
+      total: number;
+    }> => {
+      try {
+        const queryParams = new URLSearchParams();
+        if (page) queryParams.append('page', String(page));
+        if (limit) queryParams.append('limit', String(limit));
+
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}/messages?${queryParams}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to get messages');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Get messages error:', error);
+        throw error;
+      }
+    },
+
+    // Update conversation
+    updateConversation: async (
+      token: string,
+      conversationId: string,
+      updateData: {
+        status?: string;
+        currentHandler?: string;
+        assignedTo?: string;
+        needsAttention?: boolean;
+        priority?: string;
+      }
+    ): Promise<any> => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}`,
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updateData),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to update conversation');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Update conversation error:', error);
+        throw error;
+      }
+    },
+
+    // Reply to conversation
+    replyToConversation: async (
+      token: string,
+      conversationId: string,
+      messageData: {
+        text: string;
+        messageType?: string;
+        attachments?: any[];
+      }
+    ): Promise<any> => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}/reply`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messageData),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to send message');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Reply to conversation error:', error);
+        throw error;
+      }
+    },
+
+    // Mark conversation as read
+    markAsRead: async (token: string, conversationId: string): Promise<void> => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}/mark-read`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to mark as read');
+        }
+      } catch (error) {
+        console.error('Mark as read error:', error);
+        throw error;
+      }
+    },
+
+    // Assign conversation
+    assignConversation: async (
+      token: string,
+      conversationId: string,
+      assignedTo: string
+    ): Promise<any> => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}/assign`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ assignedTo }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to assign conversation');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Assign conversation error:', error);
+        throw error;
+      }
+    },
+
+    // Get customers
+    getCustomers: async (token: string, params?: any): Promise<any[]> => {
+      try {
+        const queryParams = new URLSearchParams(params);
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/customers?${queryParams}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to get customers');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Get customers error:', error);
         throw error;
       }
     },

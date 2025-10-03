@@ -154,7 +154,6 @@ export class GetConversationsQuery {
   assignedTo?: string;
 
   @IsOptional()
-  @IsBoolean()
   needsAttention?: boolean;
 
   @IsOptional()
@@ -162,10 +161,16 @@ export class GetConversationsQuery {
   source?: 'messenger' | 'comment';
 
   @IsOptional()
-  @IsNumber()
+  @IsString()
+  pageId?: string;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
   page?: number = 1;
 
   @IsOptional()
-  @IsNumber()
   limit?: number = 20;
 }
