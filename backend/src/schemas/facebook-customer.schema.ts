@@ -73,7 +73,9 @@ export const FacebookCustomerSchema = SchemaFactory.createForClass(FacebookCusto
 
 // Indexes
 FacebookCustomerSchema.index({ customer_id: 1 }, { unique: true });
-FacebookCustomerSchema.index({ company_id: 1, facebook_user_id: 1 }, { unique: true });
+// Một khách hàng Facebook có thể tương tác với nhiều page khác nhau của cùng 1 company
+// Nên phải có composite index: company_id + page_id + facebook_user_id
+FacebookCustomerSchema.index({ company_id: 1, page_id: 1, facebook_user_id: 1 }, { unique: true });
 FacebookCustomerSchema.index({ company_id: 1, page_id: 1 });
 FacebookCustomerSchema.index({ assigned_to: 1 });
 FacebookCustomerSchema.index({ company_id: 1, last_interaction_at: -1 });

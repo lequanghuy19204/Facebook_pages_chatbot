@@ -1,4 +1,64 @@
-import { IsString, IsOptional, IsEnum, IsArray, IsBoolean, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsArray, IsBoolean, IsNumber, IsDate, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class PostDataDto {
+  @IsOptional()
+  @IsString()
+  content?: string;
+
+  @IsOptional()
+  @IsString()
+  permalink_url?: string;
+
+  @IsOptional()
+  @IsArray()
+  photos?: string[];
+
+  @IsOptional()
+  @IsString()
+  status_type?: string;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  created_time?: Date;
+
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  updated_time?: Date;
+}
+
+export class CreateConversationWithPostDto {
+  @IsString()
+  companyId: string;
+
+  @IsString()
+  pageId: string;
+
+  @IsString()
+  customerId: string;
+
+  @IsOptional()
+  @IsString()
+  facebookThreadId?: string;
+
+  @IsEnum(['messenger', 'comment'])
+  source: 'messenger' | 'comment';
+
+  @IsOptional()
+  @IsString()
+  postId?: string;
+
+  @IsOptional()
+  @IsString()
+  commentId?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PostDataDto)
+  postData?: PostDataDto;
+}
 
 export class CreateMessageDto {
   @IsString()
@@ -8,7 +68,7 @@ export class CreateMessageDto {
   text: string;
 
   @IsOptional()
-  @IsEnum(['text', 'image', 'file', 'quick_reply'])
+  @IsEnum(['text', 'image', 'file', 'quick_reply', 'comment'])
   messageType?: string;
 
   @IsOptional()
@@ -96,6 +156,10 @@ export class GetConversationsQuery {
   @IsOptional()
   @IsBoolean()
   needsAttention?: boolean;
+
+  @IsOptional()
+  @IsEnum(['messenger', 'comment'])
+  source?: 'messenger' | 'comment';
 
   @IsOptional()
   @IsNumber()

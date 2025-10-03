@@ -39,9 +39,10 @@ export class FacebookMessagingService {
     facebookUserId: string,
     facebookPageId: string,
   ): Promise<FacebookCustomerDocument> {
-    // Tìm customer đã tồn tại
+    // Tìm customer đã tồn tại - PHẢI PHÂN BIỆT GIỮA CÁC PAGE
     let customer = await this.customerModel.findOne({
       company_id: companyId,
+      page_id: pageId, // Thêm page_id để phân biệt
       facebook_user_id: facebookUserId,
     });
 
@@ -109,6 +110,14 @@ export class FacebookMessagingService {
     source: 'messenger' | 'comment' = 'messenger',
     postId?: string,
     commentId?: string,
+    postData?: {
+      content?: string;
+      permalink_url?: string;
+      photos?: string[];
+      status_type?: string;
+      created_time?: Date;
+      updated_time?: Date;
+    },
   ): Promise<FacebookConversationDocument> {
     let conversation: FacebookConversationDocument | null = null;
 
@@ -119,36 +128,95 @@ export class FacebookMessagingService {
       });
     }
 
+    // Logic tìm conversation cũ:
     if (!conversation) {
-      // Tìm conversation mở gần nhất của customer
-      conversation = await this.conversationModel.findOne({
-        company_id: companyId,
-        customer_id: customerId,
-        status: 'open',
-      }).sort({ created_at: -1 });
+      if (source === 'messenger' && facebookThreadId) {
+        // Messenger: Tìm theo facebook_thread_id
+        conversation = await this.conversationModel.findOne({
+          company_id: companyId,
+          customer_id: customerId,
+          facebook_thread_id: facebookThreadId,
+          source: 'messenger',
+          status: 'open',
+        }).sort({ created_at: -1 });
+      } else if (source === 'comment') {
+        // Comment: Gộp vào conversation comment cũ của cùng customer
+        conversation = await this.conversationModel.findOne({
+          company_id: companyId,
+          customer_id: customerId,
+          source: 'comment',
+          status: 'open',
+        }).sort({ created_at: -1 });
+      }
     }
 
     if (!conversation) {
       // Tạo conversation mới
       const conversationId = this.generateConversationId();
       
-      conversation = new this.conversationModel({
+      const conversationData: any = {
         conversation_id: conversationId,
         company_id: companyId,
         page_id: pageId,
         customer_id: customerId,
         facebook_thread_id: facebookThreadId,
         source: source,
-        post_id: postId,
-        comment_id: commentId,
         status: 'open',
         current_handler: 'chatbot',
-        needs_attention: false,
+        needs_attention: source === 'comment', // Comment luôn cần attention
         priority: 'normal',
-      });
-
+      };
+      
+      conversation = new this.conversationModel(conversationData);
       await conversation.save();
-      this.logger.log(`Created new conversation: ${conversationId}`);
+      this.logger.log(`Created new conversation: ${conversationId} (source: ${source})`);
+    }
+    
+    // Cập nhật thông tin bài đăng cho comment (CHỈ cập nhật trường có dữ liệu)
+    if (source === 'comment' && postData) {
+      let hasUpdates = false;
+      
+      // Cập nhật các ID luôn
+      if (postId) {
+        conversation.post_id = postId;
+        hasUpdates = true;
+      }
+      if (commentId) {
+        conversation.comment_id = commentId;
+        hasUpdates = true;
+      }
+      
+      // Chỉ cập nhật nếu có dữ liệu mới
+      if (postData.content !== undefined) {
+        conversation.post_content = postData.content;
+        hasUpdates = true;
+      }
+      if (postData.permalink_url !== undefined) {
+        conversation.post_permalink_url = postData.permalink_url;
+        hasUpdates = true;
+      }
+      if (postData.photos !== undefined) {
+        conversation.post_photos = postData.photos;
+        hasUpdates = true;
+      }
+      if (postData.status_type !== undefined) {
+        conversation.post_status_type = postData.status_type;
+        hasUpdates = true;
+      }
+      if (postData.created_time !== undefined) {
+        conversation.post_created_time = postData.created_time;
+        hasUpdates = true;
+      }
+      if (postData.updated_time !== undefined) {
+        conversation.post_updated_time = postData.updated_time;
+        hasUpdates = true;
+      }
+      
+      if (hasUpdates) {
+        conversation.updated_at = new Date();
+        await conversation.save();
+        this.logger.log(`Updated post data for conversation: ${conversation.conversation_id} (comment event)`);
+      }
     }
 
     return conversation;
@@ -184,6 +252,7 @@ export class FacebookMessagingService {
     if (query.handler) filter.current_handler = query.handler;
     if (query.assignedTo) filter.assigned_to = query.assignedTo;
     if (query.needsAttention !== undefined) filter.needs_attention = query.needsAttention;
+    if (query.source) filter.source = query.source; // Filter theo source: messenger hoặc comment
 
     const page = query.page || 1;
     const limit = query.limit || 20;
@@ -254,6 +323,7 @@ export class FacebookMessagingService {
       senderId: string;
       senderName?: string;
       sentAt?: Date;
+      metadata?: any;
     },
   ): Promise<FacebookMessageDocument> {
     const messageId = this.generateMessageId();
@@ -275,6 +345,7 @@ export class FacebookMessagingService {
       sender_name: messageData.senderName,
       sent_at: messageData.sentAt || new Date(),
       is_read: messageData.senderType !== 'customer', // Staff/bot messages auto-read
+      metadata: messageData.metadata,
     });
 
     await message.save();
@@ -484,5 +555,61 @@ export class FacebookMessagingService {
 
   async findPageByFacebookId(facebookPageId: string): Promise<FacebookPageDocument | null> {
     return await this.pageModel.findOne({ facebook_page_id: facebookPageId });
+  }
+
+  async updateConversationsWithPostData(
+    companyId: string, 
+    postId: string, 
+    postData: {
+      content?: string;
+      permalink_url?: string;
+      photos?: string[];
+      status_type?: string;
+      created_time?: Date;
+      updated_time?: Date;
+    }
+  ): Promise<void> {
+    try {
+      // Xây dựng object update chỉ với các trường có dữ liệu
+      const updateFields: any = {
+        updated_at: new Date(),
+      };
+      
+      // CHỈ cập nhật trường có dữ liệu thực sự (không rỗng, không ghi đè giá trị đã có)
+      if (postData.content && postData.content.trim() !== '') {
+        updateFields.post_content = postData.content;
+      }
+      // KHÔNG cập nhật permalink_url nếu rỗng (giữ lại giá trị từ comment event)
+      if (postData.permalink_url && postData.permalink_url.trim() !== '') {
+        updateFields.post_permalink_url = postData.permalink_url;
+      }
+      if (postData.photos && Array.isArray(postData.photos) && postData.photos.length > 0) {
+        updateFields.post_photos = postData.photos;
+      }
+      if (postData.status_type && postData.status_type.trim() !== '') {
+        updateFields.post_status_type = postData.status_type;
+      }
+      if (postData.created_time) {
+        updateFields.post_created_time = postData.created_time;
+      }
+      if (postData.updated_time) {
+        updateFields.post_updated_time = postData.updated_time;
+      }
+      
+      // Cập nhật tất cả conversations comment liên quan đến post này
+      const updateResult = await this.conversationModel.updateMany(
+        {
+          company_id: companyId,
+          source: 'comment',
+          post_id: postId,
+        },
+        { $set: updateFields }
+      );
+      
+      this.logger.log(`Updated ${updateResult.modifiedCount} conversations with post data for post: ${postId} (status event)`);
+      this.logger.log(`Update fields:`, Object.keys(updateFields));
+    } catch (error) {
+      this.logger.error('Failed to update conversations with post data:', error);
+    }
   }
 }

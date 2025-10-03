@@ -25,7 +25,7 @@ export class FacebookMessage {
 
   // MESSAGE CONTENT
   @Prop({ required: true, default: 'text' })
-  message_type: 'text' | 'image' | 'file' | 'quick_reply' | 'postback';
+  message_type: 'text' | 'image' | 'file' | 'comment' | 'quick_reply' | 'postback';
 
   @Prop({ required: true })
   text: string; // Nội dung văn bản

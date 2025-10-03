@@ -137,8 +137,11 @@ export class FacebookWebhookController {
       // Process webhook
       if (parsedBody.object === 'page') {
         for (const entry of parsedBody.entry) {
+          this.logger.log(`[Webhook] Processing entry: pageId=${entry.id}, messaging=${entry.messaging?.length || 0}, changes=${entry.changes?.length || 0}`);
           await this.processEntry(entry);
         }
+      } else {
+        this.logger.warn(`[Webhook] Unhandled object type: ${parsedBody.object}`);
       }
 
       return { success: true };
@@ -215,6 +218,7 @@ export class FacebookWebhookController {
           event.message ? 'message' : event.postback ? 'postback' : 'other'
         }`,
       );
+      this.logger.log(`[processMessagingEvent] Processing messenger event for customer: ${facebookUserId}`);
 
       // Tìm page trong database để lấy thông tin công ty
       const page = await this.messagingService.findPageByFacebookId(facebookPageId);
@@ -231,14 +235,18 @@ export class FacebookWebhookController {
         facebookPageId,
       );
 
-      // Tìm hoặc tạo conversation
+      // Tìm hoặc tạo conversation cho messenger
+      // Thread ID riêng biệt để phân biệt với comment
+      const threadId = `messenger_${facebookPageId}_${facebookUserId}`;
       const conversation = await this.messagingService.findOrCreateConversation(
         page.company_id,
         page.page_id,
         customer.customer_id,
-        `${facebookPageId}_${facebookUserId}`, // thread_id
-        'messenger',
+        threadId, // thread_id riêng cho messenger
+        'messenger', // source = messenger
       );
+      
+      this.logger.log(`[processMessagingEvent] Using conversation: ${conversation.conversation_id} for messenger`);
 
       // Process message
       if (event.message) {
@@ -361,13 +369,217 @@ export class FacebookWebhookController {
   private async processPageChange(pageId: string, change: any): Promise<void> {
     try {
       this.logger.log(`[processPageChange] Change type: ${change.field}`);
+      this.logger.log(`[processPageChange] Change data:`, JSON.stringify(change, null, 2));
 
-      // TODO: Xử lý comments, posts, etc.
-      // if (change.field === 'feed') {
-      //   // Process comment on post
-      // }
+      if (change.field === 'feed') {
+        await this.processFeedChange(pageId, change);
+      } else if (change.field === 'ratings') {
+        await this.processRatingChange(pageId, change);
+      } else {
+        this.logger.log(`[processPageChange] Unhandled field: ${change.field}`);
+      }
     } catch (error) {
       this.logger.error('[processPageChange] Error:', error);
+    }
+  }
+
+  private async processFeedChange(pageId: string, change: any): Promise<void> {
+    try {
+      const value = change.value;
+      
+      if (value.item === 'comment') {
+        await this.processComment(pageId, value);
+      } else if (value.item === 'post') {
+        await this.processPost(pageId, value);
+      } else if (value.item === 'status') {
+        await this.processPostStatus(pageId, value); // Xử lý cập nhật bài đăng
+      } else if (value.item === 'reaction') {
+        await this.processReaction(pageId, value);
+      } else if (value.item === 'share') {
+        await this.processShare(pageId, value);
+      } else {
+        this.logger.log(`[processFeedChange] Unhandled item type: ${value.item}`);
+      }
+    } catch (error) {
+      this.logger.error('[processFeedChange] Error:', error);
+    }
+  }
+
+  private async processComment(pageId: string, commentData: any): Promise<void> {
+    try {
+      const commentId = commentData.comment_id;
+      const postId = commentData.post_id;
+      const parentId = commentData.parent_id; // null for top-level comments
+      const fromUser = commentData.from;
+      const message = commentData.message;
+      const createdTime = new Date(commentData.created_time * 1000);
+      
+      // Xử lý ảnh trong comment (trường 'photo')
+      const commentPhoto = commentData.photo;
+      let attachments: any[] | undefined = undefined;
+      
+      if (commentPhoto) {
+        attachments = [{
+          type: 'image',
+          url: commentPhoto,
+          payload: {
+            url: commentPhoto
+          }
+        }];
+        this.logger.log(`[processComment] Comment has photo: ${commentPhoto}`);
+      }
+      
+      // Lấy thông tin bài đăng từ webhook
+      const postInfo = commentData.post;
+
+      this.logger.log(`[processComment] New comment from ${fromUser.name} (${fromUser.id})`);
+      this.logger.log(`[processComment] Post: ${postId}, Comment: ${commentId}`);
+      this.logger.log(`[processComment] Message: ${message}`);
+
+      // Tìm page trong database
+      const page = await this.messagingService.findPageByFacebookId(pageId);
+      if (!page) {
+        this.logger.warn(`[processComment] Page not found: ${pageId}`);
+        return;
+      }
+
+      // Tìm hoặc tạo customer từ comment author
+      const customer = await this.messagingService.findOrCreateCustomer(
+        page.company_id,
+        page.page_id,
+        fromUser.id,
+        pageId,
+      );
+
+      // Chuẩn bị thông tin bài đăng từ comment event
+      // Lưu ý: Comment event có permalink_url, Status event có message + photos
+      // CHỈ cập nhật khi có dữ liệu, không ghi đè với giá trị rỗng
+      const postData = postInfo ? {
+        content: postInfo.message || undefined, // Giữ nguyên undefined nếu không có
+        permalink_url: postInfo.permalink_url || undefined, // CHỈ CÓ TRONG COMMENT EVENT
+        photos: postInfo.photos && postInfo.photos.length > 0 ? postInfo.photos : undefined,
+        status_type: postInfo.status_type || undefined,
+        created_time: postInfo.created_time ? new Date(postInfo.created_time * 1000) : undefined,
+        updated_time: postInfo.updated_time ? new Date(postInfo.updated_time) : undefined,
+      } : undefined; // KHÔNG tạo object rỗng
+
+      this.logger.log(`[processComment] Post data (from comment event):`, {
+        hasPostInfo: !!postInfo,
+        content_length: postData?.content?.length || 0,
+        photos_count: postData?.photos?.length || 0,
+        has_permalink: !!postData?.permalink_url,
+        permalink_url: postData?.permalink_url || 'not-in-comment-event',
+        status_type: postData?.status_type || 'none',
+        post_id: postId
+      });
+
+      // Tạo/cập nhật conversation cho comment - GỘP VÀO CONVERSATION CŨ NẾu CÙNG CUSTOMER
+      const threadId = `comment_${pageId}_${customer.customer_id}`; // Thread theo customer, không theo comment riêng
+      const conversation = await this.messagingService.findOrCreateConversation(
+        page.company_id,
+        page.page_id,
+        customer.customer_id,
+        threadId,
+        'comment',
+        postId,
+        commentId,
+        postData,
+      );
+      
+      this.logger.log(`[processComment] Using conversation: ${conversation.conversation_id} for customer: ${customer.customer_id}`);
+
+      // Tạo message record cho comment
+      await this.messagingService.createMessage(
+        page.company_id,
+        page.page_id,
+        customer.customer_id,
+        conversation.conversation_id,
+        {
+          facebookMessageId: commentId,
+          messageType: 'comment',
+          text: message || '[No text content]',
+          attachments: attachments, // Thêm ảnh comment nếu có
+          senderType: 'customer',
+          senderId: customer.customer_id,
+          senderName: fromUser.name,
+          sentAt: createdTime,
+          // KHÔNG lưu metadata cho comment - thông tin bài đăng đã lưu vào conversation
+          metadata: null,
+        },
+      );
+
+      this.logger.log('[processComment] Comment saved successfully');
+    } catch (error) {
+      this.logger.error('[processComment] Error:', error);
+    }
+  }
+
+  private async processPost(pageId: string, postData: any): Promise<void> {
+    try {
+      this.logger.log(`[processPost] New post: ${postData.post_id}`);
+      // TODO: Implement post processing if needed
+    } catch (error) {
+      this.logger.error('[processPost] Error:', error);
+    }
+  }
+
+  private async processPostStatus(pageId: string, statusData: any): Promise<void> {
+    try {
+      const postId = statusData.post_id;
+      this.logger.log(`[processPostStatus] Post status updated: ${postId}`);
+      this.logger.log(`[processPostStatus] Status data:`, JSON.stringify(statusData, null, 2));
+      
+      // Tìm page trong database
+      const page = await this.messagingService.findPageByFacebookId(pageId);
+      if (!page) {
+        this.logger.warn(`[processPostStatus] Page not found: ${pageId}`);
+        return;
+      }
+
+      // Cập nhật thông tin bài đăng vào các conversation comment liên quan
+      await this.messagingService.updateConversationsWithPostData(
+        page.company_id,
+        postId,
+        {
+          content: statusData.message || '',
+          permalink_url: statusData.permalink_url || '',
+          photos: statusData.photos || [],
+          status_type: statusData.status_type || '',
+          created_time: statusData.created_time ? new Date(statusData.created_time * 1000) : undefined,
+          updated_time: statusData.updated_time ? new Date(statusData.updated_time) : undefined,
+        }
+      );
+      
+      this.logger.log(`[processPostStatus] Updated conversations with post data for: ${postId}`);
+    } catch (error) {
+      this.logger.error('[processPostStatus] Error:', error);
+    }
+  }
+
+  private async processReaction(pageId: string, reactionData: any): Promise<void> {
+    try {
+      this.logger.log(`[processReaction] New reaction: ${reactionData.reaction_type}`);
+      // TODO: Implement reaction processing if needed
+    } catch (error) {
+      this.logger.error('[processReaction] Error:', error);
+    }
+  }
+
+  private async processShare(pageId: string, shareData: any): Promise<void> {
+    try {
+      this.logger.log(`[processShare] New share: ${shareData.share_id}`);
+      // TODO: Implement share processing if needed
+    } catch (error) {
+      this.logger.error('[processShare] Error:', error);
+    }
+  }
+
+  private async processRatingChange(pageId: string, change: any): Promise<void> {
+    try {
+      this.logger.log(`[processRatingChange] New rating change`);
+      // TODO: Implement rating processing if needed
+    } catch (error) {
+      this.logger.error('[processRatingChange] Error:', error);
     }
   }
 }

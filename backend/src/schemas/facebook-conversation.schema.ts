@@ -23,11 +23,36 @@ export class FacebookConversation {
   @Prop({ required: true, default: 'messenger' })
   source: 'messenger' | 'comment'; // Nguồn cuộc hội thoại
 
+  // === THÔNG TIN BÀI ĐĂNG (CHIẾ ÁP DỤNG KHI SOURCE = 'comment') ===
   @Prop()
-  post_id?: string; // ID bài đăng (nếu từ comment)
+  post_id?: string; // ID bài đăng Facebook (ví dụ: "811762138677249_122105180283009857")
 
   @Prop()
-  comment_id?: string; // ID comment gốc (nếu từ comment)
+  comment_id?: string; // ID comment gốc Facebook (ví dụ: "122105180283009857_4218811035025361")
+
+  @Prop()
+  post_content?: string; // Nội dung bài đăng
+
+  @Prop()
+  post_permalink_url?: string; // Link bài đăng
+
+  @Prop({ type: [String] })
+  post_photos?: string[]; // Danh sách ảnh trong bài đăng
+
+  @Prop()
+  post_status_type?: string; // Loại bài đăng: "added_photos", "mobile_status_update", etc
+
+  @Prop()
+  post_created_time?: Date; // Thời gian tạo bài đăng
+
+  @Prop()
+  post_updated_time?: Date; // Thời gian cập nhật bài đăng cuối
+
+  @Prop()
+  post_is_published?: boolean; // Bài đăng đã được publish chưa
+
+  @Prop()
+  post_promotion_status?: string; // Trạng thái quảng cáo: "inactive", "active"
 
   @Prop({ default: 'open' })
   status: 'open' | 'closed' | 'archived'; // Trạng thái cuộc hội thoại
@@ -93,3 +118,7 @@ FacebookConversationSchema.index({
 }); // Dashboard sorting - KEY INDEX
 FacebookConversationSchema.index({ company_id: 1, assigned_to: 1, status: 1 });
 FacebookConversationSchema.index({ company_id: 1, current_handler: 1 });
+// Indexes cho comment tracking
+FacebookConversationSchema.index({ post_id: 1 }, { sparse: true });
+FacebookConversationSchema.index({ comment_id: 1 }, { sparse: true });
+FacebookConversationSchema.index({ company_id: 1, source: 1 });
