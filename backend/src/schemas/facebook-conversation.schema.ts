@@ -69,6 +69,9 @@ export class FacebookConversation {
   @Prop({ default: 'normal' })
   priority: 'low' | 'normal' | 'high' | 'urgent'; // Độ ưu tiên
 
+  @Prop({ type: [String] })
+  tags?: string[]; // Tags cho conversation: ["vip", "potential", "complaint", "P. lê", "Huyền", "KCGM"]
+
   @Prop()
   assigned_at?: Date; // Thời điểm assign staff
 

@@ -3,194 +3,107 @@
 import React, { useState } from 'react';
 import '@/styles/chat/RightPanel.css';
 
-interface Order {
-  id: string;
-  productName: string;
-  quantity: number;
-  price: number;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
-  createdAt: string;
-}
-
 interface RightPanelProps {
   conversationId: string | null;
 }
 
-// Mock data
-const mockOrders: Order[] = [];
-
 export default function RightPanel({ conversationId }: RightPanelProps) {
   const [activeTab, setActiveTab] = useState<'info' | 'order'>('info');
-  const [note, setNote] = useState<string>('');
-  const [notes, setNotes] = useState<string[]>([]);
-
-  const handleAddNote = () => {
-    if (note.trim()) {
-      setNotes([...notes, note.trim()]);
-      setNote('');
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleAddNote();
-    }
-  };
-
-  const handleCreateOrder = () => {
-    // TODO: Implement create order logic
-    console.log('Creating order for conversation:', conversationId);
-  };
+  const [note, setNote] = useState('');
 
   if (!conversationId) {
-    return (
-      <div className="right-panel-component">
-        <div className="right-panel-empty-state">
-          <p>Chọn một cuộc hội thoại để xem thông tin</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="right-panel-component">
-      {/* Tab Header */}
+    <div className="right-panel-container">
+      {/* Tab Headers */}
       <div className="right-panel-tabs">
-        <button
-          className={`right-panel-tab-button ${activeTab === 'info' ? 'active' : ''}`}
+        <div
+          className={`right-panel-tab-item ${activeTab === 'info' ? 'right-panel-active' : ''}`}
           onClick={() => setActiveTab('info')}
         >
           Thông tin
-        </button>
-        <button
-          className={`right-panel-tab-button ${activeTab === 'order' ? 'active' : ''}`}
+        </div>
+        <div
+          className={`right-panel-tab-item ${activeTab === 'order' ? 'right-panel-active' : ''}`}
           onClick={() => setActiveTab('order')}
         >
           Tạo đơn
-        </button>
+        </div>
       </div>
 
       {/* Tab Content */}
       <div className="right-panel-content">
         {activeTab === 'info' && (
-          <div className="right-panel-info-tab">
+          <>
             {/* Notes Section */}
-            <div className="right-panel-notes">
-              <div className="right-panel-notes-header">
-                <div className="right-panel-notes-icon">
-                  📝
+            <div className="right-panel-notes-section">
+              <div className="right-panel-notes-empty">
+                <div className="right-panel-notes-empty-icon">
+                  <svg width="81" height="86" viewBox="0 0 81 86" fill="none">
+                    <path d="M12.33 1.35C12.33 1.35 80.36 85.60 80.36 85.60" stroke="#E0E0E0" strokeWidth="2"/>
+                    <circle cx="40" cy="40" r="30" fill="#F5F5F5"/>
+                  </svg>
                 </div>
-                <div className="right-panel-notes-empty-text">
-                  {notes.length === 0 ? 'Bạn chưa có ghi chú nào' : `${notes.length} ghi chú`}
-                </div>
+                <p className="right-panel-notes-empty-text">Bạn chưa có ghi chú nào</p>
               </div>
 
-              {/* Existing Notes */}
-              {notes.length > 0 && (
-                <div className="right-panel-notes-list">
-                  {notes.map((noteText, index) => (
-                    <div key={index} className="right-panel-note-item">
-                      <p>{noteText}</p>
-                      <button
-                        className="right-panel-note-delete"
-                        onClick={() => setNotes(notes.filter((_, i) => i !== index))}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Add Note Input */}
-              <div className="right-panel-note-input-container">
-                <div className="right-panel-note-input-wrapper">
-                  <textarea
+              <div className="right-panel-notes-input-container">
+                <div className="right-panel-notes-input-wrapper">
+                  <input
+                    type="text"
+                    className="right-panel-notes-input"
+                    placeholder="Nhập ghi chú (Enter để gửi)"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Nhập ghi chú (Enter để gửi)"
-                    className="right-panel-note-input"
-                    rows={2}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && note.trim()) {
+                        console.log('Adding note:', note);
+                        setNote('');
+                      }
+                    }}
                   />
-                  <button
-                    className="right-panel-note-send"
-                    onClick={handleAddNote}
-                    disabled={!note.trim()}
-                  >
-                    📤
-                  </button>
                 </div>
+                <button className="right-panel-notes-send-button">
+                  <img src="/assets/926ec6e2-aae2-4a0a-a83d-f98ebbfbc699.png" alt="send" />
+                </button>
               </div>
+            </div>
+
+            {/* Divider with Label */}
+            <div className="right-panel-section-divider">
+              <div className="right-panel-divider-line"></div>
+              <div className="right-panel-divider-label">Đơn hàng</div>
+              <div className="right-panel-divider-line"></div>
             </div>
 
             {/* Orders Section */}
-            <div className="right-panel-orders">
-              <div className="right-panel-divider">
-                <div className="right-panel-divider-line"></div>
-                <div className="right-panel-divider-text">Đơn hàng</div>
-                <div className="right-panel-divider-line"></div>
+            <div className="right-panel-orders-section">
+              <div className="right-panel-orders-empty">
+                <div className="right-panel-orders-empty-icon">
+                  <img src="/assets/e2f7a445-b7e1-4361-addd-5ff9791acec7.png" alt="no orders" />
+                </div>
+                <p className="right-panel-orders-empty-text">Chưa có lịch sử đơn hàng</p>
+                <button className="right-panel-create-order-button">
+                  <img src="/assets/5ba6960d-f313-4787-a728-735b292ed69a.png" alt="plus" />
+                  <span>Tạo đơn</span>
+                </button>
               </div>
 
-              {mockOrders.length === 0 ? (
-                <div className="right-panel-orders-empty">
-                  <div className="right-panel-empty-icon">📦</div>
-                  <p className="right-panel-empty-text">Chưa có lịch sử đơn hàng</p>
-                  <button 
-                    className="right-panel-create-order"
-                    onClick={handleCreateOrder}
-                  >
-                    <span className="right-panel-button-icon">➕</span>
-                    <span className="right-panel-button-text">Tạo đơn</span>
-                  </button>
+              {/* Ad Tag */}
+              <div className="right-panel-ad-tag--container">
+                <div className="right-panel-ad-tag-">
+                  Ad 120212123260400613
                 </div>
-              ) : (
-                <div className="right-panel-orders-list">
-                  {mockOrders.map((order) => (
-                    <div key={order.id} className="right-panel-order-item">
-                      <div className="right-panel-order-header">
-                        <span className="right-panel-order-id">#{order.id}</span>
-                        <span className={`right-panel-order-status ${order.status}`}>
-                          {order.status}
-                        </span>
-                      </div>
-                      <div className="right-panel-order-details">
-                        <p className="right-panel-product-name">{order.productName}</p>
-                        <p className="right-panel-order-info">
-                          Số lượng: {order.quantity} | Giá: {order.price.toLocaleString('vi-VN')}₫
-                        </p>
-                        <p className="right-panel-order-date">
-                          {new Date(order.createdAt).toLocaleDateString('vi-VN')}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Ad ID Tag */}
-            <div className="right-panel-ad-tag">
-              <div className="right-panel-ad-text">
-                Ad 120230607789120778
               </div>
             </div>
-          </div>
+          </>
         )}
 
         {activeTab === 'order' && (
-          <div className="right-panel-order-tab">
-            <div className="right-panel-order-form">
-              <div className="right-panel-form-icon">📋</div>
-              <p>Form tạo đơn hàng sẽ được implement ở đây</p>
-              <button 
-                className="right-panel-form-button"
-                onClick={handleCreateOrder}
-              >
-                Tạo đơn hàng mới
-              </button>
-            </div>
+          <div className="right-panel-order-form">
+            <p>Form tạo đơn hàng sẽ được thêm vào đây</p>
           </div>
         )}
       </div>

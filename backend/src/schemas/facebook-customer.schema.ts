@@ -36,19 +36,28 @@ export class FacebookCustomer {
   timezone?: number; // Múi giờ: +7
 
   @Prop()
-  email?: string; // Email nếu có
+  email?: string; // Email (nếu khách hàng cung cấp trong chat hoặc nhân viên/chatbot thêm)
 
   @Prop()
-  phone?: string; // Số điện thoại nếu có
+  phone?: string; // Số điện thoại (nếu khách hàng cung cấp trong chat hoặc nhân viên/chatbot thêm)
 
   @Prop()
-  address?: string; // Địa chỉ nếu có
+  address?: string; // Địa chỉ (thường do nhân viên hoặc chatbot thêm)
+
+  @Prop()
+  age?: number; // Tuổi (thường do nhân viên hoặc chatbot thêm)
+
+  @Prop()
+  height?: number; // Chiều cao cm (thường do nhân viên hoặc chatbot thêm)
+
+  @Prop()
+  weight?: number; // Cân nặng kg (thường do nhân viên hoặc chatbot thêm)
+
+  @Prop({ type: [String] })
+  products_interested?: string[]; // Danh sách product_id khách hàng quan tâm (thường do nhân viên hoặc chatbot thêm)
 
   @Prop()
   notes?: string; // Ghi chú của nhân viên
-
-  @Prop({ type: [String] })
-  tags?: string[]; // Tags: ["vip", "potential", "complaint"]
 
   @Prop()
   assigned_to?: string; // ID staff được phân công
