@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import ApiService, { User, PendingUser, UserStats, FacebookPage, CompanyInfo as ApiCompanyInfo, UpdateCompanyDto } from '@/services/api';
+import ApiService, { User, PendingUser, UserStats, FacebookPage, FacebookTag, CompanyInfo as ApiCompanyInfo, UpdateCompanyDto, CreateTagDto, UpdateTagDto } from '@/services/api';
 import Header from '../shared/Header';
 import PendingUsers from './PendingUsers';
 import UserTable from './UserTable';
 import UserStatsCards from './UserStatsCards';
+import TagsManagement from './TagsManagement';
 import '@/styles/management/Management.css';
+import { toast } from 'react-toastify';
 
 interface CompanyInfo {
   company_id: string;
@@ -36,8 +38,10 @@ export default function Management({ onLogout }: ManagementProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [facebookPages, setFacebookPages] = useState<FacebookPage[]>([]);
+  const [tags, setTags] = useState<FacebookTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<'users' | 'tags'>('users');
   const [stats, setStats] = useState<UserStats>({
     totalUsers: 0,
     maxUsers: 0,
@@ -81,6 +85,7 @@ export default function Management({ onLogout }: ManagementProps) {
       fetchPendingUsers();
       fetchFacebookPages();
       fetchCompanyInfo();
+      fetchTags();
     }
   }, [token]);
   
@@ -331,6 +336,67 @@ export default function Management({ onLogout }: ManagementProps) {
     }
   };
 
+  // ===== TAGS FUNCTIONS =====
+  const fetchTags = async () => {
+    if (!token) return;
+    
+    try {
+      const response = await ApiService.tags.getTags(token);
+      setTags(response?.data || []);
+    } catch (err: any) {
+      console.error('Error fetching tags:', err);
+      setTags([]);
+    }
+  };
+
+  const handleCreateTag = async (tagData: CreateTagDto) => {
+    if (!token) return;
+    
+    try {
+      setLoading(true);
+      await ApiService.tags.createTag(token, tagData);
+      toast.success('Tạo tag thành công');
+      await fetchTags();
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể tạo tag');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateTag = async (tagId: string, tagData: UpdateTagDto) => {
+    if (!token) return;
+    
+    try {
+      setLoading(true);
+      await ApiService.tags.updateTag(token, tagId, tagData);
+      toast.success('Cập nhật tag thành công');
+      await fetchTags();
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể cập nhật tag');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteTag = async (tagId: string) => {
+    if (!token) return;
+    
+    try {
+      setLoading(true);
+      await ApiService.tags.deleteTag(token, tagId);
+      toast.success('Xóa tag thành công');
+      await fetchTags();
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể xóa tag');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleToggleUserStatus = async (userId: string) => {
     if (!token) return;
     
@@ -384,13 +450,36 @@ export default function Management({ onLogout }: ManagementProps) {
               <div className="breadcrumb">
                 <span className="breadcrumb-item">Dashboard</span>
                 <span className="breadcrumb-separator"></span>
-                <span className="breadcrumb-item active">Quản lý tài khoản</span>
+                <span className="breadcrumb-item active">Quản lý</span>
               </div>
-              <div className="page-title">
-                Quản lý tài khoản ({stats.totalUsers}/{stats.maxUsers} người dùng)
+
+              {/* Tabs Navigation */}
+              <div className="management-tabs">
+                <button
+                  className={`management-tab ${activeTab === 'users' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('users')}
+                >
+                  👥 Quản lý tài khoản
+                  <span className="tab-badge">{stats.totalUsers}/{stats.maxUsers}</span>
+                </button>
+                <button
+                  className={`management-tab ${activeTab === 'tags' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('tags')}
+                >
+                  🏷️ Quản lý Tags
+                  <span className="tab-badge">{tags.length}</span>
+                </button>
               </div>
-              <div className="company-info-section">
-                <h3 className="company-info-title">Thông tin công ty</h3>
+
+              {/* Users Tab Content */}
+              {activeTab === 'users' && (
+                <div className="management-tab-content">
+                  <div className="page-title">
+                    Quản lý tài khoản ({stats.totalUsers}/{stats.maxUsers} người dùng)
+                  </div>
+                  
+                  <div className="company-info-section">
+                    <h3 className="company-info-title">Thông tin công ty</h3>
                 
                 {/* Hiển thị thông báo thành công hoặc lỗi */}
                 {successMessage && (
@@ -549,39 +638,54 @@ export default function Management({ onLogout }: ManagementProps) {
                     </div>
                   </div>
                 )}
-              </div>
+                  </div>
+
+                  {/* Statistics Cards */}
+                  <UserStatsCards stats={stats} users={users} />
+
+                  {/* Pending Users Section */}
+                  {pendingUsers.length > 0 && (
+                    <PendingUsers
+                      pendingUsers={pendingUsers}
+                      selectedUsers={selectedUsers}
+                      onSelectedUsersChange={setSelectedUsers}
+                      onApprove={handleApproveUser}
+                      onReject={handleRejectUser}
+                      onBulkApprove={handleBulkApprove}
+                      onBulkReject={handleBulkReject}
+                      loading={loading}
+                    />
+                  )}
+
+                  {/* User Management Table */}
+                  <UserTable
+                    users={users}
+                    currentUser={user}
+                    onUpdateRoles={handleUpdateUserRoles}
+                    onToggleStatus={handleToggleUserStatus}
+                    onUpdateFacebookPages={handleUpdateFacebookPagesAccess}
+                    facebookPages={facebookPages}
+                    loading={loading}
+                    onRefresh={fetchUsers}
+                  />
+                </div>
+              )}
+
+              {/* Tags Tab Content */}
+              {activeTab === 'tags' && (
+                <TagsManagement
+                  tags={tags}
+                  facebookPages={facebookPages}
+                  onCreateTag={handleCreateTag}
+                  onUpdateTag={handleUpdateTag}
+                  onDeleteTag={handleDeleteTag}
+                  loading={loading}
+                  onRefresh={fetchTags}
+                />
+              )}
             </div>
-
-            {/* Statistics Cards */}
-            <UserStatsCards stats={stats} users={users} />
-
-            {/* Pending Users Section */}
-            {pendingUsers.length > 0 && (
-              <PendingUsers
-                pendingUsers={pendingUsers}
-                selectedUsers={selectedUsers}
-                onSelectedUsersChange={setSelectedUsers}
-                onApprove={handleApproveUser}
-                onReject={handleRejectUser}
-                onBulkApprove={handleBulkApprove}
-                onBulkReject={handleBulkReject}
-                loading={loading}
-              />
-            )}
-
-            {/* User Management Table */}
-            <UserTable
-              users={users}
-              currentUser={user}
-              onUpdateRoles={handleUpdateUserRoles}
-              onToggleStatus={handleToggleUserStatus}
-              onUpdateFacebookPages={handleUpdateFacebookPagesAccess}
-              facebookPages={facebookPages}
-              loading={loading}
-              onRefresh={fetchUsers}
-            />
-
           </div>
+
         </div>
       </div>
     </div>

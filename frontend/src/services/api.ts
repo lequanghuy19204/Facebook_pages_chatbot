@@ -276,9 +276,209 @@ export interface ProductStats {
   total_products: number;
   active_products: number;
   inactive_products: number;
-  brands_count: number;
   products_with_images: number;
   products_without_images: number;
+}
+
+// ===== FACEBOOK MESSAGING INTERFACES =====
+
+export interface FacebookConversation {
+  conversation_id: string;
+  company_id: string;
+  page_id: string;
+  customer_id: string;
+  facebook_thread_id?: string;
+  source: 'messenger' | 'comment';
+  
+  // POST INFO (for comment source)
+  post_id?: string;
+  comment_id?: string;
+  post_content?: string;
+  post_permalink_url?: string;
+  post_photos?: string[];
+  post_status_type?: string;
+  post_created_time?: Date;
+  post_updated_time?: Date;
+  post_is_published?: boolean;
+  post_promotion_status?: string;
+  
+  status: 'open' | 'closed' | 'archived';
+  current_handler: 'chatbot' | 'human';
+  assigned_to?: string;
+  needs_attention: boolean;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  tags?: string[];
+  assigned_at?: Date;
+  
+  // LAST MESSAGE
+  last_message_text?: string;
+  last_message_at?: Date;
+  last_message_from?: 'customer' | 'chatbot' | 'staff';
+  
+  // STATS
+  total_messages: number;
+  unread_count: number;
+  
+  // ESCALATION
+  escalated_from_bot: boolean;
+  escalation_reason?: 'no_answer' | 'customer_request' | 'complex_query';
+  escalated_at?: Date;
+  
+  created_at: Date;
+  updated_at: Date;
+  
+  // POPULATED FIELDS
+  customer?: FacebookCustomer;
+}
+
+export interface FacebookCustomer {
+  customer_id: string;
+  company_id: string;
+  page_id: string;
+  facebook_user_id: string;
+  name: string;
+  first_name?: string;
+  last_name?: string;
+  profile_pic?: string;
+  locale?: string;
+  timezone?: number;
+  email?: string;
+  phone?: string;
+  address?: string;
+  age?: number;
+  height?: number;
+  weight?: number;
+  products_interested?: string[];
+  notes?: string;
+  assigned_to?: string;
+  status: 'active' | 'blocked' | 'archived';
+  first_contact_at: Date;
+  last_interaction_at: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface FacebookMessage {
+  message_id: string;
+  company_id: string;
+  page_id: string;
+  customer_id: string;
+  conversation_id: string;
+  facebook_message_id?: string;
+  
+  message_type: 'text' | 'image' | 'file' | 'comment' | 'quick_reply' | 'postback';
+  text: string;
+  attachments?: Array<{
+    type: 'image' | 'video' | 'audio' | 'file';
+    url: string;
+    size?: number;
+    name?: string;
+  }>;
+  quick_reply?: {
+    payload: string;
+  };
+  postback?: {
+    payload: string;
+    title: string;
+  };
+  
+  sender_type: 'customer' | 'chatbot' | 'staff';
+  sender_id: string;
+  sender_name?: string;
+  
+  bot_confidence?: number;
+  bot_intent?: string;
+  escalated_to_human: boolean;
+  
+  is_read: boolean;
+  read_at?: Date;
+  read_by?: string[];
+  
+  delivery_status: 'sending' | 'sent' | 'delivered' | 'failed';
+  delivery_error?: string;
+  
+  sent_at: Date;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface GetConversationsQuery {
+  page?: number;
+  limit?: number;
+  status?: 'open' | 'closed' | 'archived';
+  current_handler?: 'chatbot' | 'human';
+  assigned_to?: string;
+  needs_attention?: boolean;
+  source?: 'messenger' | 'comment';
+  search?: string;
+  tags?: string[];
+}
+
+export interface ConversationsResponse {
+  success: boolean;
+  data: FacebookConversation[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+}
+
+export interface GetMessagesQuery {
+  page?: number;
+  limit?: number;
+  sender_type?: 'customer' | 'chatbot' | 'staff';
+}
+
+export interface MessagesResponse {
+  success: boolean;
+  data: FacebookMessage[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
+}
+
+// ===== TAGS INTERFACES =====
+
+export interface FacebookTag {
+  tag_id: string;
+  company_id: string;
+  page_ids: string[]; // Tag có thể thuộc nhiều pages
+  tag_name: string;
+  tag_color: string; // Hex color code
+  usage_count: number;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTagDto {
+  tag_name: string;
+  tag_color: string;
+  page_ids: string[];
+}
+
+export interface UpdateTagDto {
+  tag_name?: string;
+  tag_color?: string;
+  page_ids?: string[];
+}
+
+export interface QueryTagsDto {
+  page?: number;
+  limit?: number;
+  search?: string;
+  page_id?: string;
+}
+
+export interface TagsResponse {
+  success: boolean;
+  data: FacebookTag[];
+  total: number;
 }
 
 const ApiService = {
@@ -706,6 +906,33 @@ const ApiService = {
         return await response.json();
       } catch (error) {
         console.error('Update Facebook pages access error:', error);
+        throw error;
+      }
+    },
+
+    // Update merged pages filter (UI preference for dashboard display)
+    updateMergedPagesFilter: async (
+      token: string,
+      pageIds: string[]
+    ): Promise<{ success: boolean; message: string; merged_pages_filter: string[] }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/users/merged-pages-filter`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ page_ids: pageIds }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update merged pages filter');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Update merged pages filter error:', error);
         throw error;
       }
     },
@@ -1459,6 +1686,160 @@ const ApiService = {
       }
     },
   },
-};
 
+  // ===== TAGS API =====
+  tags: {
+    // Get all tags
+    getTags: async (token: string, params?: QueryTagsDto): Promise<TagsResponse> => {
+      try {
+        const queryParams = new URLSearchParams();
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.page_id) queryParams.append('page_id', params.page_id);
+
+        const url = `${API_BASE_URL}/tags${queryParams.toString() ? `?${queryParams}` : ''}`;
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to get tags');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Get tags error:', error);
+        throw error;
+      }
+    },
+
+    // Get single tag
+    getTag: async (token: string, tagId: string): Promise<FacebookTag> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tags/${tagId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to get tag');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Get tag error:', error);
+        throw error;
+      }
+    },
+
+    // Create new tag
+    createTag: async (token: string, tagData: CreateTagDto): Promise<FacebookTag> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tags`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(tagData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create tag');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Create tag error:', error);
+        throw error;
+      }
+    },
+
+    // Update tag
+    updateTag: async (token: string, tagId: string, tagData: UpdateTagDto): Promise<FacebookTag> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tags/${tagId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(tagData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update tag');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Update tag error:', error);
+        throw error;
+      }
+    },
+
+    // Delete tag
+    deleteTag: async (token: string, tagId: string): Promise<{ success: boolean; message: string }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tags/${tagId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to delete tag');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Delete tag error:', error);
+        throw error;
+      }
+    },
+
+    // Get tags by page
+    getTagsByPage: async (token: string, pageId: string): Promise<FacebookTag[]> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tags/page/${pageId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to get tags by page');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Get tags by page error:', error);
+        throw error;
+      }
+    },
+  },
+};
 export default ApiService;

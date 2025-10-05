@@ -55,11 +55,76 @@
   background: rgba(0, 0, 0, 0.3);
 }
 
+/* Management Tabs */
+.management-tabs {
+  display: flex;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 0;
+}
+
+.management-tab {
+  background: transparent;
+  border: none;
+  padding: 8px 15px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 3px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  bottom: -2px;
+}
+
+.management-tab:hover {
+  color: #374151;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.management-tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.tab-badge {
+  background: #e5e7eb;
+  color: #6b7280;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.management-tab.active .tab-badge {
+  background: #667eea;
+  color: white;
+}
+
+.management-tab-content {
+  width: 100%;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Management Header */
 .management-header {
   background-color: white;
   border-radius: 8px;
-  padding: 16px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -312,6 +377,7 @@
 }
 
 .stats-grid {
+  padding: 15px 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 16px;
@@ -320,11 +386,11 @@
 .stat-card {
   background-color: white;
   border-radius: 8px;
-  padding: 16px;
+  padding: 10px;
   display: flex;
   align-items: center;
   gap: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .stat-icon {

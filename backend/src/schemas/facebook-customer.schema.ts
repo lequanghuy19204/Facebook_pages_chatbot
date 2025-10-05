@@ -62,6 +62,9 @@ export class FacebookCustomer {
   @Prop()
   assigned_to?: string; // ID staff được phân công
 
+  @Prop({ type: [String], default: [] })
+  tags: string[]; // Mảng tag_id để phân loại customer (VD: ["tag_001", "tag_002"])
+
   @Prop({ default: 'active' })
   status: 'active' | 'blocked' | 'archived'; // Trạng thái khách hàng
 
@@ -88,3 +91,5 @@ FacebookCustomerSchema.index({ company_id: 1, page_id: 1, facebook_user_id: 1 },
 FacebookCustomerSchema.index({ company_id: 1, page_id: 1 });
 FacebookCustomerSchema.index({ assigned_to: 1 });
 FacebookCustomerSchema.index({ company_id: 1, last_interaction_at: -1 });
+FacebookCustomerSchema.index({ tags: 1 }); // Find customers by tags
+FacebookCustomerSchema.index({ company_id: 1, tags: 1 }); // Filter customers by tags in company

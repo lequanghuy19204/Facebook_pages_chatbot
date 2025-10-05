@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFacebook } from '@/contexts/FacebookContext';
 import FacebookConnect from './FacebookConnect';
 import FacebookPages from './FacebookPages';
 import Header from '../shared/Header';
+import MergedPagesFilterModal from './MergedPagesFilterModal';
+import ApiService from '@/services/api';
 import '@/styles/dashboard/Dashboard.css';
 import { toast } from 'react-toastify';
 
@@ -14,9 +17,12 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onLogout }: DashboardProps) {
-  const { user, company, logout } = useAuth();
+  const router = useRouter();
+  const { user, company, logout, token, updateUserInfo } = useAuth();
   const { isConnected, pages, pagesLoading, syncing, syncPages } = useFacebook();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+  const [isSavingFilter, setIsSavingFilter] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -88,6 +94,49 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     const colorIndex = pageName.charCodeAt(0) % colors.length;
     return colors[colorIndex];
   };
+
+  // Handle merge pages filter modal
+  const handleOpenMergeModal = () => {
+    setIsMergeModalOpen(true);
+  };
+
+  const handleCloseMergeModal = () => {
+    setIsMergeModalOpen(false);
+  };
+
+  const handleSaveMergedPages = async (selectedPageIds: string[]) => {
+    if (!token || !user) {
+      toast.error('Phiên đăng nhập đã hết hạn');
+      return;
+    }
+
+    try {
+      setIsSavingFilter(true);
+      const result = await ApiService.users.updateMergedPagesFilter(token, selectedPageIds);
+      
+      // Update user info in context
+      if (user) {
+        updateUserInfo({
+          ...user,
+          merged_pages_filter: result.merged_pages_filter
+        });
+      }
+
+      toast.success(result.message || 'Đã cập nhật bộ lọc pages');
+      
+      // Navigate to chat page after successful save
+      setTimeout(() => {
+        router.push('/chat');
+      }, 500); // Small delay to show toast message
+    } catch (error: any) {
+      console.error('Error saving merged pages filter:', error);
+      toast.error(error.message || 'Không thể cập nhật bộ lọc pages');
+      throw error; // Re-throw để modal xử lý
+    } finally {
+      setIsSavingFilter(false);
+    }
+  };
+
   // console.log('R2_BUCKET_URL:', R2_BUCKET_URL);
 
   return (
@@ -141,7 +190,12 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   
                   <FacebookConnect className="connect-facebook-button" />
                   
-                  <button className="merge-pages-button">
+                  <button 
+                    className="merge-pages-button"
+                    onClick={handleOpenMergeModal}
+                    disabled={pages.length === 0 || pagesLoading}
+                    title={pages.length === 0 ? "Chưa có pages nào" : "Gộp trang"}
+                  >
                     <img src="/megre_page.svg" alt="Merge" className="merge-icon" />
                     <span>Gộp trang</span>
                   </button>
@@ -271,6 +325,16 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           </div>
         </div>
       </div>
+
+      {/* Merged Pages Filter Modal */}
+      <MergedPagesFilterModal
+        isOpen={isMergeModalOpen}
+        onClose={handleCloseMergeModal}
+        facebookPages={pages}
+        currentMergedPages={user?.merged_pages_filter || []}
+        onSave={handleSaveMergedPages}
+        loading={isSavingFilter}
+      />
     </div>
   );
 }

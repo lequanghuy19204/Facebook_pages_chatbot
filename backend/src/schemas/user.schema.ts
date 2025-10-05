@@ -51,6 +51,9 @@ export class User {
   @Prop({ type: [String], default: [] })
   facebook_pages_access: string[];
 
+  @Prop({ type: [String], default: [] })
+  merged_pages_filter: string[]; // UI preference - pages user muốn hiển thị conversations
+
   @Prop({ default: true })
   is_active: boolean;
 
@@ -77,3 +80,4 @@ UserSchema.index({ roles: 1 });
 UserSchema.index({ company_id: 1, roles: 1 });
 UserSchema.index({ email: 1, is_active: 1 });
 UserSchema.index({ facebook_pages_access: 1 });
+UserSchema.index({ merged_pages_filter: 1 });

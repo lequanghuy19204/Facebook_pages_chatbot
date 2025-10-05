@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { RolesGuard } from './roles.guard';
 import { User, UserSchema } from '../schemas/user.schema';
 import { Company, CompanySchema } from '../schemas/company.schema';
 
@@ -30,7 +31,7 @@ import { Company, CompanySchema } from '../schemas/company.schema';
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard],
-  exports: [AuthService, JwtStrategy, JwtAuthGuard, PassportModule],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard],
+  exports: [AuthService, JwtStrategy, JwtAuthGuard, RolesGuard, PassportModule],
 })
 export class AuthModule {}

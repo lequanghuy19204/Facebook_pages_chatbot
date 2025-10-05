@@ -90,13 +90,6 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
                   <span>Tạo đơn</span>
                 </button>
               </div>
-
-              {/* Ad Tag */}
-              <div className="right-panel-ad-tag--container">
-                <div className="right-panel-ad-tag-">
-                  Ad 120212123260400613
-                </div>
-              </div>
             </div>
           </>
         )}

@@ -481,4 +481,82 @@ export class UsersService {
       throw error;
     }
   }
+
+  /**
+   * Cập nhật merged_pages_filter cho user
+   * CHỈ user có thể update của chính mình - Admin KHÔNG có quyền sửa
+   */
+  async updateMergedPagesFilter(
+    userId: string, 
+    mergedPagesFilter: string[], 
+    companyId: string,
+    requestingUserId: string,
+    requestingUserRoles: UserRole[]
+  ): Promise<any> {
+    // Chỉ user mới có thể update của chính mình - Admin KHÔNG có quyền
+    if (userId !== requestingUserId) {
+      throw new ForbiddenException('Bạn chỉ có thể cập nhật bộ lọc pages của chính mình');
+    }
+
+    // Find user
+    const user = await this.userModel.findOne({ 
+      user_id: userId, 
+      company_id: companyId 
+    }).exec();
+
+    if (!user) {
+      throw new NotFoundException('User không tồn tại');
+    }
+
+    // Nếu merged_pages_filter rỗng, cho phép (hiển thị tất cả)
+    if (mergedPagesFilter.length === 0) {
+      user.merged_pages_filter = [];
+      await user.save();
+      
+      return {
+        success: true,
+        message: 'Bộ lọc pages đã được cập nhật (hiển thị tất cả)',
+        merged_pages_filter: [],
+      };
+    }
+
+    // Validate: Pages trong merged_pages_filter phải nằm trong facebook_pages_access
+    // Admin/manage_user có full access nên check toàn bộ pages của company
+    const isAdmin = requestingUserRoles.includes(UserRole.ADMIN);
+    const isManageUser = requestingUserRoles.includes(UserRole.MANAGE_USER);
+    const hasFullAccess = isAdmin || isManageUser;
+
+    if (hasFullAccess) {
+      // Admin/manage_user: Validate pages tồn tại và thuộc company
+      const pages = await this.facebookPageModel.find({
+        company_id: companyId,
+        page_id: { $in: mergedPagesFilter },
+        is_active: true,
+      }).exec();
+
+      if (pages.length !== mergedPagesFilter.length) {
+        throw new BadRequestException('Một hoặc nhiều page_id không hợp lệ hoặc không thuộc công ty này');
+      }
+    } else {
+      // Staff: Check pages trong merged_pages_filter phải nằm trong facebook_pages_access
+      const allowedPages = user.facebook_pages_access || [];
+      const invalidPages = mergedPagesFilter.filter(pageId => !allowedPages.includes(pageId));
+      
+      if (invalidPages.length > 0) {
+        throw new BadRequestException(
+          `Một số pages không nằm trong quyền truy cập của bạn: ${invalidPages.join(', ')}`
+        );
+      }
+    }
+
+    // Update merged_pages_filter
+    user.merged_pages_filter = mergedPagesFilter;
+    await user.save();
+
+    return {
+      success: true,
+      message: 'Bộ lọc pages đã được cập nhật',
+      merged_pages_filter: mergedPagesFilter,
+    };
+  }
 }

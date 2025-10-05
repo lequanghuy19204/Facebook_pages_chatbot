@@ -127,4 +127,38 @@ export class UsersController {
     const { user } = req;
     return this.usersService.updateAvatar(user.user_id, body.avatar_cloudflare_url, body.avatar_cloudflare_key);
   }
+
+  // User tự update merged_pages_filter của chính mình
+  @Put('merged-pages-filter')
+  @UseGuards(AuthGuard('jwt'))
+  async updateOwnMergedPagesFilter(
+    @Request() req: any,
+    @Body() body: { page_ids: string[] }
+  ) {
+    const { user } = req;
+    return this.usersService.updateMergedPagesFilter(
+      user.user_id,
+      body.page_ids,
+      user.company_id,
+      user.user_id,
+      user.roles
+    );
+  }
+
+  @Put(':userId/merged-pages-filter')
+  @UseGuards(AuthGuard('jwt'))
+  async updateMergedPagesFilter(
+    @Request() req: any,
+    @Param('userId') userId: string,
+    @Body() body: { page_ids: string[] }
+  ) {
+    const { user } = req;
+    return this.usersService.updateMergedPagesFilter(
+      userId,
+      body.page_ids,
+      user.company_id,
+      user.user_id,
+      user.roles
+    );
+  }
 }

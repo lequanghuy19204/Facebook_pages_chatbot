@@ -131,7 +131,16 @@
 }
 
 .chat-list-item.chat-list-selected {
-  background-color: rgba(210, 235, 255, 1);
+  background-color: #d2ebff;
+}
+
+.chat-list-item.chat-list-unread {
+  font-weight: 600;
+  background-color: #dde1e7; 
+}
+
+.chat-list-item.chat-list-unread .chat-list-name {
+  font-weight: 600;
 }
 
 .chat-list-item-content {
@@ -248,6 +257,7 @@
   margin-top: 4.50px;
   display: flex;
   align-items: flex-start;
+  gap: 4px;
 }
 
 .chat-list-message-text {
@@ -265,6 +275,23 @@
   text-overflow: ellipsis;
   display: flex;
   align-items: center;
+  flex: 1;
+}
+
+.chat-list-unread-badge {
+  background-color: rgba(255, 59, 48, 1);
+  color: 9white;
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .chat-list-tags {

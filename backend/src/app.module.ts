@@ -11,6 +11,7 @@ import { UsersModule } from './users/users.module';
 import { CompanyModule } from './company/company.module';
 import { ProductsModule } from './products/products.module';
 import { WebsocketModule } from './websocket/websocket.module';
+import { TagsModule } from './tags/tags.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { WebsocketModule } from './websocket/websocket.module';
     CompanyModule,
     ProductsModule,
     WebsocketModule,
+    TagsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

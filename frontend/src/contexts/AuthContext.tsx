@@ -14,6 +14,7 @@ interface User {
   avatar_cloudflare_key?: string;
   phone?: string;
   company_name?: string;
+  merged_pages_filter?: string[]; // UI preference for page filtering
 }
 
 interface Company {

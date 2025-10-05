@@ -125,3 +125,7 @@ FacebookConversationSchema.index({ company_id: 1, current_handler: 1 });
 FacebookConversationSchema.index({ post_id: 1 }, { sparse: true });
 FacebookConversationSchema.index({ comment_id: 1 }, { sparse: true });
 FacebookConversationSchema.index({ company_id: 1, source: 1 });
+// Indexes cho tags
+FacebookConversationSchema.index({ tags: 1 }); // Find conversations by tags
+FacebookConversationSchema.index({ company_id: 1, tags: 1 }); // Filter conversations by tags in company
+FacebookConversationSchema.index({ company_id: 1, page_id: 1, tags: 1 }); // Filter by page and tags
