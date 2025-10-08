@@ -319,7 +319,11 @@ export class FacebookMessagingService {
     return conversation;
   }
 
-  async getConversations(companyId: string, query: GetConversationsQuery): Promise<{
+  async getConversations(
+    companyId: string, 
+    userId: string,
+    query: GetConversationsQuery
+  ): Promise<{
     conversations: any[];
     total: number;
     page: number;
@@ -334,6 +338,12 @@ export class FacebookMessagingService {
     if (query.source) filter.source = query.source;
     if (query.pageId) filter.page_id = query.pageId;
 
+    // FILTER THEO MERGED_PAGES_FILTER của user
+    if (query.pageIds && query.pageIds.length > 0) {
+      filter.page_id = { $in: query.pageIds };
+      this.logger.log(`Filtering conversations by merged_pages_filter: ${query.pageIds.join(', ')}`);
+    }
+
     const page = query.page || 1;
     const limit = query.limit || 20;
     const skip = (page - 1) * limit;
@@ -346,6 +356,8 @@ export class FacebookMessagingService {
       .exec();
 
     const total = await this.conversationModel.countDocuments(filter);
+
+    this.logger.log(`Retrieved ${conversations.length} conversations (total: ${total}) for company: ${companyId}`);
 
     return {
       conversations,

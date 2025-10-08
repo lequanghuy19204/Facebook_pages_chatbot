@@ -38,6 +38,7 @@ export interface AuthResponse {
     phone?: string;
     avatar_cloudflare_url?: string;
     avatar_cloudflare_key?: string;
+    merged_pages_filter?: string[];
   };
   company: {
     company_id: string;
@@ -116,6 +117,7 @@ export interface User {
   avatar_cloudflare_key?: string;
   is_online: boolean;
   facebook_pages_access?: string[];
+  merged_pages_filter?: string[];
   phone?: string;
 }
 
@@ -1425,6 +1427,7 @@ const ApiService = {
         assignedTo?: string;
         source?: string;
         pageId?: string;
+        pageIds?: string[];
         search?: string;
         page?: number;
         limit?: number;
@@ -1443,7 +1446,14 @@ const ApiService = {
         if (params) {
           Object.entries(params).forEach(([key, value]) => {
             if (value !== undefined && value !== null) {
-              queryParams.append(key, String(value));
+              // Xử lý array pageIds
+              if (key === 'pageIds' && Array.isArray(value)) {
+                value.forEach(pageId => {
+                  queryParams.append('pageIds', pageId);
+                });
+              } else {
+                queryParams.append(key, String(value));
+              }
             }
           });
         }

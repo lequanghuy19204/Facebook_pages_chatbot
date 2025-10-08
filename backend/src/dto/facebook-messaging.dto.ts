@@ -169,6 +169,10 @@ export class GetConversationsQuery {
   search?: string;
 
   @IsOptional()
+  @IsArray()
+  pageIds?: string[];
+
+  @IsOptional()
   page?: number = 1;
 
   @IsOptional()

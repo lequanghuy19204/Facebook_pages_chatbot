@@ -80,10 +80,36 @@ export class FacebookMessagingController {
   // ===== CONVERSATION ENDPOINTS =====
 
   @Get('conversations')
-  async getConversations(@Request() req, @Query() query: GetConversationsQuery) {
+  async getConversations(@Request() req, @Query() query: any) {
     try {
       const companyId = req.user.company_id;
-      const result = await this.messagingService.getConversations(companyId, query);
+      const userId = req.user.user_id;
+      
+      // Xử lý pageIds từ query params (có thể là string hoặc array)
+      let pageIds: string[] | undefined = undefined;
+      if (query.pageIds) {
+        if (Array.isArray(query.pageIds)) {
+          pageIds = query.pageIds;
+        } else {
+          pageIds = [query.pageIds];
+        }
+      }
+      
+      const parsedQuery: GetConversationsQuery = {
+        ...query,
+        pageIds: pageIds,
+        page: query.page ? parseInt(query.page) : 1,
+        limit: query.limit ? parseInt(query.limit) : 20,
+      };
+      
+      this.logger.log(`Getting conversations for user ${userId}, pageIds: ${pageIds?.join(', ') || 'all'}`);
+      
+      // Lấy merged_pages_filter từ user để filter conversations
+      const result = await this.messagingService.getConversations(
+        companyId, 
+        userId,
+        parsedQuery
+      );
       
       return {
         success: true,

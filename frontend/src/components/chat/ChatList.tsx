@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import '@/styles/chat/ChatList.css';
 import ApiService, { FacebookConversation } from '@/services/api';
 import socketService from '@/services/socket';
@@ -11,6 +12,7 @@ interface ChatListProps {
 }
 
 export default function ChatList({ onConversationSelect, selectedConversation }: ChatListProps) {
+  const { user } = useAuth();
   const [conversations, setConversations] = useState<FacebookConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,12 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
         params.search = searchQuery;
       }
 
+      // THÊM FILTER THEO MERGED_PAGES_FILTER
+      if (user?.merged_pages_filter && user.merged_pages_filter.length > 0) {
+        params.pageIds = user.merged_pages_filter;
+        console.log('Filtering conversations by merged_pages_filter:', user.merged_pages_filter);
+      }
+
       const result = await ApiService.messaging.getConversations(token, params);
       
       // Sắp xếp: needs_attention = true lên đầu, sau đó theo last_message_at mới nhất
@@ -71,10 +79,10 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
     }
   };
 
-  // Initial load
+  // Initial load - reload khi user.merged_pages_filter thay đổi
   useEffect(() => {
     fetchConversations();
-  }, [filterSource]);
+  }, [filterSource, user?.merged_pages_filter]);
 
   // Search with debounce
   useEffect(() => {

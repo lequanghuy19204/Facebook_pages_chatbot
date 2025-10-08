@@ -122,6 +122,7 @@ export class AuthService {
         phone: user.phone,
         avatar_cloudflare_url: user.avatar_cloudflare_url,
         avatar_cloudflare_key: user.avatar_cloudflare_key,
+        merged_pages_filter: user.merged_pages_filter || [],
       },
       company: {
         company_id: company.company_id,
@@ -247,6 +248,7 @@ export class AuthService {
         phone: user.phone,
         avatar_cloudflare_url: user.avatar_cloudflare_url,
         avatar_cloudflare_key: user.avatar_cloudflare_key,
+        merged_pages_filter: user.merged_pages_filter || [],
       },
       company: {
         company_id: company.company_id,

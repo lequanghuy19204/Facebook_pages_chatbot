@@ -91,6 +91,7 @@ export class AuthResponseDto {
     phone?: string;
     avatar_cloudflare_url?: string;
     avatar_cloudflare_key?: string;
+    merged_pages_filter?: string[];
   };
   company: {
     company_id: string;
