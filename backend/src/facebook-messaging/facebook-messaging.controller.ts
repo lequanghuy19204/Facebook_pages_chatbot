@@ -332,11 +332,14 @@ export class FacebookMessagingController {
   async markAsRead(
     @Request() req,
     @Param('conversationId') conversationId: string,
+    @Body() body?: { user_id?: string; user_name?: string },
   ) {
     try {
       const companyId = req.user.company_id;
-      const userId = req.user.user_id;
-      const userName = req.user.name || req.user.email;
+      
+      // Ưu tiên lấy từ body (frontend gửi lên), fallback về req.user
+      const userId = body?.user_id || req.user.user_id;
+      const userName = body?.user_name || req.user.full_name || req.user.name || req.user.email;
       
       await this.messagingService.markAsRead(conversationId, companyId, userId, userName);
       
@@ -357,11 +360,16 @@ export class FacebookMessagingController {
   async markAsUnread(
     @Request() req,
     @Param('conversationId') conversationId: string,
+    @Body() body?: { user_id?: string; user_name?: string },
   ) {
     try {
       const companyId = req.user.company_id;
       
-      await this.messagingService.markAsUnread(conversationId, companyId);
+      // Lấy user info để ghi nhận người mark unread
+      const userId = body?.user_id || req.user.user_id;
+      const userName = body?.user_name || req.user.full_name || req.user.name || req.user.email;
+      
+      await this.messagingService.markAsUnread(conversationId, companyId, userId, userName);
       
       return {
         success: true,

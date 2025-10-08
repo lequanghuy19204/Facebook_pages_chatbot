@@ -49,12 +49,13 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
       setConversation(conversationData);
       setMessages(messagesData.messages || []);
 
-      // Mark as read with user info
-      const userStr = localStorage.getItem('user');
+      // Mark as read with user info from localStorage
+      const userStr = localStorage.getItem('auth_user');
       if (userStr) {
         const user = JSON.parse(userStr);
         await ApiService.messaging.markAsRead(token, conversationId, user.user_id, user.full_name);
       } else {
+        // Fallback: không có user info
         await ApiService.messaging.markAsRead(token, conversationId);
       }
     } catch (err: any) {
@@ -308,13 +309,13 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
                         {hasAttachment && message.attachments && message.attachments.map((att, idx) => (
                           <div key={idx} style={{ marginTop: '8px' }}>
                             {att.type === 'image' && (
-                              <img src={att.url} alt="attachment" style={{ maxWidth: '100%', borderRadius: '8px' }} />
+                              <img src={att.facebook_url} alt="attachment" style={{ maxWidth: '100%', borderRadius: '8px' }} />
                             )}
                             {att.type === 'video' && (
-                              <video src={att.url} controls style={{ maxWidth: '100%', borderRadius: '8px' }} />
+                              <video src={att.facebook_url} controls style={{ maxWidth: '100%', borderRadius: '8px' }} />
                             )}
                             {att.type === 'file' && (
-                              <a href={att.url} target="_blank" rel="noopener noreferrer">📎 {att.url}</a>
+                              <a href={att.facebook_url} target="_blank" rel="noopener noreferrer">📎 {att.filename}</a>
                             )}
                           </div>
                         ))}
@@ -342,14 +343,14 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
                           <div key={idx} className="chat-area-image-container">
                             {att.type === 'image' && (
                               <>
-                                <img src={att.url} alt="attachment" />
+                                <img src={att.facebook_url} alt="attachment" />
                                 <button className="chat-area-image-download">
                                   <img src="/assets/4cf588a1-b66c-4acb-ac99-6fe6db0ec42c.png" alt="download" />
                                 </button>
                               </>
                             )}
                             {att.type === 'video' && (
-                              <video src={att.url} controls style={{ width: '100%', borderRadius: '10px' }} />
+                              <video src={att.facebook_url} controls style={{ width: '100%', borderRadius: '10px' }} />
                             )}
                           </div>
                         ))}

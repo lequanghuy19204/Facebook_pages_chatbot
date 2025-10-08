@@ -310,6 +310,16 @@ export class FacebookWebhookController {
         senderName = customer.name;
       }
 
+      // Chuẩn hóa attachments format từ Facebook Messenger
+      let normalizedAttachments: any[] | undefined = undefined;
+      if (message.attachments && message.attachments.length > 0) {
+        normalizedAttachments = message.attachments.map((att: any) => ({
+          type: att.type || 'file',
+          facebook_url: att.payload?.url || att.url || '',
+          filename: att.payload?.url?.split('/').pop() || 'attachment'
+        }));
+      }
+
       // Tạo message record
       await this.messagingService.createMessage(
         page.company_id,
@@ -319,8 +329,8 @@ export class FacebookWebhookController {
         {
           facebookMessageId: message.mid,
           messageType: message.attachments ? 'image' : message.quick_reply ? 'quick_reply' : 'text',
-          text: message.text || '[No text content]',
-          attachments: message.attachments,
+          text: message.text || '🖼️ Ảnh',
+          attachments: normalizedAttachments,
           quickReply: message.quick_reply,
           senderType: senderType,
           senderId: senderId,
@@ -460,10 +470,8 @@ export class FacebookWebhookController {
       if (commentPhoto) {
         attachments = [{
           type: 'image',
-          url: commentPhoto,
-          payload: {
-            url: commentPhoto
-          }
+          facebook_url: commentPhoto,
+          filename: 'comment_image.jpg'
         }];
         this.logger.log(`[processComment] Comment has photo: ${commentPhoto}`);
       }
@@ -548,7 +556,7 @@ export class FacebookWebhookController {
         {
           facebookMessageId: commentId,
           messageType: 'comment',
-          text: message || '[No text content]',
+          text: message || '🖼️ Ảnh',
           attachments: attachments, // Thêm ảnh comment nếu có
           senderType: 'customer',
           senderId: customer.customer_id,

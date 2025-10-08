@@ -223,9 +223,10 @@ export class FacebookMessagingService {
         facebook_thread_id: facebookThreadId,
         source: source,
         status: 'open',
-        current_handler: 'chatbot',
-        needs_attention: source === 'comment',
+        current_handler: 'chatbot', // Mặc định chatbot xử lý
+        needs_attention: false,     // Mặc định false, sẽ được set = true trong updateConversationLastMessage nếu current_handler = 'human'
         priority: 'normal',
+        is_read: false,             // Mặc định chưa đọc
       };
       
       conversation = new this.conversationModel(conversationData);
@@ -591,46 +592,66 @@ export class FacebookMessagingService {
   }
 
   async markAsRead(conversationId: string, companyId: string, userId: string, userName?: string): Promise<void> {
+    // Khi nhân viên MỞ XEM conversation:
+    // - Set needs_attention = false (không cần ưu tiên nữa)
+    // - Set is_read = true (đã xem)
+    // - KHÔNG cập nhật read_by_user_id, read_by_user_name, read_at (giữ nguyên người xử lý trước đó)
+    
     await this.conversationModel.updateOne(
       { conversation_id: conversationId, company_id: companyId },
       { 
         $set: { 
           unread_customer_messages: 0,
           is_read: true,
-          read_by_user_id: userId,
-          read_by_user_name: userName,
-          read_at: new Date(),
+          needs_attention: false, // Nhân viên đã mở xem -> không cần attention nữa
         },
       },
     );
 
+    // Emit WebSocket để tất cả nhân viên khác biết conversation này đã được xem
     this.messagingGateway.emitConversationUpdate(companyId, {
       conversation_id: conversationId,
       is_read: true,
-      read_by_user_id: userId,
-      read_by_user_name: userName,
-      read_at: new Date(),
+      needs_attention: false, // Quan trọng: để tất cả client bỏ hiển thị đậm
+      unread_customer_messages: 0,
+      // KHÔNG emit read_by_user_id, read_by_user_name, read_at
     });
+    
+    this.logger.log(`Conversation ${conversationId} opened by ${userName} (${userId}) - needs_attention set to false`);
   }
 
-  async markAsUnread(conversationId: string, companyId: string): Promise<void> {
+  async markAsUnread(conversationId: string, companyId: string, userId: string, userName?: string): Promise<void> {
+    // Khi nhân viên MARK UNREAD:
+    // - Set needs_attention = true (cần nhân viên khác xử lý)
+    // - Set is_read = false (chưa đọc)
+    // - CẬP NHẬT read_by_user_id, read_by_user_name, read_at = nhân viên hiện tại
+    
+    const readAt = new Date();
+    
     await this.conversationModel.updateOne(
       { conversation_id: conversationId, company_id: companyId },
       { 
         $set: { 
           is_read: false,
-          read_by_user_id: null,
-          read_by_user_name: null,
+          read_by_user_id: userId,
+          read_by_user_name: userName,
+          read_at: readAt,
+          needs_attention: true, // Đánh dấu lại cần attention cho nhân viên khác
         },
       },
     );
 
+    // Emit WebSocket để tất cả client biết conversation cần attention lại
     this.messagingGateway.emitConversationUpdate(companyId, {
       conversation_id: conversationId,
       is_read: false,
-      read_by_user_id: null,
-      read_by_user_name: null,
+      read_by_user_id: userId,
+      read_by_user_name: userName,
+      read_at: readAt,
+      needs_attention: true, // Quan trọng: hiển thị đậm lại
     });
+    
+    this.logger.log(`Conversation ${conversationId} marked as unread by ${userName} (${userId})`);
   }
 
   // ===== HELPER METHODS =====
@@ -647,15 +668,21 @@ export class FacebookMessagingService {
       updated_at: new Date(),
     };
 
-    // Logic theo thiết kế:
+    // Logic theo thiết kế mới:
     if (message.sender_type === 'customer') {
       // Tin nhắn từ customer
-      updateData.$inc.unread_customer_messages = 1;
+      updateData.$inc = { 
+        ...updateData.$inc,
+        unread_customer_messages: 1 
+      };
       
       // CHỈ set needs_attention = true nếu current_handler = "human"
       if (conversation.current_handler === 'human') {
         updateData.needs_attention = true;
         updateData.is_read = false;
+        updateData.read_by_user_id = null;
+        updateData.read_by_user_name = null;
+        updateData.read_at = null;
       }
       // Nếu current_handler = "chatbot" -> không cần attention (bot tự xử lý)
       
@@ -665,6 +692,10 @@ export class FacebookMessagingService {
       updateData.needs_attention = false;
       updateData.is_read = true;
       updateData.unread_customer_messages = 0;
+      // CẬP NHẬT read_by = staff đang reply
+      updateData.read_by_user_id = message.sender_id;
+      updateData.read_by_user_name = message.sender_name;
+      updateData.read_at = new Date();
       
     } else if (message.sender_type === 'chatbot') {
       // Tin nhắn từ chatbot -> giữ nguyên chatbot handler

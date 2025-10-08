@@ -306,8 +306,6 @@ export interface FacebookConversation {
   post_status_type?: string;
   post_created_time?: Date;
   post_updated_time?: Date;
-  post_is_published?: boolean;
-  post_promotion_status?: string;
   
   status: 'open' | 'closed' | 'archived';
   current_handler: 'chatbot' | 'human';
@@ -360,12 +358,17 @@ export interface FacebookCustomer {
   email?: string;
   phone?: string;
   address?: string;
-  age?: number;
   height?: number;
   weight?: number;
-  products_interested?: string[];
-  notes?: string;
-  assigned_to?: string;
+  purchased_products?: Array<{
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    purchase_date: Date;
+    notes?: string;
+  }>;
+  customer_notes?: string;
+  tags: string[];
   status: 'active' | 'blocked' | 'archived';
   first_contact_at: Date;
   last_interaction_at: Date;
@@ -385,32 +388,19 @@ export interface FacebookMessage {
   text: string;
   attachments?: Array<{
     type: 'image' | 'video' | 'audio' | 'file';
-    url: string;
-    size?: number;
-    name?: string;
+    facebook_url: string;
+    filename: string;
   }>;
-  quick_reply?: {
-    payload: string;
-  };
-  postback?: {
-    payload: string;
-    title: string;
-  };
   
   sender_type: 'customer' | 'chatbot' | 'staff';
   sender_id: string;
   sender_name?: string;
   
-  bot_confidence?: number;
-  bot_intent?: string;
-  escalated_to_human: boolean;
+  is_escalation_trigger: boolean;
+  escalation_reason?: 'bot_cannot_answer' | 'customer_request';
+  shortcut_used?: string;
   
-  is_read: boolean;
-  read_at?: Date;
-  read_by?: string[];
-  
-  delivery_status: 'sending' | 'sent' | 'delivered' | 'failed';
-  delivery_error?: string;
+  delivery_status: 'sent' | 'delivered' | 'read' | 'failed';
   
   sent_at: Date;
   created_at: Date;
@@ -1654,7 +1644,7 @@ const ApiService = {
     },
 
     // Mark conversation as unread
-    markAsUnread: async (token: string, conversationId: string): Promise<void> => {
+    markAsUnread: async (token: string, conversationId: string, userId?: string, userName?: string): Promise<void> => {
       try {
         const response = await fetch(
           `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}/mark-unread`,
@@ -1664,6 +1654,10 @@ const ApiService = {
               Authorization: `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
+            body: JSON.stringify({
+              user_id: userId,
+              user_name: userName,
+            }),
           }
         );
 

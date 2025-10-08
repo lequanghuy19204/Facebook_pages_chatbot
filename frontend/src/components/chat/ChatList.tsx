@@ -49,7 +49,20 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
       }
 
       const result = await ApiService.messaging.getConversations(token, params);
-      setConversations(result.conversations);
+      
+      // Sắp xếp: needs_attention = true lên đầu, sau đó theo last_message_at mới nhất
+      const sortedConversations = result.conversations.sort((a, b) => {
+        // Ưu tiên needs_attention
+        if (a.needs_attention !== b.needs_attention) {
+          return a.needs_attention ? -1 : 1;
+        }
+        // Sau đó theo thời gian mới nhất
+        const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+        const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+        return timeB - timeA;
+      });
+      
+      setConversations(sortedConversations);
     } catch (err: any) {
       console.error('Failed to fetch conversations:', err);
       setError(err.message || 'Failed to load conversations');
@@ -113,8 +126,13 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
               ...message.conversation,
             };
             
-            // Sort lại
+            // Sort lại: needs_attention trước, sau đó mới đến thời gian
             return updated.sort((a, b) => {
+              // Ưu tiên needs_attention
+              if (a.needs_attention !== b.needs_attention) {
+                return a.needs_attention ? -1 : 1;
+              }
+              // Sau đó theo thời gian mới nhất
               const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
               const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
               return timeB - timeA;
@@ -141,8 +159,13 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
             : conv
         );
         
-        // Sort by last_message_at descending (newest first)
+        // Sort by needs_attention first, then last_message_at
         return updated.sort((a, b) => {
+          // Ưu tiên needs_attention
+          if (a.needs_attention !== b.needs_attention) {
+            return a.needs_attention ? -1 : 1;
+          }
+          // Sau đó theo thời gian mới nhất
           const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
           const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
           return timeB - timeA;
@@ -153,13 +176,25 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
     // Listen for conversation updates
     const handleConversationUpdated = (data: any) => {
       console.log('Conversation updated:', data);
-      setConversations(prev =>
-        prev.map(conv =>
+      setConversations(prev => {
+        const updated = prev.map(conv =>
           conv.conversation_id === data.conversation_id
             ? { ...conv, ...data }
             : conv
-        )
-      );
+        );
+        
+        // Re-sort sau khi update (quan trọng cho needs_attention)
+        return updated.sort((a, b) => {
+          // Ưu tiên needs_attention
+          if (a.needs_attention !== b.needs_attention) {
+            return a.needs_attention ? -1 : 1;
+          }
+          // Sau đó theo thời gian mới nhất
+          const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+          const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+          return timeB - timeA;
+        });
+      });
     };
 
     // Listen for new conversations
@@ -267,7 +302,7 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
           return (
             <div
               key={conversation.conversation_id}
-              className={`chat-list-item ${selectedConversation === conversation.conversation_id ? 'chat-list-selected' : ''} ${conversation.unread_customer_messages > 0 ? 'chat-list-unread' : ''}`}
+              className={`chat-list-item ${selectedConversation === conversation.conversation_id ? 'chat-list-selected' : ''} ${conversation.needs_attention ? 'chat-list-needs-attention' : ''}`}
               onClick={() => onConversationSelect(conversation.conversation_id)}
             >
               <div className="chat-list-item-content">
@@ -303,7 +338,7 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
                     <div className="chat-list-message-text">
                       {conversation.last_message_text || 'Không có tin nhắn'}
                     </div>
-                    {conversation.unread_customer_messages > 0 && (
+                    {conversation.unread_customer_messages > 0 && conversation.current_handler === 'human' && (
                       <div className="chat-list-unread-badge">
                         {conversation.unread_customer_messages}
                       </div>
