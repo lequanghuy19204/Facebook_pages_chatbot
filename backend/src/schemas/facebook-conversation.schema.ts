@@ -17,6 +17,18 @@ export class FacebookConversation {
   @Prop({ required: true, index: true })
   customer_id: string; // ID khách hàng
 
+  @Prop()
+  customer_name?: string; // Tên đầy đủ khách hàng (denormalized từ facebook_customers)
+
+  @Prop()
+  customer_first_name?: string; // Tên khách hàng (denormalized từ facebook_customers)
+
+  @Prop()
+  customer_profile_pic?: string; // Avatar khách hàng (denormalized từ facebook_customers)
+
+  @Prop()
+  customer_phone?: string; // Số điện thoại khách hàng (denormalized từ facebook_customers)
+
   @Prop({ unique: true, index: true })
   facebook_thread_id?: string; // Thread ID từ Facebook (nếu có)
 
@@ -47,12 +59,6 @@ export class FacebookConversation {
 
   @Prop()
   post_updated_time?: Date; // Thời gian cập nhật bài đăng cuối
-
-  @Prop()
-  post_is_published?: boolean; // Bài đăng đã được publish chưa
-
-  @Prop()
-  post_promotion_status?: string; // Trạng thái quảng cáo: "inactive", "active"
 
   @Prop({ default: 'open' })
   status: 'open' | 'closed' | 'archived'; // Trạng thái cuộc hội thoại
@@ -85,12 +91,25 @@ export class FacebookConversation {
   @Prop()
   last_message_from?: 'customer' | 'chatbot' | 'staff'; // Ai gửi
 
+  // READ STATUS (CHỈ QUAN TÂM KHI CURRENT_HANDLER = "human")
+  @Prop({ default: false })
+  is_read: boolean; // Nhân viên đã đọc conversation chưa
+
+  @Prop()
+  read_by_user_id?: string; // ID nhân viên đọc conversation gần nhất
+
+  @Prop()
+  read_by_user_name?: string; // Tên nhân viên đọc conversation gần nhất (để hiển thị cho nhân viên khác)
+
+  @Prop()
+  read_at?: Date; // Thời gian nhân viên đọc conversation gần nhất
+
   // STATS
   @Prop({ default: 0 })
   total_messages: number; // Tổng số tin nhắn
 
   @Prop({ default: 0 })
-  unread_count: number; // Số tin nhắn khách chưa đọc
+  unread_customer_messages: number; // Số tin nhắn từ khách chưa được xử lý
 
   // ESCALATION (Bot → Human)
   @Prop({ default: false })
@@ -101,6 +120,16 @@ export class FacebookConversation {
 
   @Prop()
   escalated_at?: Date; // Thời điểm chuyển
+
+  // RETURN TO BOT (Nhân viên → Chatbot)
+  @Prop({ default: 0 })
+  returned_to_bot_count: number; // Số lần nhân viên cấp lại quyền cho bot
+
+  @Prop()
+  last_returned_to_bot_at?: Date; // Thời gian cấp lại quyền gần nhất
+
+  @Prop()
+  last_returned_by?: string; // user_id của staff cấp lại quyền
 
   @Prop({ default: Date.now })
   created_at: Date;
@@ -116,11 +145,12 @@ FacebookConversationSchema.index({ conversation_id: 1 }, { unique: true });
 FacebookConversationSchema.index({ facebook_thread_id: 1 }, { unique: true, sparse: true });
 FacebookConversationSchema.index({ 
   company_id: 1, 
+  current_handler: 1,
   needs_attention: -1, 
   last_message_at: -1 
 }); // Dashboard sorting - KEY INDEX
-FacebookConversationSchema.index({ company_id: 1, assigned_to: 1, status: 1 });
-FacebookConversationSchema.index({ company_id: 1, current_handler: 1 });
+FacebookConversationSchema.index({ assigned_to: 1, status: 1 });
+FacebookConversationSchema.index({ company_id: 1, page_id: 1, current_handler: 1 });
 // Indexes cho comment tracking
 FacebookConversationSchema.index({ post_id: 1 }, { sparse: true });
 FacebookConversationSchema.index({ comment_id: 1 }, { sparse: true });
@@ -128,4 +158,4 @@ FacebookConversationSchema.index({ company_id: 1, source: 1 });
 // Indexes cho tags
 FacebookConversationSchema.index({ tags: 1 }); // Find conversations by tags
 FacebookConversationSchema.index({ company_id: 1, tags: 1 }); // Filter conversations by tags in company
-FacebookConversationSchema.index({ company_id: 1, page_id: 1, tags: 1 }); // Filter by page and tags
+FacebookConversationSchema.index({ customer_id: 1, status: 1 }); // Lấy conversations của customer

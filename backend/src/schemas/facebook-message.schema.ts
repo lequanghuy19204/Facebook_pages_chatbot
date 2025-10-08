@@ -33,21 +33,9 @@ export class FacebookMessage {
   @Prop({ type: Array })
   attachments?: {
     type: 'image' | 'video' | 'audio' | 'file';
-    url: string;
-    size?: number;
-    name?: string;
+    facebook_url: string;
+    filename: string;
   }[]; // File đính kèm (nếu có)
-
-  @Prop({ type: Object })
-  quick_reply?: {
-    payload: string;
-  }; // Quick reply data
-
-  @Prop({ type: Object })
-  postback?: {
-    payload: string;
-    title: string;
-  }; // Postback data
 
   // SENDER INFO
   @Prop({ required: true })
@@ -59,32 +47,19 @@ export class FacebookMessage {
   @Prop()
   sender_name?: string; // Tên hiển thị
 
-  // BOT PROCESSING
-  @Prop()
-  bot_confidence?: number; // Độ tự tin của bot (0-1), null nếu không phải bot xử lý
-
-  @Prop()
-  bot_intent?: string; // Intent nhận diện: "product_inquiry", "greeting", etc
-
+  // MESSAGE METADATA
   @Prop({ default: false })
-  escalated_to_human: boolean; // Tin nhắn này có trigger escalation không
-
-  // READ STATUS
-  @Prop({ default: false })
-  is_read: boolean; // Đã đọc hay chưa
+  is_escalation_trigger: boolean; // Tin nhắn này có trigger chuyển từ bot sang nhân viên không
 
   @Prop()
-  read_at?: Date; // Thời điểm đọc
+  escalation_reason?: 'bot_cannot_answer' | 'customer_request'; // Lý do escalation
 
-  @Prop({ type: [String] })
-  read_by?: string[]; // Staff đã đọc (chỉ áp dụng khi sender là customer)
+  @Prop()
+  shortcut_used?: string; // Nếu staff dùng shortcut để gửi tin nhắn này (lưu shortcut_id hoặc shortcut_code)
 
   // DELIVERY STATUS
   @Prop({ default: 'sent' })
-  delivery_status: 'sending' | 'sent' | 'delivered' | 'failed';
-
-  @Prop()
-  delivery_error?: string; // Lỗi khi gửi (nếu có)
+  delivery_status: 'sent' | 'delivered' | 'read' | 'failed';
 
   // TIMESTAMPS
   @Prop({ required: true })
@@ -103,3 +78,7 @@ export const FacebookMessageSchema = SchemaFactory.createForClass(FacebookMessag
 FacebookMessageSchema.index({ message_id: 1 }, { unique: true });
 FacebookMessageSchema.index({ facebook_message_id: 1 }, { unique: true, sparse: true });
 FacebookMessageSchema.index({ conversation_id: 1, sent_at: 1 }); // Messages trong conversation
+FacebookMessageSchema.index({ company_id: 1, sender_type: 1 });
+FacebookMessageSchema.index({ sender_id: 1, sender_type: 1, sent_at: -1 });
+FacebookMessageSchema.index({ is_escalation_trigger: 1 });
+FacebookMessageSchema.index({ shortcut_used: 1 });

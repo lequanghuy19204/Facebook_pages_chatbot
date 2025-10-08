@@ -42,25 +42,25 @@ export class FacebookCustomer {
   phone?: string; // Số điện thoại (nếu khách hàng cung cấp trong chat hoặc nhân viên/chatbot thêm)
 
   @Prop()
-  address?: string; // Địa chỉ (thường do nhân viên hoặc chatbot thêm)
-
-  @Prop()
-  age?: number; // Tuổi (thường do nhân viên hoặc chatbot thêm)
+  address?: string; // Địa chỉ (AI extract từ chat)
 
   @Prop()
   height?: number; // Chiều cao cm (thường do nhân viên hoặc chatbot thêm)
 
   @Prop()
   weight?: number; // Cân nặng kg (thường do nhân viên hoặc chatbot thêm)
-
-  @Prop({ type: [String] })
-  products_interested?: string[]; // Danh sách product_id khách hàng quan tâm (thường do nhân viên hoặc chatbot thêm)
+  
+  @Prop({ type: Array })
+  purchased_products?: {
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    purchase_date: Date;
+    notes?: string;
+  }[]; // Danh sách sản phẩm đã mua/quan tâm (AI extract từ chat)
 
   @Prop()
-  notes?: string; // Ghi chú của nhân viên
-
-  @Prop()
-  assigned_to?: string; // ID staff được phân công
+  customer_notes?: string; // Ghi chú quan trọng về khách hàng (AI phân tích hành vi + nhân viên bổ sung)
 
   @Prop({ type: [String], default: [] })
   tags: string[]; // Mảng tag_id để phân loại customer (VD: ["tag_001", "tag_002"])
@@ -89,7 +89,9 @@ FacebookCustomerSchema.index({ customer_id: 1 }, { unique: true });
 // Nên phải có composite index: company_id + page_id + facebook_user_id
 FacebookCustomerSchema.index({ company_id: 1, page_id: 1, facebook_user_id: 1 }, { unique: true });
 FacebookCustomerSchema.index({ company_id: 1, page_id: 1 });
-FacebookCustomerSchema.index({ assigned_to: 1 });
 FacebookCustomerSchema.index({ company_id: 1, last_interaction_at: -1 });
 FacebookCustomerSchema.index({ tags: 1 }); // Find customers by tags
 FacebookCustomerSchema.index({ company_id: 1, tags: 1 }); // Filter customers by tags in company
+FacebookCustomerSchema.index({ phone: 1 }); // Tìm customer theo phone
+FacebookCustomerSchema.index({ company_id: 1, name: 1 }); // Tìm customer theo tên
+FacebookCustomerSchema.index({ 'purchased_products.product_id': 1 }); // Tìm customer đã mua sản phẩm

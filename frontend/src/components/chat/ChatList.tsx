@@ -94,7 +94,6 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
     const handleNewMessage = (message: any) => {
       console.log('New message received:', message);
       
-      // Socket sends message object directly, not nested in data
       if (!message || !message.conversation_id) {
         console.warn('Invalid message format:', message);
         return;
@@ -102,6 +101,31 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
 
       // Update conversation in list and move to top
       setConversations(prev => {
+        // Nếu có thông tin conversation đầy đủ từ backend, sử dụng luôn
+        if (message.conversation) {
+          const existingIndex = prev.findIndex(c => c.conversation_id === message.conversation_id);
+          
+          if (existingIndex >= 0) {
+            // Cập nhật conversation hiện có
+            const updated = [...prev];
+            updated[existingIndex] = {
+              ...updated[existingIndex],
+              ...message.conversation,
+            };
+            
+            // Sort lại
+            return updated.sort((a, b) => {
+              const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+              const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+              return timeB - timeA;
+            });
+          } else {
+            // Conversation mới (chưa có trong list)
+            return [message.conversation, ...prev];
+          }
+        }
+        
+        // Fallback: chỉ cập nhật message info (không có customer info)
         const updated = prev.map(conv => 
           conv.conversation_id === message.conversation_id
             ? {
@@ -109,9 +133,10 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
                 last_message_text: message.text || '',
                 last_message_at: new Date(message.sent_at),
                 last_message_from: message.sender_type,
-                unread_count: message.sender_type === 'customer' 
-                  ? conv.unread_count + 1 
-                  : conv.unread_count,
+                unread_customer_messages: message.sender_type === 'customer' 
+                  ? (conv.unread_customer_messages || 0) + 1 
+                  : conv.unread_customer_messages,
+                total_messages: (conv.total_messages || 0) + 1,
               }
             : conv
         );
@@ -234,88 +259,82 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
           </div>
         )}
 
-        {!loading && !error && conversations.map((conversation) => (
-          <div
-            key={conversation.conversation_id}
-            className={`chat-list-item ${selectedConversation === conversation.conversation_id ? 'chat-list-selected' : ''} ${conversation.unread_count > 0 ? 'chat-list-unread' : ''}`}
-            onClick={() => onConversationSelect(conversation.conversation_id)}
-          >
-            <div className="chat-list-item-content">
-              <div className="chat-list-avatar">
-                <img 
-                  src={
-                    (conversation as any).customer_profile_pic || 
-                    conversation.customer?.profile_pic || 
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      (conversation as any).customer_name || 
-                      conversation.customer?.name || 
-                      'User'
-                    )}&background=random&size=200`
-                  } 
-                  alt={
-                    (conversation as any).customer_name || 
-                    conversation.customer?.name || 
-                    'User'
-                  }
-                  onError={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    const name = (conversation as any).customer_name || conversation.customer?.name || 'User';
-                    img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=200`;
-                  }}
-                />
-              </div>
-              <div className="chat-list-details">
-                <div className="chat-list-header-row">
-                  <div className="chat-list-name-wrapper">
-                    <div className="chat-list-name">
-                      {(conversation as any).customer_name || 
-                       conversation.customer?.name || 
-                       'Unknown User'}
+        {!loading && !error && conversations.map((conversation) => {
+          const customerName = conversation.customer_name || 'Unknown User';
+          const customerAvatar = conversation.customer_profile_pic || 
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=random&size=200`;
+          
+          return (
+            <div
+              key={conversation.conversation_id}
+              className={`chat-list-item ${selectedConversation === conversation.conversation_id ? 'chat-list-selected' : ''} ${conversation.unread_customer_messages > 0 ? 'chat-list-unread' : ''}`}
+              onClick={() => onConversationSelect(conversation.conversation_id)}
+            >
+              <div className="chat-list-item-content">
+                <div className="chat-list-avatar">
+                  <img 
+                    src={customerAvatar} 
+                    alt={customerName}
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=random&size=200`;
+                    }}
+                  />
+                </div>
+                <div className="chat-list-details">
+                  <div className="chat-list-header-row">
+                    <div className="chat-list-name-wrapper">
+                      <div className="chat-list-name">
+                        {customerName}
+                      </div>
+                    </div>
+                    <div className="chat-list-header-right">
+                      <div className="chat-list-time">
+                        {formatTime(conversation.last_message_at)}
+                      </div>
                     </div>
                   </div>
-                  <div className="chat-list-header-right">
-                    <div className="chat-list-time">
-                      {formatTime(conversation.last_message_at)}
+                  <div className="chat-list-message-preview">
+                    {getReplyIcon(conversation.last_message_from) && (
+                      <div className="chat-list-message-icon">
+                        {getReplyIcon(conversation.last_message_from)}
+                      </div>
+                    )}
+                    <div className="chat-list-message-text">
+                      {conversation.last_message_text || 'Không có tin nhắn'}
                     </div>
-                    <div className="chat-list-message-icon">
+                    {conversation.unread_customer_messages > 0 && (
+                      <div className="chat-list-unread-badge">
+                        {conversation.unread_customer_messages}
+                      </div>
+                    )}
+                  </div>
+                  <div className="chat-list-tags-row">
+                    <div className="chat-list-tags-container">
+                      {conversation.tags && conversation.tags.length > 0 && (
+                        <>
+                          {conversation.tags.map((tag, index) => (
+                            <span key={index} className={`chat-list-tag chat-list-tag-${index % 3}`}>
+                              {tag}
+                            </span>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                    <div className="chat-list-source-icon">
                       <img 
                         src={conversation.source === 'comment' ? '/comment.png' : '/message.png'} 
                         alt={conversation.source === 'comment' ? 'comment' : 'message'} 
                       />
                     </div>
                   </div>
+                  
                 </div>
-                <div className="chat-list-message-preview">
-                  {getReplyIcon(conversation.last_message_from) && (
-                    <div className="chat-list-message-icon">
-                      {getReplyIcon(conversation.last_message_from)}
-                    </div>
-                  )}
-                  <div className="chat-list-message-text">
-                    {conversation.last_message_text || 'Không có tin nhắn'}
-                  </div>
-                  {conversation.unread_count > 0 && (
-                    <div className="chat-list-unread-badge">
-                      {conversation.unread_count}
-                    </div>
-                  )}
-                </div>
-                {conversation.tags && conversation.tags.length > 0 && (
-                  <div className="chat-list-tags">
-                    <div className="chat-list-tags-container">
-                      {conversation.tags.map((tag, index) => (
-                        <span key={index} className={`chat-list-tag chat-list-tag-${index % 3}`}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
+              <div className="chat-list-divider"></div>
             </div>
-            <div className="chat-list-divider"></div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

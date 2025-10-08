@@ -287,6 +287,13 @@ export interface FacebookConversation {
   company_id: string;
   page_id: string;
   customer_id: string;
+  
+  // CUSTOMER INFO (Denormalized)
+  customer_name?: string;
+  customer_first_name?: string;
+  customer_profile_pic?: string;
+  customer_phone?: string;
+  
   facebook_thread_id?: string;
   source: 'messenger' | 'comment';
   
@@ -315,20 +322,28 @@ export interface FacebookConversation {
   last_message_at?: Date;
   last_message_from?: 'customer' | 'chatbot' | 'staff';
   
+  // READ STATUS
+  is_read: boolean;
+  read_by_user_id?: string;
+  read_by_user_name?: string;
+  read_at?: Date;
+  
   // STATS
   total_messages: number;
-  unread_count: number;
+  unread_customer_messages: number;
   
   // ESCALATION
   escalated_from_bot: boolean;
   escalation_reason?: 'no_answer' | 'customer_request' | 'complex_query';
   escalated_at?: Date;
   
+  // RETURN TO BOT
+  returned_to_bot_count: number;
+  last_returned_to_bot_at?: Date;
+  last_returned_by?: string;
+  
   created_at: Date;
   updated_at: Date;
-  
-  // POPULATED FIELDS
-  customer?: FacebookCustomer;
 }
 
 export interface FacebookCustomer {
@@ -1606,10 +1621,43 @@ const ApiService = {
     },
 
     // Mark conversation as read
-    markAsRead: async (token: string, conversationId: string): Promise<void> => {
+    markAsRead: async (
+      token: string, 
+      conversationId: string,
+      userId?: string,
+      userName?: string
+    ): Promise<void> => {
       try {
+        const body: any = {};
+        if (userId) body.user_id = userId;
+        if (userName) body.user_name = userName;
+
         const response = await fetch(
           `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}/mark-read`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to mark as read');
+        }
+      } catch (error) {
+        console.error('Mark as read error:', error);
+        throw error;
+      }
+    },
+
+    // Mark conversation as unread
+    markAsUnread: async (token: string, conversationId: string): Promise<void> => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}/mark-unread`,
           {
             method: 'POST',
             headers: {
@@ -1620,10 +1668,10 @@ const ApiService = {
         );
 
         if (!response.ok) {
-          throw new Error('Failed to mark as read');
+          throw new Error('Failed to mark as unread');
         }
       } catch (error) {
-        console.error('Mark as read error:', error);
+        console.error('Mark as unread error:', error);
         throw error;
       }
     },

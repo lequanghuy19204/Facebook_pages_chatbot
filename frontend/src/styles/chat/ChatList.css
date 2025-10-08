@@ -251,10 +251,9 @@
 
 .chat-list-message-preview {
   width: 315px;
-  height: 15px;
+  height: 22px;
   overflow: hidden;
   box-sizing: border-box;
-  margin-top: 4.50px;
   display: flex;
   align-items: flex-start;
   gap: 4px;
@@ -262,10 +261,9 @@
 
 .chat-list-message-text {
   width: 300px;
-  height: 15px;
+  height: 22px;
   overflow: hidden;
   box-sizing: border-box;
-  margin-top: 1px;
   margin-left: 4px;
   font-family: 'Roboto', sans-serif;
   font-size: 13px;
@@ -283,10 +281,10 @@
   color: 9white;
   border-radius: 10px;
   padding: 0 6px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  min-width: 14px;
-  height: 14px;
+  min-width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -294,23 +292,27 @@
   flex-shrink: 0;
 }
 
-.chat-list-tags {
+.chat-list-tags-row {
   width: 315px;
   height: 22px;
-  margin-top: 2.5px;
+  margin-top: 4px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .chat-list-tags-container {
-  height: 17px;
+  height: 22px;
   overflow: hidden;
   box-sizing: border-box;
-  margin-top: 3px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 4px;
+  flex: 1;
+  min-width: 0;
+  /* Luôn chiếm chỗ ngay cả khi không có tags */
+  min-height: 17px;
 }
 
 .chat-list-tag {
@@ -338,6 +340,23 @@
 
 .chat-list-tag-2 {
   background-color: rgba(75, 89, 94, 1);
+}
+
+.chat-list-source-icon {
+  width: 22px;
+  height: 22px;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chat-list-source-icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 .chat-list-message-icon {

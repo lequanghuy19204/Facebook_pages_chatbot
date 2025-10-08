@@ -32,6 +32,8 @@ interface FacebookMessagingEvent {
     text?: string;
     attachments?: any[];
     quick_reply?: { payload: string };
+    is_echo?: boolean;
+    app_id?: number;
   };
   postback?: {
     payload: string;
@@ -210,13 +212,19 @@ export class FacebookWebhookController {
     event: FacebookMessagingEvent,
   ): Promise<void> {
     try {
-      const facebookUserId = event.sender.id;
       const timestamp = new Date(event.timestamp);
-
+      
+      // Phân biệt tin nhắn từ page (echo) vs tin nhắn từ customer
+      const isEcho = event.message?.is_echo === true;
+      
+      // Nếu là echo (page gửi), thì recipient là customer thực
+      // Nếu không phải echo (customer gửi), thì sender là customer
+      const facebookUserId = isEcho ? event.recipient.id : event.sender.id;
+      
       this.logger.log(
         `[processMessagingEvent] Page: ${facebookPageId}, User: ${facebookUserId}, Type: ${
           event.message ? 'message' : event.postback ? 'postback' : 'other'
-        }`,
+        }, IsEcho: ${isEcho}`,
       );
       this.logger.log(`[processMessagingEvent] Processing messenger event for customer: ${facebookUserId}`);
 
@@ -227,7 +235,7 @@ export class FacebookWebhookController {
         return;
       }
 
-      // Tìm hoặc tạo customer
+      // Tìm hoặc tạo customer (luôn dùng customer ID thực, không phải page ID)
       const customer = await this.messagingService.findOrCreateCustomer(
         page.company_id,
         page.page_id,
@@ -236,7 +244,7 @@ export class FacebookWebhookController {
       );
 
       // Tìm hoặc tạo conversation cho messenger
-      // Thread ID riêng biệt để phân biệt với comment
+      // Thread ID dựa trên customer ID thực để đảm bảo cùng 1 conversation
       const threadId = `messenger_${facebookPageId}_${facebookUserId}`;
       const conversation = await this.messagingService.findOrCreateConversation(
         page.company_id,
@@ -246,11 +254,11 @@ export class FacebookWebhookController {
         'messenger', // source = messenger
       );
       
-      this.logger.log(`[processMessagingEvent] Using conversation: ${conversation.conversation_id} for messenger`);
+      this.logger.log(`[processMessagingEvent] Using conversation: ${conversation.conversation_id} for messenger (echo: ${isEcho})`);
 
       // Process message
       if (event.message) {
-        await this.processMessage(page, customer, conversation, event.message, timestamp);
+        await this.processMessage(page, customer, conversation, event.message, timestamp, isEcho);
       }
 
       // Process postback
@@ -278,9 +286,29 @@ export class FacebookWebhookController {
     conversation: any,
     message: any,
     timestamp: Date,
+    isEcho: boolean = false,
   ): Promise<void> {
     try {
-      this.logger.log(`[processMessage] Message: ${message.text || 'No text'}`);
+      this.logger.log(`[processMessage] Message: ${message.text || 'No text'}, IsEcho: ${isEcho}`);
+
+      // Xác định sender type và sender info
+      let senderType: 'customer' | 'chatbot' | 'staff';
+      let senderId: string;
+      let senderName: string;
+      
+      if (isEcho) {
+        // Tin nhắn từ page - có thể là staff hoặc chatbot gửi từ Facebook web
+        // Hiện tại xác định là staff (sau này có thể phân biệt bằng app_id)
+        senderType = 'staff';
+        senderId = 'facebook_web_staff'; // ID tạm cho staff gửi từ FB web
+        senderName = page.name || 'Page Staff';
+        this.logger.log(`[processMessage] Echo message from page staff via Facebook web`);
+      } else {
+        // Tin nhắn từ customer
+        senderType = 'customer';
+        senderId = customer.customer_id;
+        senderName = customer.name;
+      }
 
       // Tạo message record
       await this.messagingService.createMessage(
@@ -294,16 +322,27 @@ export class FacebookWebhookController {
           text: message.text || '[No text content]',
           attachments: message.attachments,
           quickReply: message.quick_reply,
-          senderType: 'customer',
-          senderId: customer.customer_id,
-          senderName: customer.name,
+          senderType: senderType,
+          senderId: senderId,
+          senderName: senderName,
           sentAt: timestamp,
         },
       );
 
-      // TODO: Ở đây sẽ xử lý chatbot logic
-      // Hiện tại chỉ đánh dấu cần attention để staff xử lý
-      this.logger.log('[processMessage] Message saved, marked for staff attention');
+      // Logic xử lý theo thiết kế:
+      if (!isEcho) {
+        // Tin nhắn từ customer
+        if (conversation.current_handler === 'chatbot') {
+          // TODO: Xử lý chatbot logic ở đây
+          this.logger.log('[processMessage] Customer message saved, chatbot should handle');
+        } else {
+          // current_handler = "human" -> needs_attention sẽ được set = true trong updateConversationLastMessage
+          this.logger.log('[processMessage] Customer message saved, staff should handle');
+        }
+      } else {
+        // Echo message từ staff -> conversation đã được chuyển sang "human" handler trong updateConversationLastMessage
+        this.logger.log('[processMessage] Staff echo message saved, conversation switched to human handler');
+      }
     } catch (error) {
       this.logger.error('[processMessage] Error:', error);
     }
@@ -451,25 +490,37 @@ export class FacebookWebhookController {
         pageId,
       );
 
-      // Chuẩn bị thông tin bài đăng từ comment event
-      // Lưu ý: Comment event có permalink_url, Status event có message + photos
-      // CHỈ cập nhật khi có dữ liệu, không ghi đè với giá trị rỗng
-      const postData = postInfo ? {
-        content: postInfo.message || undefined, // Giữ nguyên undefined nếu không có
-        permalink_url: postInfo.permalink_url || undefined, // CHỈ CÓ TRONG COMMENT EVENT
-        photos: postInfo.photos && postInfo.photos.length > 0 ? postInfo.photos : undefined,
-        status_type: postInfo.status_type || undefined,
-        created_time: postInfo.created_time ? new Date(postInfo.created_time * 1000) : undefined,
-        updated_time: postInfo.updated_time ? new Date(postInfo.updated_time) : undefined,
-      } : undefined; // KHÔNG tạo object rỗng
+      // GỌI FACEBOOK API để lấy thông tin bài đăng đầy đủ
+      this.logger.log(`[processComment] Fetching full post info from Facebook API for: ${postId}`);
+      const fullPostInfo = await this.messagingService.getFacebookPostInfo(postId, pageId);
+      
+      // Kết hợp thông tin từ webhook và API
+      // Ưu tiên thông tin từ API (đầy đủ hơn)
+      const postData: any = {};
+      
+      if (fullPostInfo) {
+        postData.content = fullPostInfo.message || undefined;
+        postData.photos = fullPostInfo.photos && fullPostInfo.photos.length > 0 ? fullPostInfo.photos : undefined;
+        postData.permalink_url = fullPostInfo.permalink_url || postInfo?.permalink_url || undefined;
+        postData.status_type = fullPostInfo.status_type || postInfo?.status_type || undefined;
+        postData.created_time = fullPostInfo.created_time || (postInfo?.created_time ? new Date(postInfo.created_time * 1000) : undefined);
+        postData.updated_time = fullPostInfo.updated_time || (postInfo?.updated_time ? new Date(postInfo.updated_time) : undefined);
+      } else if (postInfo) {
+        // Fallback về webhook data nếu API call thất bại
+        postData.content = postInfo.message || undefined;
+        postData.permalink_url = postInfo.permalink_url || undefined;
+        postData.photos = postInfo.photos && postInfo.photos.length > 0 ? postInfo.photos : undefined;
+        postData.status_type = postInfo.status_type || undefined;
+        postData.created_time = postInfo.created_time ? new Date(postInfo.created_time * 1000) : undefined;
+        postData.updated_time = postInfo.updated_time ? new Date(postInfo.updated_time) : undefined;
+      }
 
-      this.logger.log(`[processComment] Post data (from comment event):`, {
-        hasPostInfo: !!postInfo,
-        content_length: postData?.content?.length || 0,
-        photos_count: postData?.photos?.length || 0,
-        has_permalink: !!postData?.permalink_url,
-        permalink_url: postData?.permalink_url || 'not-in-comment-event',
-        status_type: postData?.status_type || 'none',
+      this.logger.log(`[processComment] Post data (from API + webhook):`, {
+        content_length: postData.content?.length || 0,
+        photos_count: postData.photos?.length || 0,
+        has_permalink: !!postData.permalink_url,
+        permalink_url: postData.permalink_url || 'not-available',
+        status_type: postData.status_type || 'none',
         post_id: postId
       });
 
@@ -503,8 +554,6 @@ export class FacebookWebhookController {
           senderId: customer.customer_id,
           senderName: fromUser.name,
           sentAt: createdTime,
-          // KHÔNG lưu metadata cho comment - thông tin bài đăng đã lưu vào conversation
-          metadata: null,
         },
       );
 

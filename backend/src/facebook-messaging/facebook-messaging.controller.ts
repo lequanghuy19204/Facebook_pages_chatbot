@@ -306,10 +306,12 @@ export class FacebookMessagingController {
   ) {
     try {
       const companyId = req.user.company_id;
+      const userId = req.user.user_id;
       
       const conversation = await this.messagingService.returnToBot(
         conversationId,
         companyId,
+        userId,
       );
       
       return {
@@ -334,17 +336,41 @@ export class FacebookMessagingController {
     try {
       const companyId = req.user.company_id;
       const userId = req.user.user_id;
+      const userName = req.user.name || req.user.email;
       
-      await this.messagingService.markAsRead(conversationId, companyId, userId);
+      await this.messagingService.markAsRead(conversationId, companyId, userId, userName);
       
       return {
         success: true,
-        message: 'Messages marked as read',
+        message: 'Conversation marked as read',
       };
     } catch (error) {
-      this.logger.error('Failed to mark messages as read:', error);
+      this.logger.error('Failed to mark conversation as read:', error);
       throw new HttpException(
         error.message || 'Failed to mark as read',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('conversations/:conversationId/mark-unread')
+  async markAsUnread(
+    @Request() req,
+    @Param('conversationId') conversationId: string,
+  ) {
+    try {
+      const companyId = req.user.company_id;
+      
+      await this.messagingService.markAsUnread(conversationId, companyId);
+      
+      return {
+        success: true,
+        message: 'Conversation marked as unread',
+      };
+    } catch (error) {
+      this.logger.error('Failed to mark conversation as unread:', error);
+      throw new HttpException(
+        error.message || 'Failed to mark as unread',
         error.status || HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

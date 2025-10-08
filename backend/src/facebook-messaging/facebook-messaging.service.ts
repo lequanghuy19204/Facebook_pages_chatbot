@@ -44,18 +44,38 @@ export class FacebookMessagingService {
     // Tìm customer đã tồn tại - PHẢI PHÂN BIỆT GIỮA CÁC PAGE
     let customer = await this.customerModel.findOne({
       company_id: companyId,
-      page_id: pageId, // Thêm page_id để phân biệt
+      page_id: pageId,
       facebook_user_id: facebookUserId,
     });
 
     if (customer) {
-      // Cập nhật last_interaction_at
+      const facebookUserInfo = await this.getFacebookUserInfo(facebookUserId, facebookPageId);
+      let needsUpdate = false;
+      
+      if (facebookUserInfo.name && customer.name !== facebookUserInfo.name) {
+        customer.name = facebookUserInfo.name;
+        needsUpdate = true;
+      }
+      if (facebookUserInfo.first_name && customer.first_name !== facebookUserInfo.first_name) {
+        customer.first_name = facebookUserInfo.first_name;
+        needsUpdate = true;
+      }
+      if (facebookUserInfo.profile_pic && customer.profile_pic !== facebookUserInfo.profile_pic) {
+        customer.profile_pic = facebookUserInfo.profile_pic;
+        needsUpdate = true;
+      }
+      
       customer.last_interaction_at = new Date();
       await customer.save();
+      
+      if (needsUpdate) {
+        await this.syncCustomerInfoToConversations(customer.customer_id, companyId, customer);
+        this.logger.log(`Updated and synced customer info: ${customer.customer_id}`);
+      }
+      
       return customer;
     }
 
-    // Tạo customer mới - cần gọi Facebook API để lấy thông tin
     const facebookUserInfo = await this.getFacebookUserInfo(facebookUserId, facebookPageId);
     
     const customerId = this.generateCustomerId();
@@ -92,7 +112,39 @@ export class FacebookMessagingService {
       throw new NotFoundException('Customer not found');
     }
 
+    await this.syncCustomerInfoToConversations(customerId, companyId, customer);
+
     return customer;
+  }
+
+  private async syncCustomerInfoToConversations(
+    customerId: string,
+    companyId: string,
+    customer: FacebookCustomerDocument,
+  ): Promise<void> {
+    try {
+      const updateFields: any = {
+        customer_name: customer.name,
+        customer_first_name: customer.first_name,
+        customer_profile_pic: customer.profile_pic,
+        customer_phone: customer.phone,
+        updated_at: new Date(),
+      };
+
+      const updateResult = await this.conversationModel.updateMany(
+        {
+          company_id: companyId,
+          customer_id: customerId,
+        },
+        { $set: updateFields }
+      );
+
+      this.logger.log(
+        `Synced customer info to ${updateResult.modifiedCount} conversations for customer: ${customerId}`
+      );
+    } catch (error) {
+      this.logger.error('Failed to sync customer info to conversations:', error);
+    }
   }
 
   async getCustomers(companyId: string, query: any = {}): Promise<FacebookCustomerDocument[]> {
@@ -153,6 +205,9 @@ export class FacebookMessagingService {
     }
 
     if (!conversation) {
+      // Lấy thông tin customer để denormalize vào conversation
+      const customer = await this.customerModel.findOne({ customer_id: customerId });
+      
       // Tạo conversation mới
       const conversationId = this.generateConversationId();
       
@@ -161,11 +216,15 @@ export class FacebookMessagingService {
         company_id: companyId,
         page_id: pageId,
         customer_id: customerId,
+        customer_name: customer?.name,
+        customer_first_name: customer?.first_name,
+        customer_profile_pic: customer?.profile_pic,
+        customer_phone: customer?.phone,
         facebook_thread_id: facebookThreadId,
         source: source,
         status: 'open',
         current_handler: 'chatbot',
-        needs_attention: source === 'comment', // Comment luôn cần attention
+        needs_attention: source === 'comment',
         priority: 'normal',
       };
       
@@ -278,7 +337,6 @@ export class FacebookMessagingService {
     const limit = query.limit || 20;
     const skip = (page - 1) * limit;
 
-    // Get conversations
     const conversations = await this.conversationModel.find(filter)
       .sort({ needs_attention: -1, last_message_at: -1 })
       .skip(skip)
@@ -286,34 +344,10 @@ export class FacebookMessagingService {
       .lean()
       .exec();
 
-    // Get customer info for each conversation
-    const customerIds = conversations.map(c => c.customer_id);
-    const customers = await this.customerModel.find({
-      customer_id: { $in: customerIds }
-    }).lean().exec();
-
-    // Create a map for quick lookup
-    const customerMap = new Map();
-    customers.forEach(customer => {
-      customerMap.set(customer.customer_id, customer);
-    });
-
-    // Merge customer info into conversations
-    const conversationsWithCustomers = conversations.map(conv => {
-      const customer = customerMap.get(conv.customer_id);
-      return {
-        ...conv,
-        customer_name: customer?.name || 'Unknown User',
-        customer_profile_pic: customer?.profile_pic,
-        customer_email: customer?.email,
-        customer_phone: customer?.phone,
-      };
-    });
-
     const total = await this.conversationModel.countDocuments(filter);
 
     return {
-      conversations: conversationsWithCustomers,
+      conversations,
       total,
       page,
       limit,
@@ -341,12 +375,37 @@ export class FacebookMessagingService {
     });
   }
 
-  async returnToBot(conversationId: string, companyId: string): Promise<FacebookConversationDocument> {
-    return await this.updateConversation(conversationId, companyId, {
-      assignedTo: undefined,
-      currentHandler: 'chatbot',
-      needsAttention: false,
+  async returnToBot(conversationId: string, companyId: string, userId?: string): Promise<FacebookConversationDocument> {
+    const conversation = await this.conversationModel.findOneAndUpdate(
+      { conversation_id: conversationId, company_id: companyId },
+      {
+        $set: {
+          current_handler: 'chatbot',
+          needs_attention: false,
+          unread_customer_messages: 0,
+          updated_at: new Date(),
+        },
+        $inc: { returned_to_bot_count: 1 },
+        $currentDate: { last_returned_to_bot_at: true },
+        ...(userId && { $set: { last_returned_by: userId } }),
+      },
+      { new: true }
+    );
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    // Emit WebSocket event
+    this.messagingGateway.emitConversationUpdate(companyId, {
+      conversation_id: conversationId,
+      current_handler: 'chatbot',
+      needs_attention: false,
+      returned_to_bot_count: conversation.returned_to_bot_count,
+      updated_at: conversation.updated_at,
     });
+
+    return conversation;
   }
 
   // ===== MESSAGE MANAGEMENT =====
@@ -367,7 +426,6 @@ export class FacebookMessagingService {
       senderId: string;
       senderName?: string;
       sentAt?: Date;
-      metadata?: any;
     },
   ): Promise<FacebookMessageDocument> {
     const messageId = this.generateMessageId();
@@ -388,8 +446,7 @@ export class FacebookMessagingService {
       sender_id: messageData.senderId,
       sender_name: messageData.senderName,
       sent_at: messageData.sentAt || new Date(),
-      is_read: messageData.senderType !== 'customer', // Staff/bot messages auto-read
-      metadata: messageData.metadata,
+      delivery_status: 'sent', // Webhook messages đã được gửi
     });
 
     await message.save();
@@ -397,7 +454,10 @@ export class FacebookMessagingService {
     // Cập nhật conversation với tin nhắn cuối
     await this.updateConversationLastMessage(conversationId, message);
     
-    this.logger.log(`Created message: ${messageId} in conversation: ${conversationId}`);
+    this.logger.log(`Created message: ${messageId} in conversation: ${conversationId} from ${messageData.senderType}`);
+    
+    // Lấy conversation đã được cập nhật để emit WebSocket với đầy đủ thông tin
+    const updatedConversation = await this.conversationModel.findOne({ conversation_id: conversationId }).lean();
     
     // Emit WebSocket event for new message
     this.messagingGateway.emitNewMessage(companyId, {
@@ -411,6 +471,8 @@ export class FacebookMessagingService {
       sender_id: messageData.senderId,
       sent_at: message.sent_at,
       attachments: message.attachments,
+      // Thêm thông tin conversation để cập nhật ChatList
+      conversation: updatedConversation,
     });
     
     return message;
@@ -528,43 +590,86 @@ export class FacebookMessagingService {
     return message;
   }
 
-  async markAsRead(conversationId: string, companyId: string, userId: string): Promise<void> {
-    // Mark conversation messages as read
-    await this.messageModel.updateMany(
-      {
-        conversation_id: conversationId,
-        company_id: companyId,
-        sender_type: 'customer',
-        is_read: false,
-      },
-      {
-        $set: { is_read: true, read_at: new Date() },
-        $addToSet: { read_by: userId },
+  async markAsRead(conversationId: string, companyId: string, userId: string, userName?: string): Promise<void> {
+    await this.conversationModel.updateOne(
+      { conversation_id: conversationId, company_id: companyId },
+      { 
+        $set: { 
+          unread_customer_messages: 0,
+          is_read: true,
+          read_by_user_id: userId,
+          read_by_user_name: userName,
+          read_at: new Date(),
+        },
       },
     );
 
-    // Reset unread count
+    this.messagingGateway.emitConversationUpdate(companyId, {
+      conversation_id: conversationId,
+      is_read: true,
+      read_by_user_id: userId,
+      read_by_user_name: userName,
+      read_at: new Date(),
+    });
+  }
+
+  async markAsUnread(conversationId: string, companyId: string): Promise<void> {
     await this.conversationModel.updateOne(
       { conversation_id: conversationId, company_id: companyId },
-      { $set: { unread_count: 0 } },
+      { 
+        $set: { 
+          is_read: false,
+          read_by_user_id: null,
+          read_by_user_name: null,
+        },
+      },
     );
+
+    this.messagingGateway.emitConversationUpdate(companyId, {
+      conversation_id: conversationId,
+      is_read: false,
+      read_by_user_id: null,
+      read_by_user_name: null,
+    });
   }
 
   // ===== HELPER METHODS =====
 
   private async updateConversationLastMessage(conversationId: string, message: FacebookMessageDocument): Promise<void> {
+    const conversation = await this.conversationModel.findOne({ conversation_id: conversationId });
+    if (!conversation) return;
+
     const updateData: any = {
-      last_message_text: message.text.substring(0, 100), // 100 ký tự đầu
+      last_message_text: message.text.substring(0, 100),
       last_message_at: message.sent_at,
       last_message_from: message.sender_type,
       $inc: { total_messages: 1 },
       updated_at: new Date(),
     };
 
-    // Nếu là tin nhắn từ customer, tăng unread_count và set needs_attention
+    // Logic theo thiết kế:
     if (message.sender_type === 'customer') {
-      updateData.$inc.unread_count = 1;
-      updateData.needs_attention = true;
+      // Tin nhắn từ customer
+      updateData.$inc.unread_customer_messages = 1;
+      
+      // CHỈ set needs_attention = true nếu current_handler = "human"
+      if (conversation.current_handler === 'human') {
+        updateData.needs_attention = true;
+        updateData.is_read = false;
+      }
+      // Nếu current_handler = "chatbot" -> không cần attention (bot tự xử lý)
+      
+    } else if (message.sender_type === 'staff') {
+      // Tin nhắn từ staff -> chuyển sang human handler
+      updateData.current_handler = 'human';
+      updateData.needs_attention = false;
+      updateData.is_read = true;
+      updateData.unread_customer_messages = 0;
+      
+    } else if (message.sender_type === 'chatbot') {
+      // Tin nhắn từ chatbot -> giữ nguyên chatbot handler
+      updateData.needs_attention = false;
+      updateData.unread_customer_messages = 0;
     }
 
     await this.conversationModel.updateOne(
@@ -597,6 +702,64 @@ export class FacebookMessagingService {
     } catch (error) {
       this.logger.error(`Failed to get Facebook user info for ${facebookUserId}:`, error.response?.data || error.message);
       return { name: 'Unknown User' };
+    }
+  }
+
+  async getFacebookPostInfo(postId: string, facebookPageId: string): Promise<any> {
+    try {
+      const page = await this.pageModel.findOne({ facebook_page_id: facebookPageId });
+      if (!page || !page.access_token) {
+        this.logger.warn(`No access token found for page: ${facebookPageId}`);
+        return null;
+      }
+
+      const apiVersion = this.configService.get('FACEBOOK_API_VERSION') || 'v23.0';
+      const url = `https://graph.facebook.com/${apiVersion}/${postId}`;
+
+      const response = await axios.get(url, {
+        params: {
+          fields: 'message,full_picture,attachments{media,type,subattachments},created_time,updated_time,permalink_url,status_type',
+          access_token: page.access_token,
+        },
+      });
+
+      const postData = response.data;
+      const photosSet = new Set<string>();
+
+      if (postData.attachments?.data) {
+        for (const attachment of postData.attachments.data) {
+          if (attachment.type === 'photo') {
+            if (attachment.media?.image?.src) {
+              photosSet.add(attachment.media.image.src);
+            }
+          } else if (attachment.type === 'album') {
+            if (attachment.subattachments?.data) {
+              for (const subAttachment of attachment.subattachments.data) {
+                if (subAttachment.media?.image?.src) {
+                  photosSet.add(subAttachment.media.image.src);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (photosSet.size === 0 && postData.full_picture) {
+        photosSet.add(postData.full_picture);
+      }
+
+      return {
+        message: postData.message || '',
+        photos: Array.from(photosSet),
+        permalink_url: postData.permalink_url || '',
+        status_type: postData.status_type || '',
+        created_time: postData.created_time ? new Date(postData.created_time) : null,
+        updated_time: postData.updated_time ? new Date(postData.updated_time) : null,
+      };
+      
+    } catch (error) {
+      this.logger.error(`Failed to get Facebook post info for ${postId}:`, error.response?.data || error.message);
+      return null;
     }
   }
 

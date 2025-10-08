@@ -49,8 +49,14 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
       setConversation(conversationData);
       setMessages(messagesData.messages || []);
 
-      // Mark as read
-      await ApiService.messaging.markAsRead(token, conversationId);
+      // Mark as read with user info
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        await ApiService.messaging.markAsRead(token, conversationId, user.user_id, user.full_name);
+      } else {
+        await ApiService.messaging.markAsRead(token, conversationId);
+      }
     } catch (err: any) {
       console.error('Failed to fetch conversation:', err);
       setError(err.message || 'Failed to load conversation');
@@ -90,6 +96,11 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
     const handleNewMessage = (message: any) => {
       if (message.conversation_id === conversationId) {
         setMessages(prev => [...prev, message]);
+        
+        // Cập nhật conversation info nếu có (để cập nhật avatar, name realtime)
+        if (message.conversation) {
+          setConversation(prev => prev ? { ...prev, ...message.conversation } : message.conversation);
+        }
       }
     };
 
@@ -165,16 +176,16 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
     return groups;
   };
 
-  // Get customer info
+  // Get customer info from denormalized data
   const getCustomerName = () => {
     if (!conversation) return 'Khách hàng';
-    return (conversation as any).customer_name || conversation.customer?.name || 'Khách hàng';
+    return conversation.customer_name || 'Khách hàng';
   };
 
   const getCustomerAvatar = () => {
     if (!conversation) return 'https://ui-avatars.com/api/?name=User&background=random&size=200';
-    const profilePic = (conversation as any).customer_profile_pic || conversation.customer?.profile_pic;
-    return profilePic || `https://ui-avatars.com/api/?name=${encodeURIComponent(getCustomerName())}&background=random&size=200`;
+    return conversation.customer_profile_pic || 
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(getCustomerName())}&background=random&size=200`;
   };
 
   if (!conversationId) {
@@ -229,7 +240,7 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
               <img src="/assets/d482b35d-4dc2-4b0c-8338-c5c6e59aa68e.png" alt="status" />
             </div>
             <div className="chat-area-status-text">
-              {conversation?.unread_count === 0 ? 'Đã xem' : 'Chưa xem'}
+              {conversation?.unread_customer_messages === 0 ? 'Đã xem' : 'Chưa xem'}
               {conversation?.current_handler && ` bởi ${conversation.current_handler}`}
               {conversation?.last_message_at && ` - ${formatDateBadge(conversation.last_message_at)}`}
             </div>
