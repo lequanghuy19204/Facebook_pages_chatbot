@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FacebookMessagingService } from './facebook-messaging.service';
 import {
   CreateMessageDto,
+  ReplyMessageDto,
   UpdateConversationDto,
   UpdateCustomerDto,
   AssignConversationDto,
@@ -266,16 +267,18 @@ export class FacebookMessagingController {
   async replyToConversation(
     @Request() req,
     @Param('conversationId') conversationId: string,
-    @Body() messageData: CreateMessageDto,
+    @Body() messageData: ReplyMessageDto,
   ) {
     try {
       const companyId = req.user.company_id;
       const userId = req.user.user_id;
+      const userName = req.user.full_name || req.user.name || req.user.email;
       
       const message = await this.messagingService.replyToConversation(
         conversationId,
         companyId,
         userId,
+        userName,
         messageData,
       );
       

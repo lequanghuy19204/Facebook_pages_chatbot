@@ -289,7 +289,14 @@ export class FacebookWebhookController {
     isEcho: boolean = false,
   ): Promise<void> {
     try {
-      this.logger.log(`[processMessage] Message: ${message.text || 'No text'}, IsEcho: ${isEcho}`);
+      this.logger.log(`[processMessage] Message: ${message.text || 'No text'}, IsEcho: ${isEcho}, MID: ${message.mid}`);
+
+      // KIỂM TRA xem message đã tồn tại chưa (tránh lưu trùng)
+      const existingMessage = await this.messagingService.findMessageByFacebookId(message.mid);
+      if (existingMessage) {
+        this.logger.log(`[processMessage] Message already exists (MID: ${message.mid}), skipping...`);
+        return;
+      }
 
       // Xác định sender type và sender info
       let senderType: 'customer' | 'chatbot' | 'staff';
@@ -300,7 +307,7 @@ export class FacebookWebhookController {
         // Tin nhắn từ page - có thể là staff hoặc chatbot gửi từ Facebook web
         // Hiện tại xác định là staff (sau này có thể phân biệt bằng app_id)
         senderType = 'staff';
-        senderId = 'facebook_web_staff'; // ID tạm cho staff gửi từ FB web
+        senderId = 'facebook_web_staff';
         senderName = page.name || 'Page Staff';
         this.logger.log(`[processMessage] Echo message from page staff via Facebook web`);
       } else {

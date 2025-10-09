@@ -9,7 +9,7 @@ import { FacebookCustomer, FacebookCustomerDocument } from '../schemas/facebook-
 import { FacebookConversation, FacebookConversationDocument } from '../schemas/facebook-conversation.schema';
 import { FacebookMessage, FacebookMessageDocument } from '../schemas/facebook-message.schema';
 import { FacebookPage, FacebookPageDocument } from '../schemas/facebook-page.schema';
-import { CreateMessageDto, UpdateConversationDto, UpdateCustomerDto, GetConversationsQuery } from '../dto/facebook-messaging.dto';
+import { CreateMessageDto, ReplyMessageDto, UpdateConversationDto, UpdateCustomerDto, GetConversationsQuery } from '../dto/facebook-messaging.dto';
 import { MessagingGateway } from '../websocket/messaging.gateway';
 
 @Injectable()
@@ -504,18 +504,14 @@ export class FacebookMessagingService {
     // Lấy conversation đã được cập nhật để emit WebSocket với đầy đủ thông tin
     const updatedConversation = await this.conversationModel.findOne({ conversation_id: conversationId }).lean();
     
-    // Emit WebSocket event for new message
+    // Convert message document to plain object để emit
+    const messageObject = message.toObject();
+    
+    this.logger.log(`Emitting new_message via WebSocket: ${messageId}, sender_name: ${messageObject.sender_name}`);
+    
+    // Emit WebSocket event for new message với TOÀN BỘ thông tin message
     this.messagingGateway.emitNewMessage(companyId, {
-      message_id: messageId,
-      conversation_id: conversationId,
-      customer_id: customerId,
-      page_id: pageId,
-      message_type: messageData.messageType,
-      text: message.text,
-      sender_type: messageData.senderType,
-      sender_id: messageData.senderId,
-      sent_at: message.sent_at,
-      attachments: message.attachments,
+      ...messageObject,
       // Thêm thông tin conversation để cập nhật ChatList
       conversation: updatedConversation,
     });
@@ -548,6 +544,10 @@ export class FacebookMessagingService {
     return { messages, total };
   }
 
+  async findMessageByFacebookId(facebookMessageId: string): Promise<FacebookMessageDocument | null> {
+    return await this.messageModel.findOne({ facebook_message_id: facebookMessageId });
+  }
+
   async sendMessageToFacebook(
     pageId: string,
     facebookUserId: string,
@@ -563,27 +563,82 @@ export class FacebookMessagingService {
       const apiVersion = this.configService.get('FACEBOOK_API_VERSION') || 'v23.0';
       const url = `https://graph.facebook.com/${apiVersion}/${page.facebook_page_id}/messages`;
 
-      const payload: any = {
-        recipient: { id: facebookUserId },
-        message: { text: message.text },
-      };
-
+      // Nếu có attachments, gửi từng attachment riêng
       if (message.attachments && message.attachments.length > 0) {
-        // Handle attachments
-        payload.message.attachment = message.attachments[0];
+        const results: any[] = [];
+        
+        for (const attachment of message.attachments) {
+          const payload: any = {
+            recipient: { id: facebookUserId },
+            message: {
+              attachment: {
+                type: this.mapAttachmentType(attachment.type),
+                payload: {
+                  url: attachment.cloudflare_url,
+                  is_reusable: true,
+                },
+              },
+            },
+          };
+
+          const response = await axios.post(url, payload, {
+            params: { access_token: page.access_token },
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          this.logger.log(`Attachment sent to Facebook: ${response.data.message_id}`);
+          results.push(response.data);
+        }
+
+        // Nếu có text, gửi text sau attachments
+        if (message.text && message.text.trim()) {
+          const textPayload = {
+            recipient: { id: facebookUserId },
+            message: { text: message.text },
+          };
+
+          const textResponse = await axios.post(url, textPayload, {
+            params: { access_token: page.access_token },
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          this.logger.log(`Text message sent to Facebook: ${textResponse.data.message_id}`);
+          results.push(textResponse.data);
+        }
+
+        return results[results.length - 1]; // Return last message ID
+      } else {
+        // Gửi text message thông thường
+        const payload: any = {
+          recipient: { id: facebookUserId },
+          message: { text: message.text },
+        };
+
+        const response = await axios.post(url, payload, {
+          params: { access_token: page.access_token },
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        this.logger.log(`Message sent to Facebook: ${response.data.message_id}`);
+        return response.data;
       }
-
-      const response = await axios.post(url, payload, {
-        params: { access_token: page.access_token },
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      this.logger.log(`Message sent to Facebook: ${response.data.message_id}`);
-      return response.data;
-      
     } catch (error) {
       this.logger.error('Failed to send message to Facebook:', error.response?.data || error.message);
       throw error;
+    }
+  }
+
+  private mapAttachmentType(type: string): string {
+    // Map internal type to Facebook attachment type
+    switch (type) {
+      case 'image':
+        return 'image';
+      case 'video':
+        return 'video';
+      case 'file':
+        return 'file';
+      default:
+        return 'file';
     }
   }
 
@@ -591,7 +646,8 @@ export class FacebookMessagingService {
     conversationId: string,
     companyId: string,
     userId: string,
-    messageData: CreateMessageDto,
+    userName: string,
+    messageData: ReplyMessageDto,
   ): Promise<FacebookMessageDocument> {
     // Lấy conversation và customer info
     const conversation = await this.getConversation(conversationId, companyId);
@@ -601,14 +657,38 @@ export class FacebookMessagingService {
       throw new NotFoundException('Customer not found');
     }
 
+    // Chuẩn bị attachments để lưu vào DB
+    let dbAttachments: any[] | undefined = undefined;
+    if (messageData.attachments && messageData.attachments.length > 0) {
+      dbAttachments = messageData.attachments.map(att => ({
+        type: att.type,
+        cloudflare_url: att.cloudflare_url,
+        cloudflare_key: att.cloudflare_key,
+        filename: att.filename,
+      }));
+    }
+
     // Gửi message qua Facebook API
     const fbResponse = await this.sendMessageToFacebook(
       conversation.page_id,
       customer.facebook_user_id,
-      { text: messageData.text, attachments: messageData.attachments },
+      { text: messageData.text, attachments: dbAttachments },
     );
 
-    // Lưu message vào DB
+    // Xác định message type
+    let messageType = messageData.messageType || 'text';
+    if (dbAttachments && dbAttachments.length > 0) {
+      const firstAttachment = dbAttachments[0];
+      if (firstAttachment.type === 'image') {
+        messageType = 'image';
+      } else if (firstAttachment.type === 'video') {
+        messageType = 'video';
+      } else {
+        messageType = 'file';
+      }
+    }
+
+    // Lưu message vào DB với thông tin nhân viên
     const message = await this.createMessage(
       companyId,
       conversation.page_id,
@@ -616,11 +696,12 @@ export class FacebookMessagingService {
       conversationId,
       {
         facebookMessageId: fbResponse.message_id,
-        messageType: messageData.messageType || 'text',
+        messageType: messageType,
         text: messageData.text,
-        attachments: messageData.attachments,
+        attachments: dbAttachments,
         senderType: 'staff',
         senderId: userId,
+        senderName: userName,
         sentAt: new Date(),
       },
     );

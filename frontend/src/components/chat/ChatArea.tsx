@@ -113,6 +113,7 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
 
     // Listen for new messages in this conversation
     const handleNewMessage = (message: any) => {
+      console.log('WebSocket new_message received:', message);
       if (message.conversation_id === conversationId) {
         setMessages(prev => [...prev, message]);
         
@@ -132,8 +133,8 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
   }, [conversationId]);
 
   // Send message
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !conversationId || sending) return;
+  const handleSendMessage = async (attachedFiles?: any[]) => {
+    if ((!inputMessage.trim() && !attachedFiles?.length) || !conversationId || sending) return;
 
     try {
       setSending(true);
@@ -143,9 +144,34 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
         return;
       }
 
+      let attachments: any[] = [];
+
+      // Upload files nếu có
+      if (attachedFiles && attachedFiles.length > 0) {
+        console.log('Uploading files:', attachedFiles.length);
+        
+        for (const fileData of attachedFiles) {
+          try {
+            const uploadResult = await ApiService.messaging.uploadMessageFile(token, fileData.file);
+            
+            attachments.push({
+              type: fileData.type,
+              cloudflare_url: uploadResult.cloudflare_url,
+              cloudflare_key: uploadResult.cloudflare_key,
+              filename: fileData.file.name,
+            });
+          } catch (uploadErr) {
+            console.error('Failed to upload file:', fileData.file.name, uploadErr);
+            throw new Error(`Không thể tải lên file: ${fileData.file.name}`);
+          }
+        }
+      }
+
+      // Gửi tin nhắn với attachments
       await ApiService.messaging.replyToConversation(token, conversationId, {
-        text: inputMessage,
-        messageType: 'text'
+        text: inputMessage || (attachments.length > 0 ? '📎 File đính kèm' : ''),
+        messageType: attachments.length > 0 ? 'file' : 'text',
+        attachments: attachments.length > 0 ? attachments : undefined,
       });
 
       setInputMessage('');

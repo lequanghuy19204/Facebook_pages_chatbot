@@ -79,6 +79,35 @@ export class CreateMessageDto {
   quickReply?: any;
 }
 
+export class MessageAttachmentDto {
+  @IsString()
+  type: string;
+
+  @IsString()
+  cloudflare_url: string;
+
+  @IsString()
+  cloudflare_key: string;
+
+  @IsString()
+  filename: string;
+}
+
+export class ReplyMessageDto {
+  @IsString()
+  text: string;
+
+  @IsOptional()
+  @IsEnum(['text', 'image', 'file', 'video', 'quick_reply', 'comment'])
+  messageType?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MessageAttachmentDto)
+  attachments?: MessageAttachmentDto[];
+}
+
 export class UpdateConversationDto {
   @IsOptional()
   @IsEnum(['open', 'closed', 'archived'])

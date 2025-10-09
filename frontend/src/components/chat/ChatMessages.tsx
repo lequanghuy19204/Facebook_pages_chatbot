@@ -113,19 +113,23 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
                         )}
                         <div className="chat-area-message-bubble received" style={{ whiteSpace: 'pre-wrap' }}>
                           {message.text}
-                          {hasAttachment && message.attachments && message.attachments.map((att, idx) => (
-                            <div key={idx} style={{ marginTop: '8px' }}>
-                              {att.type === 'image' && (
-                                <img src={att.facebook_url} alt="attachment" style={{ maxWidth: '100%', borderRadius: '8px' }} />
-                              )}
-                              {att.type === 'video' && (
-                                <video src={att.facebook_url} controls style={{ maxWidth: '100%', borderRadius: '8px' }} />
-                              )}
-                              {att.type === 'file' && (
-                                <a href={att.facebook_url} target="_blank" rel="noopener noreferrer">📎 {att.filename}</a>
-                              )}
+                          {hasAttachment && message.attachments && (
+                            <div className="chat-area-images-grid-received" style={{ marginTop: message.text ? '8px' : '0' }}>
+                              {message.attachments.map((att, idx) => (
+                                <div key={idx} className="chat-area-image-item-received">
+                                  {att.type === 'image' && (
+                                    <img src={att.facebook_url} alt="attachment" />
+                                  )}
+                                  {att.type === 'video' && (
+                                    <video src={att.facebook_url} controls style={{ width: '100%', borderRadius: '8px' }} />
+                                  )}
+                                  {att.type === 'file' && (
+                                    <a href={att.facebook_url} target="_blank" rel="noopener noreferrer">📎 {att.filename}</a>
+                                  )}
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          )}
                         </div>
                         {/* Thời gian hiển thị bên cạnh bubble */}
                         <div style={{ 
@@ -186,21 +190,23 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
                         </div>
                         {/* Bubble ảnh/video */}
                         <div className="chat-area-message-bubble-image">
-                          {message.attachments && message.attachments.map((att, idx) => (
-                            <div key={idx} className="chat-area-image-container">
-                              {att.type === 'image' && (
-                                <>
-                                  <img src={att.facebook_url} alt="attachment" />
-                                  <button className="chat-area-image-download">
-                                    <img src="/assets/4cf588a1-b66c-4acb-ac99-6fe6db0ec42c.png" alt="download" />
-                                  </button>
-                                </>
-                              )}
-                              {att.type === 'video' && (
-                                <video src={att.facebook_url} controls style={{ width: '100%', borderRadius: '10px' }} />
-                              )}
-                            </div>
-                          ))}
+                          <div className="chat-area-images-grid">
+                            {message.attachments && message.attachments.map((att, idx) => (
+                              <div key={idx} className="chat-area-image-item">
+                                {att.type === 'image' && (
+                                  <>
+                                    <img src={att.facebook_url} alt="attachment" />
+                                    <button className="chat-area-image-download">
+                                      <img src="/assets/4cf588a1-b66c-4acb-ac99-6fe6db0ec42c.png" alt="download" />
+                                    </button>
+                                  </>
+                                )}
+                                {att.type === 'video' && (
+                                  <video src={att.facebook_url} controls style={{ width: '100%', borderRadius: '8px' }} />
+                                )}
+                              </div>
+                            ))}
+                          </div>
                           {message.text && (
                             <p className="chat-area-image-caption" style={{ whiteSpace: 'pre-wrap' }}>{message.text}</p>
                           )}

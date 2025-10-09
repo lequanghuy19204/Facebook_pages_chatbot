@@ -100,6 +100,62 @@ export class CloudflareR2Controller {
     };
   }
 
+  @Post('upload/file')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file', {
+    limits: {
+      fileSize: 50 * 1024 * 1024, // 50MB limit for general files
+    },
+  }))
+  @ApiOperation({ summary: 'Upload any file (images, videos, documents)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ 
+    status: 200, 
+    description: 'File uploaded successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean' },
+        data: {
+          type: 'object',
+          properties: {
+            key: { type: 'string' },
+            url: { type: 'string' },
+            publicUrl: { type: 'string' },
+            size: { type: 'number' },
+            contentType: { type: 'string' },
+            uploadedAt: { type: 'string', format: 'date-time' },
+          },
+        },
+      },
+    },
+  })
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: any,
+    @Query('folder') folder?: string,
+    @Query('filename') customFileName?: string
+  ): Promise<{ success: boolean; data: UploadResult }> {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    const userId = req.user.user_id;
+    const uploadFolder = folder || `files/${userId}`;
+    
+    // Generate filename if not provided
+    const fileName = customFileName || file.originalname;
+
+    this.logger.log(`User ${userId} uploading file: ${file.originalname} (${file.size} bytes, ${file.mimetype})`);
+
+    const result = await this.r2Service.uploadFile(file, uploadFolder, fileName);
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
   @Post('upload/images')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FilesInterceptor('images', 10, {

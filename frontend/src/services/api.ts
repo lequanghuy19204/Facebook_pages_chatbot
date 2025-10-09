@@ -1589,6 +1589,38 @@ const ApiService = {
       }
     },
 
+    // Upload file for messaging
+    uploadMessageFile: async (token: string, file: File): Promise<{cloudflare_url: string; cloudflare_key: string}> => {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(
+          `${API_BASE_URL}/storage/upload/file?folder=messages`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to upload file');
+        }
+
+        const result = await response.json();
+        return {
+          cloudflare_url: result.data.publicUrl,
+          cloudflare_key: result.data.key,
+        };
+      } catch (error) {
+        console.error('Upload message file error:', error);
+        throw error;
+      }
+    },
+
     // Reply to conversation
     replyToConversation: async (
       token: string,
