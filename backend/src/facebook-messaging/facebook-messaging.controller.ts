@@ -189,7 +189,7 @@ export class FacebookMessagingController {
     @Request() req,
     @Param('conversationId') conversationId: string,
     @Query('page') page = 1,
-    @Query('limit') limit = 50,
+    @Query('limit') limit = 100,
   ) {
     try {
       const companyId = req.user.company_id;
@@ -200,14 +200,13 @@ export class FacebookMessagingController {
         +limit,
       );
       
+      this.logger.log(`Retrieved ${result.messages.length} messages for conversation ${conversationId}`);
+      
       return {
         success: true,
-        data: result.messages,
-        pagination: {
+        data: {
+          messages: result.messages,
           total: result.total,
-          page: +page,
-          limit: +limit,
-          pages: Math.ceil(result.total / +limit),
         },
       };
     } catch (error) {

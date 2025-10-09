@@ -159,6 +159,17 @@
   height: 13.75px;
 }
 
+.chat-area-icon-button-img {
+  width: 20px !important;
+  height: 20px !important;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.chat-area-icon-button:hover .chat-area-icon-button-img {
+  opacity: 1;
+}
+
 /* Messages */
 .chat-area-messages {
   flex: 1;
@@ -207,10 +218,14 @@
   margin: 0;
 }
 
+.message-wrapper {
+  margin-bottom: 2px;
+}
+
 .chat-area-message-row {
   display: flex;
   gap: 5.5px;
-  margin-bottom: 2.5px;
+  align-items: flex-end;
 }
 
 .chat-area-message-row.received {

@@ -299,9 +299,20 @@ export class FacebookMessagingService {
     companyId: string, 
     updateData: UpdateConversationDto
   ): Promise<FacebookConversationDocument> {
+    // Map camelCase fields từ DTO sang snake_case cho MongoDB
+    const mongoUpdateData: any = {
+      updated_at: new Date(),
+    };
+    
+    if (updateData.status !== undefined) mongoUpdateData.status = updateData.status;
+    if (updateData.currentHandler !== undefined) mongoUpdateData.current_handler = updateData.currentHandler;
+    if (updateData.assignedTo !== undefined) mongoUpdateData.assigned_to = updateData.assignedTo;
+    if (updateData.needsAttention !== undefined) mongoUpdateData.needs_attention = updateData.needsAttention;
+    if (updateData.priority !== undefined) mongoUpdateData.priority = updateData.priority;
+
     const conversation = await this.conversationModel.findOneAndUpdate(
       { conversation_id: conversationId, company_id: companyId },
-      { ...updateData, updated_at: new Date() },
+      { $set: mongoUpdateData },
       { new: true }
     );
 
@@ -309,10 +320,14 @@ export class FacebookMessagingService {
       throw new NotFoundException('Conversation not found');
     }
 
-    // Emit WebSocket event for conversation update
+    // Emit WebSocket event với snake_case để frontend nhận đúng
     this.messagingGateway.emitConversationUpdate(companyId, {
       conversation_id: conversationId,
-      ...updateData,
+      status: conversation.status,
+      current_handler: conversation.current_handler,
+      assigned_to: conversation.assigned_to,
+      needs_attention: conversation.needs_attention,
+      priority: conversation.priority,
       updated_at: conversation.updated_at,
     });
 
@@ -389,18 +404,31 @@ export class FacebookMessagingService {
   }
 
   async returnToBot(conversationId: string, companyId: string, userId?: string): Promise<FacebookConversationDocument> {
+    // Khi chuyển về chatbot:
+    // - Set current_handler = 'chatbot'
+    // - Set needs_attention = false (chatbot tự xử lý)
+    // - Set is_read = false (không cần quan tâm read status với chatbot)
+    // - GIỮ NGUYÊN read_by_user_id, read_by_user_name, read_at (không xóa)
+    // - Set unread_customer_messages = 0
+    
+    const updateData: any = {
+      current_handler: 'chatbot',
+      needs_attention: false,
+      is_read: false,
+      unread_customer_messages: 0,
+      updated_at: new Date(),
+    };
+
+    if (userId) {
+      updateData.last_returned_by = userId;
+    }
+
     const conversation = await this.conversationModel.findOneAndUpdate(
       { conversation_id: conversationId, company_id: companyId },
       {
-        $set: {
-          current_handler: 'chatbot',
-          needs_attention: false,
-          unread_customer_messages: 0,
-          updated_at: new Date(),
-        },
+        $set: updateData,
         $inc: { returned_to_bot_count: 1 },
         $currentDate: { last_returned_to_bot_at: true },
-        ...(userId && { $set: { last_returned_by: userId } }),
       },
       { new: true }
     );
@@ -414,9 +442,13 @@ export class FacebookMessagingService {
       conversation_id: conversationId,
       current_handler: 'chatbot',
       needs_attention: false,
+      is_read: false,
+      unread_customer_messages: 0,
       returned_to_bot_count: conversation.returned_to_bot_count,
       updated_at: conversation.updated_at,
     });
+
+    this.logger.log(`Conversation ${conversationId} returned to bot by user ${userId}`);
 
     return conversation;
   }
@@ -634,33 +666,52 @@ export class FacebookMessagingService {
 
   async markAsUnread(conversationId: string, companyId: string, userId: string, userName?: string): Promise<void> {
     // Khi nhân viên MARK UNREAD:
+    // - Set current_handler = 'human' (đảm bảo human đang xử lý)
     // - Set needs_attention = true (cần nhân viên khác xử lý)
     // - Set is_read = false (chưa đọc)
     // - CẬP NHẬT read_by_user_id, read_by_user_name, read_at = nhân viên hiện tại
+    // - Nếu unread_customer_messages = 0 thì set = 1
     
     const readAt = new Date();
+    const conversation = await this.conversationModel.findOne({
+      conversation_id: conversationId,
+      company_id: companyId,
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    const updateData: any = {
+      current_handler: 'human',
+      is_read: false,
+      read_by_user_id: userId,
+      read_by_user_name: userName,
+      read_at: readAt,
+      needs_attention: true,
+      updated_at: new Date(),
+    };
+
+    // Nếu unread_customer_messages = 0 thì set = 1
+    if (conversation.unread_customer_messages === 0) {
+      updateData.unread_customer_messages = 1;
+    }
     
     await this.conversationModel.updateOne(
       { conversation_id: conversationId, company_id: companyId },
-      { 
-        $set: { 
-          is_read: false,
-          read_by_user_id: userId,
-          read_by_user_name: userName,
-          read_at: readAt,
-          needs_attention: true, // Đánh dấu lại cần attention cho nhân viên khác
-        },
-      },
+      { $set: updateData },
     );
 
     // Emit WebSocket để tất cả client biết conversation cần attention lại
     this.messagingGateway.emitConversationUpdate(companyId, {
       conversation_id: conversationId,
+      current_handler: 'human',
       is_read: false,
       read_by_user_id: userId,
       read_by_user_name: userName,
       read_at: readAt,
-      needs_attention: true, // Quan trọng: hiển thị đậm lại
+      needs_attention: true,
+      unread_customer_messages: updateData.unread_customer_messages || conversation.unread_customer_messages,
     });
     
     this.logger.log(`Conversation ${conversationId} marked as unread by ${userName} (${userId})`);

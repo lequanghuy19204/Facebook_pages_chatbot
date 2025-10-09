@@ -388,14 +388,14 @@ export default function Settings({ onLogout }: SettingsProps) {
                   
                   <div className="form-actions">
                     <button 
-                      className="action-btn secondary"
+                      className="settings-action-btn secondary"
                       onClick={handleCancelEditProfile}
                       disabled={loading}
                     >
                       ❌ Hủy
                     </button>
                     <button 
-                      className="action-btn primary"
+                      className="settings-action-btn primary"
                       onClick={handleSaveProfile}
                       disabled={loading}
                     >
@@ -429,7 +429,7 @@ export default function Settings({ onLogout }: SettingsProps) {
                   
                   <div className="info-actions">
                     <button 
-                      className="action-btn secondary"
+                      className="settings-action-btn secondary"
                       onClick={handleEditProfile}
                       disabled={loading}
                     >
@@ -475,14 +475,14 @@ export default function Settings({ onLogout }: SettingsProps) {
                   
                   <div className="form-actions">
                     <button 
-                      className="action-btn secondary"
+                      className="settings-action-btn secondary"
                       onClick={handleCancelChangePassword}
                       disabled={loading}
                     >
                       ❌ Hủy
                     </button>
                     <button 
-                      className="action-btn primary"
+                      className="settings-action-btn primary"
                       onClick={handleSavePassword}
                       disabled={loading || !passwordData.new_password || !passwordData.confirm_password}
                     >
@@ -498,7 +498,7 @@ export default function Settings({ onLogout }: SettingsProps) {
                   
                   <div className="info-actions">
                     <button 
-                      className="action-btn secondary"
+                      className="settings-action-btn secondary"
                       onClick={handleChangePassword}
                       disabled={loading}
                     >

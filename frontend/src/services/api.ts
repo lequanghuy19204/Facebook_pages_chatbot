@@ -1517,7 +1517,7 @@ const ApiService = {
       page?: number,
       limit?: number
     ): Promise<{
-      messages: any[];
+      messages: FacebookMessage[];
       total: number;
     }> => {
       try {
@@ -1537,11 +1537,15 @@ const ApiService = {
         );
 
         if (!response.ok) {
-          throw new Error('Failed to get messages');
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to get messages');
         }
 
-        const data = await response.json();
-        return data.data;
+        const result = await response.json();
+        console.log('Messages API response:', result);
+        
+        // Backend trả về: { success: true, data: { messages: [], total: number } }
+        return result.data;
       } catch (error) {
         console.error('Get messages error:', error);
         throw error;
@@ -1707,6 +1711,32 @@ const ApiService = {
         return data.data;
       } catch (error) {
         console.error('Assign conversation error:', error);
+        throw error;
+      }
+    },
+
+    // Return conversation to bot
+    returnToBot: async (token: string, conversationId: string): Promise<any> => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}/return-to-bot`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to return to bot');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Return to bot error:', error);
         throw error;
       }
     },

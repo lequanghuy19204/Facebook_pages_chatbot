@@ -1,6 +1,7 @@
 .chat-list-container {
   width: 400px;
   height: 100%;
+  border-right: 1px solid #e5ded8;
   background-color: rgba(80, 109, 173, 1);
   display: flex;
   flex-direction: column;
@@ -11,6 +12,7 @@
 .chat-list-header {
   width: 100%;
   height: 48px;
+  border-bottom: 1px solid #e5ded8;
   background-color: rgba(255, 255, 255, 1);
   display: flex;
   align-items: center;
@@ -23,7 +25,7 @@
   width: 247px;
   height: 32px;
   background-color: rgba(234, 236, 240, 1);
-  border-radius: 6px;
+  /* border-radius: 6px; */
   display: flex;
   align-items: center;
   margin-left: 8px;
@@ -106,6 +108,7 @@
 .chat-list-messages {
   width: 400px;
   height: 100%;
+  border-right: 1px solid #e5ded8;
   background-color: rgba(255, 255, 255, 1);
   overflow-y: auto;
   overflow-x: hidden;
