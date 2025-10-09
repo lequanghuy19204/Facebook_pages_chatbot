@@ -5,7 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { User, UserDocument, UserRole } from '../schemas/user.schema';
 import { Company, CompanyDocument } from '../schemas/company.schema';
 import { FacebookPage, FacebookPageDocument } from '../schemas/facebook-page.schema';
-import { CloudflareR2Service } from '../cloudflare/cloudflare-r2.service';
+import { MinioStorageService } from '../minio/minio-storage.service';
 
 @Injectable()
 export class UsersService {
@@ -13,7 +13,7 @@ export class UsersService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel(FacebookPage.name) private facebookPageModel: Model<FacebookPageDocument>,
-    private cloudflareR2Service: CloudflareR2Service,
+    private minioStorageService: MinioStorageService,
   ) {}
 
   async getAllUsers(companyId: string, query?: any): Promise<any> {
@@ -445,10 +445,10 @@ export class UsersService {
         throw new NotFoundException('User not found');
       }
       
-      // Xóa avatar cũ từ Cloudflare R2 nếu có
+      // Xóa avatar cũ từ MinIO nếu có
       if (user.avatar_cloudflare_key) {
         try {
-          await this.cloudflareR2Service.deleteFile(user.avatar_cloudflare_key);
+          await this.minioStorageService.deleteFile(user.avatar_cloudflare_key);
           console.log(`Deleted old avatar: ${user.avatar_cloudflare_key}`);
         } catch (error) {
           console.error('Error deleting old avatar:', error);

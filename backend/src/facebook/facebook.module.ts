@@ -3,7 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { FacebookController } from './facebook.controller';
 import { FacebookService } from './facebook.service';
 import { AuthModule } from '../auth/auth.module';
-import { CloudflareR2Module } from '../cloudflare/cloudflare-r2.module';
+import { MinioStorageModule } from '../minio/minio-storage.module';
 import { Company, CompanySchema } from '../schemas/company.schema';
 import { User, UserSchema } from '../schemas/user.schema';
 import { FacebookPage, FacebookPageSchema } from '../schemas/facebook-page.schema';
@@ -11,7 +11,7 @@ import { FacebookPage, FacebookPageSchema } from '../schemas/facebook-page.schem
 @Module({
   imports: [
     AuthModule,
-    CloudflareR2Module,
+    MinioStorageModule,
     MongooseModule.forFeature([
       { name: Company.name, schema: CompanySchema },
       { name: User.name, schema: UserSchema },

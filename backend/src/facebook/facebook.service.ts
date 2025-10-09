@@ -7,7 +7,7 @@ import * as crypto from 'crypto';
 import { Company, CompanyDocument } from '../schemas/company.schema';
 import { User, UserDocument, UserRole } from '../schemas/user.schema';
 import { FacebookPage, FacebookPageDocument } from '../schemas/facebook-page.schema';
-import { CloudflareR2Service } from '../cloudflare/cloudflare-r2.service';
+import { MinioStorageService } from '../minio/minio-storage.service';
 import {
   FacebookConnectDto,
   FacebookUserInfoDto,
@@ -33,7 +33,7 @@ export class FacebookService {
 
   constructor(
     private configService: ConfigService,
-    private cloudflareR2Service: CloudflareR2Service,
+    private minioStorageService: MinioStorageService,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(FacebookPage.name) private facebookPageModel: Model<FacebookPageDocument>,
@@ -377,7 +377,7 @@ export class FacebookService {
         .find({ company_id: user.company_id })
         .exec();
       
-      // Create a map of Facebook page IDs to their Cloudflare data for quick lookup
+      // Create a map of Facebook page IDs to their MinIO data for quick lookup
       const existingPageMap = new Map();
       existingPages.forEach(page => {
         if (page.facebook_page_id && page.picture_cloudflare_key && page.picture_url) {
@@ -432,16 +432,16 @@ export class FacebookService {
             const pictureUrl = item.page.picture?.data?.url;
             if (!pictureUrl) return { pageId: item.pageId, success: false, reused: false };
 
-            // Check if we already have this image in Cloudflare
+            // Check if we already have this image in MinIO
             const existingPageData = existingPageMap.get(item.page.id);
             if (existingPageData && existingPageData.picture_url === pictureUrl) {
-              // Reuse existing Cloudflare image
+              // Reuse existing MinIO image
               item.pageData.picture_cloudflare_key = existingPageData.picture_cloudflare_key;
               item.pageData.picture_cloudflare_url = existingPageData.picture_cloudflare_url;
-              this.logger.log(`Reusing existing profile picture for ${item.page.name} from Cloudflare R2`);
+              this.logger.log(`Reusing existing profile picture for ${item.page.name} from MinIO`);
               return { pageId: item.pageId, success: true, reused: true };
             } else {
-              // Download and upload to Cloudflare R2 in parallel
+              // Download and upload to MinIO in parallel
               const pictureResult = await this.downloadAndUploadPageProfilePicture(
                 item.page.id,
                 pictureUrl
@@ -450,7 +450,7 @@ export class FacebookService {
               if (pictureResult) {
                 item.pageData.picture_cloudflare_key = pictureResult.cloudflareKey;
                 item.pageData.picture_cloudflare_url = pictureResult.cloudflareUrl;
-                this.logger.log(`Stored page profile picture for ${item.page.name} in Cloudflare R2`);
+                this.logger.log(`Stored page profile picture for ${item.page.name} in MinIO`);
                 return { pageId: item.pageId, success: true, reused: false };
               } else {
                 this.logger.warn(`Failed to process profile picture for ${item.page.name}`);
@@ -625,24 +625,24 @@ export class FacebookService {
 
       this.logger.log(`Disconnecting Facebook for company: ${user.company_id} by admin: ${user.full_name}`);
 
-      // First get all pages to retrieve their Cloudflare keys
+      // First get all pages to retrieve their MinIO keys
       const pages = await this.facebookPageModel.find({ company_id: user.company_id }).exec();
       
-      // Delete profile pictures from Cloudflare R2
+      // Delete profile pictures from MinIO
       let deletedPicturesCount = 0;
       for (const page of pages) {
         if (page.picture_cloudflare_key) {
           try {
-            await this.cloudflareR2Service.deleteFile(page.picture_cloudflare_key);
+            await this.minioStorageService.deleteFile(page.picture_cloudflare_key);
             deletedPicturesCount++;
-            this.logger.log(`Deleted profile picture from Cloudflare R2: ${page.picture_cloudflare_key}`);
+            this.logger.log(`Deleted profile picture from MinIO: ${page.picture_cloudflare_key}`);
           } catch (error) {
             this.logger.error(`Failed to delete profile picture for page ${page.name}: ${error.message}`);
           }
         }
       }
       
-      this.logger.log(`Deleted ${deletedPicturesCount} profile pictures from Cloudflare R2`);
+      this.logger.log(`Deleted ${deletedPicturesCount} profile pictures from MinIO`);
 
       // Delete all Facebook pages for this company
       const deletedPages = await this.facebookPageModel.deleteMany({ 
@@ -777,7 +777,7 @@ export class FacebookService {
   }
 
   /**
-   * Download and upload Facebook page profile picture to Cloudflare R2 with retry logic
+   * Download and upload Facebook page profile picture to MinIO with retry logic
    */
   async downloadAndUploadPageProfilePicture(pageId: string, pictureUrl: string): Promise<{
     cloudflareKey: string;
@@ -824,7 +824,7 @@ export class FacebookService {
             throw new Error(`Image too large: ${imageBuffer.length} bytes`);
           }
           
-          // Generate a unique key for Cloudflare R2
+          // Generate a unique key for MinIO
           const fileExtension = contentType.includes('png') ? '.png' : 
                                contentType.includes('gif') ? '.gif' : 
                                contentType.includes('svg') ? '.svg' : '.jpg';
@@ -833,14 +833,14 @@ export class FacebookService {
           const fileName = `fb_page_${pageId}${fileExtension}`;
           const key = `facebook/page_images/${fileName}`;
           
-          // Upload to Cloudflare R2
-          const uploadResult = await this.cloudflareR2Service.uploadBuffer(
+          // Upload to MinIO
+          const uploadResult = await this.minioStorageService.uploadBuffer(
             imageBuffer,
             key,
             contentType
           );
           
-          this.logger.log(`Successfully uploaded profile picture to Cloudflare R2: ${key} (${imageBuffer.length} bytes)`);
+          this.logger.log(`Successfully uploaded profile picture to MinIO: ${key} (${imageBuffer.length} bytes)`);
           
           return {
             cloudflareKey: uploadResult.key,

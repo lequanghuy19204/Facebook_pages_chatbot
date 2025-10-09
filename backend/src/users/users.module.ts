@@ -6,7 +6,7 @@ import { User, UserSchema } from '../schemas/user.schema';
 import { Company, CompanySchema } from '../schemas/company.schema';
 import { FacebookPage, FacebookPageSchema } from '../schemas/facebook-page.schema';
 import { AuthModule } from '../auth/auth.module';
-import { CloudflareR2Module } from '../cloudflare/cloudflare-r2.module';
+import { MinioStorageModule } from '../minio/minio-storage.module';
 
 @Module({
   imports: [
@@ -16,7 +16,7 @@ import { CloudflareR2Module } from '../cloudflare/cloudflare-r2.module';
       { name: FacebookPage.name, schema: FacebookPageSchema },
     ]),
     AuthModule,
-    CloudflareR2Module,
+    MinioStorageModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

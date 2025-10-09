@@ -4,7 +4,7 @@ import { Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { Product, ProductDocument, ProductImage } from '../schemas/product.schema';
 import { User, UserDocument } from '../schemas/user.schema';
-import { CloudflareR2Service } from '../cloudflare/cloudflare-r2.service';
+import { MinioStorageService } from '../minio/minio-storage.service';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -20,7 +20,7 @@ export class ProductsService {
   constructor(
     @InjectModel(Product.name) private productModel: Model<ProductDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private cloudflareR2Service: CloudflareR2Service,
+    private minioStorageService: MinioStorageService,
   ) {}
 
   /**
@@ -249,8 +249,8 @@ export class ProductsService {
       if (product.images && product.images.length > 0) {
         for (const image of product.images) {
           try {
-            await this.cloudflareR2Service.deleteFile(image.cloudflare_key);
-            this.logger.log(`Đã xóa ảnh ${image.image_id} từ Cloudflare R2`);
+            await this.minioStorageService.deleteFile(image.cloudflare_key);
+            this.logger.log(`Đã xóa ảnh ${image.image_id} từ MinIO`);
           } catch (error) {
             this.logger.error(`Lỗi khi xóa ảnh ${image.image_id}: ${error.message}`);
             
@@ -417,10 +417,10 @@ export class ProductsService {
 
       
       try {
-        await this.cloudflareR2Service.deleteFile(image.cloudflare_key);
-        this.logger.log(`Đã xóa ảnh ${imageId} từ Cloudflare R2`);
+        await this.minioStorageService.deleteFile(image.cloudflare_key);
+        this.logger.log(`Đã xóa ảnh ${imageId} từ MinIO`);
       } catch (error) {
-        this.logger.error(`Lỗi khi xóa ảnh từ Cloudflare R2: ${error.message}`);
+        this.logger.error(`Lỗi khi xóa ảnh từ MinIO: ${error.message}`);
         
       }
 

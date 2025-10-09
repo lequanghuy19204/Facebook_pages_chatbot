@@ -6,7 +6,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { FacebookModule } from './facebook/facebook.module';
 import { FacebookMessagingModule } from './facebook-messaging/facebook-messaging.module';
-import { CloudflareR2Module } from './cloudflare/cloudflare-r2.module';
+import { MinioStorageModule } from './minio/minio-storage.module';
 import { UsersModule } from './users/users.module';
 import { CompanyModule } from './company/company.module';
 import { ProductsModule } from './products/products.module';
@@ -22,7 +22,7 @@ import { TagsModule } from './tags/tags.module';
     AuthModule,
     FacebookModule,
     FacebookMessagingModule,
-    CloudflareR2Module,
+    MinioStorageModule,
     UsersModule,
     CompanyModule,
     ProductsModule,
