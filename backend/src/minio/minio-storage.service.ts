@@ -261,5 +261,105 @@ export class MinioStorageService {
     const uuid = uuidv4().split('-')[0];
     return `${prefix}_${timestamp}_${uuid}${fileExtension}`;
   }
+
+  async downloadAndUploadFromUrl(
+    sourceUrl: string,
+    folder: string,
+    customFileName?: string
+  ): Promise<MinioStorageUploadResult | null> {
+    try {
+      this.logger.log(`Downloading file from URL: ${sourceUrl}`);
+      
+      const axios = (await import('axios')).default;
+      const response = await axios.get(sourceUrl, {
+        responseType: 'arraybuffer',
+        timeout: 30000,
+      });
+
+      const buffer = Buffer.from(response.data);
+      const contentType = response.headers['content-type'] || 'application/octet-stream';
+      
+      let fileName = customFileName;
+      if (!fileName) {
+        const urlPath = new URL(sourceUrl).pathname;
+        const urlFileName = path.basename(urlPath);
+        fileName = urlFileName || `file_${Date.now()}`;
+      }
+      
+      const fileExtension = path.extname(fileName);
+      if (!fileExtension) {
+        const ext = contentType.split('/')[1] || 'jpg';
+        fileName = `${fileName}.${ext}`;
+      }
+      
+      const timestamp = Date.now();
+      const uuid = uuidv4().split('-')[0];
+      const finalFileName = `${path.parse(fileName).name}_${timestamp}_${uuid}${path.extname(fileName)}`;
+      
+      const key = `${folder}/${finalFileName}`;
+
+      this.logger.log(`Uploading to MinIO: ${key} (${buffer.length} bytes)`);
+
+      const uploadCommand = new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+        ContentLength: buffer.length,
+        Metadata: {
+          sourceUrl: sourceUrl,
+          uploadedAt: new Date().toISOString(),
+        },
+      });
+
+      await this.s3Client.send(uploadCommand);
+
+      const publicUrl = `${this.publicUrl}/${this.bucketName}/${key}`;
+
+      return {
+        key: key,
+        url: publicUrl,
+        publicUrl: publicUrl,
+        size: buffer.length,
+        contentType: contentType,
+        uploadedAt: new Date(),
+      };
+
+    } catch (error) {
+      this.logger.error(`Failed to download and upload from URL: ${sourceUrl}`, error);
+      return null;
+    }
+  }
+
+  async downloadAndUploadMultipleFromUrls(
+    urls: string[],
+    folder: string
+  ): Promise<MinioStorageUploadResult[]> {
+    if (!urls || urls.length === 0) {
+      return [];
+    }
+
+    this.logger.log(`Uploading ${urls.length} files from URLs in parallel`);
+
+    const uploadPromises = urls.map(url => 
+      this.downloadAndUploadFromUrl(url, folder)
+    );
+
+    const results = await Promise.allSettled(uploadPromises);
+
+    const successfulUploads: MinioStorageUploadResult[] = [];
+    
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled' && result.value) {
+        successfulUploads.push(result.value);
+      } else {
+        this.logger.warn(`Failed to upload file from URL: ${urls[index]}`);
+      }
+    });
+
+    this.logger.log(`Successfully uploaded ${successfulUploads.length}/${urls.length} files`);
+
+    return successfulUploads;
+  }
 }
 

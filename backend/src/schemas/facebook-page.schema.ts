@@ -42,13 +42,13 @@ export class FacebookPage {
   error_message?: string;
 
   @Prop()
-  picture_url?: string;
+  picture?: string; // URL gốc từ Facebook
 
   @Prop()
-  picture_cloudflare_url?: string;
+  picture_url?: string; // URL trên MinIO
 
   @Prop()
-  picture_cloudflare_key?: string;
+  picture_key?: string; // Key trên MinIO
 
   @Prop()
   tasks?: string[];

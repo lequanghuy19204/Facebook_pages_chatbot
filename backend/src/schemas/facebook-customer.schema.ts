@@ -27,7 +27,13 @@ export class FacebookCustomer {
   last_name?: string; // Họ
 
   @Prop()
-  profile_pic?: string; // Avatar URL từ Facebook
+  profile_pic?: string; // Avatar URL gốc từ Facebook
+
+  @Prop()
+  profile_pic_url?: string; // Avatar URL trên Minio
+
+  @Prop()
+  profile_pic_key?: string; // Avatar key trên Minio
 
   @Prop()
   locale?: string; // Ngôn ngữ: "vi_VN", "en_US"

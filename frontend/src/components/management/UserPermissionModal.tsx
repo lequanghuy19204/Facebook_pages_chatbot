@@ -22,8 +22,6 @@ const ROLE_OPTIONS = [
   { value: UserRole.MANAGE_CHATBOT, label: 'Quản lý Chatbot', icon: '🤖', description: 'Cấu hình và quản lý chatbot' }
 ];
 
-const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
-
 export default function UserPermissionModal({
   isOpen,
   onClose,
@@ -366,9 +364,9 @@ export default function UserPermissionModal({
                       />
                       <div className="mgmt-modal-page-content">
                         <div className="mgmt-modal-page-avatar">
-                          {page.picture_cloudflare_key ? (
+                          {page.picture_url ? (
                             <img 
-                              src={`${R2_BUCKET_URL}/${page.picture_cloudflare_key}`} 
+                              src={page.picture_url} 
                               alt={`${page.name} logo`}
                               className="mgmt-modal-avatar-image"
                               loading="lazy"

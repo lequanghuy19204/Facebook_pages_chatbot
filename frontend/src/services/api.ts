@@ -75,9 +75,9 @@ export interface FacebookPage {
   is_active: boolean;
   last_sync?: string;
   sync_status: string;
-  picture_url?: string;
-  picture_cloudflare_url?: string;
-  picture_cloudflare_key?: string;
+  picture?: string; // URL gốc từ Facebook
+  picture_url?: string; // URL trên MinIO
+  picture_key?: string; // Key trên MinIO
   tasks?: string[];
   imported_by: string;
   imported_at?: string;

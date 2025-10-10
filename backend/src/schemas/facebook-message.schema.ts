@@ -34,6 +34,8 @@ export class FacebookMessage {
   attachments?: {
     type: 'image' | 'video' | 'audio' | 'file';
     facebook_url: string;
+    minio_url?: string;
+    minio_key?: string;
     filename: string;
   }[]; // File đính kèm (nếu có)
 

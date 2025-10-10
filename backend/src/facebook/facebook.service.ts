@@ -380,11 +380,11 @@ export class FacebookService {
       // Create a map of Facebook page IDs to their MinIO data for quick lookup
       const existingPageMap = new Map();
       existingPages.forEach(page => {
-        if (page.facebook_page_id && page.picture_cloudflare_key && page.picture_url) {
+        if (page.facebook_page_id && page.picture_key && page.picture_url) {
           existingPageMap.set(page.facebook_page_id, {
+            picture: page.picture,
             picture_url: page.picture_url,
-            picture_cloudflare_key: page.picture_cloudflare_key,
-            picture_cloudflare_url: page.picture_cloudflare_url
+            picture_key: page.picture_key
           });
         }
       });
@@ -415,9 +415,9 @@ export class FacebookService {
             imported_at: new Date(),
             tasks: page.tasks,
             // Will be filled later if image processing succeeds
-            picture_url: page.picture?.data?.url || null,
-            picture_cloudflare_key: null as string | null,
-            picture_cloudflare_url: null as string | null
+            picture: page.picture?.data?.url || null,
+            picture_url: null as string | null,
+            picture_key: null as string | null
           }
         };
       });
@@ -434,10 +434,10 @@ export class FacebookService {
 
             // Check if we already have this image in MinIO
             const existingPageData = existingPageMap.get(item.page.id);
-            if (existingPageData && existingPageData.picture_url === pictureUrl) {
+            if (existingPageData && existingPageData.picture === pictureUrl) {
               // Reuse existing MinIO image
-              item.pageData.picture_cloudflare_key = existingPageData.picture_cloudflare_key;
-              item.pageData.picture_cloudflare_url = existingPageData.picture_cloudflare_url;
+              item.pageData.picture_url = existingPageData.picture_url;
+              item.pageData.picture_key = existingPageData.picture_key;
               this.logger.log(`Reusing existing profile picture for ${item.page.name} from MinIO`);
               return { pageId: item.pageId, success: true, reused: true };
             } else {
@@ -448,8 +448,8 @@ export class FacebookService {
               );
               
               if (pictureResult) {
-                item.pageData.picture_cloudflare_key = pictureResult.cloudflareKey;
-                item.pageData.picture_cloudflare_url = pictureResult.cloudflareUrl;
+                item.pageData.picture_url = pictureResult.minioUrl;
+                item.pageData.picture_key = pictureResult.minioKey;
                 this.logger.log(`Stored page profile picture for ${item.page.name} in MinIO`);
                 return { pageId: item.pageId, success: true, reused: false };
               } else {
@@ -631,11 +631,11 @@ export class FacebookService {
       // Delete profile pictures from MinIO
       let deletedPicturesCount = 0;
       for (const page of pages) {
-        if (page.picture_cloudflare_key) {
+        if (page.picture_key) {
           try {
-            await this.minioStorageService.deleteFile(page.picture_cloudflare_key);
+            await this.minioStorageService.deleteFile(page.picture_key);
             deletedPicturesCount++;
-            this.logger.log(`Deleted profile picture from MinIO: ${page.picture_cloudflare_key}`);
+            this.logger.log(`Deleted profile picture from MinIO: ${page.picture_key}`);
           } catch (error) {
             this.logger.error(`Failed to delete profile picture for page ${page.name}: ${error.message}`);
           }
@@ -780,8 +780,8 @@ export class FacebookService {
    * Download and upload Facebook page profile picture to MinIO with retry logic
    */
   async downloadAndUploadPageProfilePicture(pageId: string, pictureUrl: string): Promise<{
-    cloudflareKey: string;
-    cloudflareUrl: string;
+    minioKey: string;
+    minioUrl: string;
   } | null> {
     const maxRetries = 3;
     const timeoutMs = 15000; // 15 seconds timeout
@@ -843,8 +843,8 @@ export class FacebookService {
           this.logger.log(`Successfully uploaded profile picture to MinIO: ${key} (${imageBuffer.length} bytes)`);
           
           return {
-            cloudflareKey: uploadResult.key,
-            cloudflareUrl: uploadResult.publicUrl
+            minioKey: uploadResult.key,
+            minioUrl: uploadResult.publicUrl
           };
           
         } finally {

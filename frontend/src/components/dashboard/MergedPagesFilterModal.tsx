@@ -13,8 +13,6 @@ interface MergedPagesFilterModalProps {
   loading: boolean;
 }
 
-const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
-
 export default function MergedPagesFilterModal({
   isOpen,
   onClose,
@@ -287,9 +285,9 @@ export default function MergedPagesFilterModal({
                       <div className="merged-page-content">
                         {/* Page Avatar */}
                         <div className="merged-page-avatar">
-                          {page.picture_cloudflare_key ? (
+                          {page.picture_url ? (
                             <img 
-                              src={`${R2_BUCKET_URL}/${page.picture_cloudflare_key}`}
+                              src={page.picture_url}
                               alt={`${page.name} logo`}
                               className="merged-avatar-image"
                               onError={(e) => {

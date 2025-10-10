@@ -83,11 +83,17 @@ export class MessageAttachmentDto {
   @IsString()
   type: string;
 
+  @IsOptional()
   @IsString()
-  cloudflare_url: string;
+  facebook_url?: string;
 
+  @IsOptional()
   @IsString()
-  cloudflare_key: string;
+  minio_url?: string;
+
+  @IsOptional()
+  @IsString()
+  minio_key?: string;
 
   @IsString()
   filename: string;

@@ -30,9 +30,6 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       onLogout();
     }
   };
-
-  const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
-
   
   const filteredPages = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -238,9 +235,9 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <div className="pages-grid">
                     {filteredPages.map((page) => (
                       <div key={page.page_id} className="page-card">
-                        {page.picture_cloudflare_key ? (
+                        {page.picture_url ? (
                           <img 
-                            src={`${R2_BUCKET_URL}/${page.picture_cloudflare_key}`}
+                            src={page.picture_url}
                             alt={`${page.name} logo`}
                             className="page-avatar"
                             onError={(e) => {

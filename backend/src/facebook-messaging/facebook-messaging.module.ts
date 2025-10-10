@@ -11,6 +11,7 @@ import { FacebookConversation, FacebookConversationSchema } from '../schemas/fac
 import { FacebookMessage, FacebookMessageSchema } from '../schemas/facebook-message.schema';
 import { FacebookPage, FacebookPageSchema } from '../schemas/facebook-page.schema';
 import { WebsocketModule } from '../websocket/websocket.module';
+import { MinioStorageService } from '../minio/minio-storage.service';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { WebsocketModule } from '../websocket/websocket.module';
     WebsocketModule,
   ],
   controllers: [FacebookMessagingController, FacebookWebhookController],
-  providers: [FacebookMessagingService],
+  providers: [FacebookMessagingService, MinioStorageService],
   exports: [FacebookMessagingService],
 })
 export class FacebookMessagingModule {}

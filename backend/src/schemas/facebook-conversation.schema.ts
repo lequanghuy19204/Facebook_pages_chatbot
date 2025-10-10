@@ -24,10 +24,28 @@ export class FacebookConversation {
   customer_first_name?: string; // Tên khách hàng (denormalized từ facebook_customers)
 
   @Prop()
-  customer_profile_pic?: string; // Avatar khách hàng (denormalized từ facebook_customers)
+  customer_profile_pic?: string; // Avatar khách hàng gốc từ Facebook (denormalized từ facebook_customers)
+
+  @Prop()
+  customer_profile_pic_url?: string; // Avatar khách hàng trên Minio (denormalized từ facebook_customers)
+
+  @Prop()
+  customer_profile_pic_key?: string; // Avatar khách hàng key trên Minio (denormalized từ facebook_customers)
 
   @Prop()
   customer_phone?: string; // Số điện thoại khách hàng (denormalized từ facebook_customers)
+
+  @Prop()
+  page_name?: string; // Tên page (denormalized từ facebook_pages)
+
+  @Prop()
+  page_picture?: string; // Avatar page gốc từ Facebook (denormalized từ facebook_pages)
+
+  @Prop()
+  page_picture_url?: string; // Avatar page trên Minio (denormalized từ facebook_pages)
+
+  @Prop()
+  page_picture_key?: string; // Avatar page key trên Minio (denormalized từ facebook_pages)
 
   @Prop({ unique: true, index: true })
   facebook_thread_id?: string; // Thread ID từ Facebook (nếu có)

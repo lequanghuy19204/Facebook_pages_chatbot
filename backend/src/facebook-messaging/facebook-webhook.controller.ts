@@ -15,6 +15,7 @@ import type { RawBodyRequest } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { FacebookMessagingService } from './facebook-messaging.service';
+import { MinioStorageService } from '../minio/minio-storage.service';
 
 interface FacebookWebhookEntry {
   id: string;
@@ -60,6 +61,7 @@ export class FacebookWebhookController {
   constructor(
     private readonly configService: ConfigService,
     private readonly messagingService: FacebookMessagingService,
+    private readonly minioService: MinioStorageService,
   ) {}
 
   @Get()
@@ -316,14 +318,28 @@ export class FacebookWebhookController {
         senderName = customer.name;
       }
 
-      // Chuẩn hóa attachments format từ Facebook Messenger
+      // Chuẩn hóa attachments format từ Facebook Messenger và upload vào MinIO
       let normalizedAttachments: any[] | undefined = undefined;
       if (message.attachments && message.attachments.length > 0) {
-        normalizedAttachments = message.attachments.map((att: any) => ({
-          type: att.type || 'file',
-          facebook_url: att.payload?.url || att.url || '',
-          filename: att.payload?.url?.split('/').pop() || 'attachment'
-        }));
+        const facebookUrls = message.attachments.map((att: any) => att.payload?.url || att.url || '').filter(url => url);
+        
+        const folder = `attachments/${page.company_id}`;
+        const uploadedFiles = await this.minioService.downloadAndUploadMultipleFromUrls(facebookUrls, folder);
+        
+        normalizedAttachments = message.attachments.map((att: any, index: number) => {
+          const facebookUrl = att.payload?.url || att.url || '';
+          const uploadedFile = uploadedFiles.find(file => file.key.includes(`_${index}_`) || uploadedFiles[index]);
+          
+          return {
+            type: att.type || 'file',
+            facebook_url: facebookUrl,
+            minio_url: uploadedFile?.publicUrl,
+            minio_key: uploadedFile?.key,
+            filename: att.payload?.url?.split('/').pop() || 'attachment'
+          };
+        });
+        
+        this.logger.log(`Uploaded ${uploadedFiles.length}/${facebookUrls.length} attachments to MinIO`);
       }
 
       // Tạo message record
@@ -469,17 +485,25 @@ export class FacebookWebhookController {
       const message = commentData.message;
       const createdTime = new Date(commentData.created_time * 1000);
       
-      // Xử lý ảnh trong comment (trường 'photo')
+      // Xử lý ảnh trong comment (trường 'photo') và upload vào MinIO
       const commentPhoto = commentData.photo;
       let attachments: any[] | undefined = undefined;
       
       if (commentPhoto) {
-        attachments = [{
-          type: 'image',
-          facebook_url: commentPhoto,
-          filename: 'comment_image.jpg'
-        }];
-        this.logger.log(`[processComment] Comment has photo: ${commentPhoto}`);
+        const page = await this.messagingService.findPageByFacebookId(pageId);
+        if (page) {
+          const folder = `attachments/${page.company_id}`;
+          const uploadedFiles = await this.minioService.downloadAndUploadMultipleFromUrls([commentPhoto], folder);
+          
+          attachments = [{
+            type: 'image',
+            facebook_url: commentPhoto,
+            minio_url: uploadedFiles[0]?.publicUrl,
+            minio_key: uploadedFiles[0]?.key,
+            filename: 'comment_image.jpg'
+          }];
+          this.logger.log(`[processComment] Comment photo uploaded to MinIO: ${uploadedFiles[0]?.key}`);
+        }
       }
       
       // Lấy thông tin bài đăng từ webhook

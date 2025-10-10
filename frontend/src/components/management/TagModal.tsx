@@ -36,8 +36,6 @@ const PRESET_COLORS = [
   '#3B3B3B', // Dark Grey
 ];
 
-const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
-
 export default function TagModal({
   isOpen,
   onClose,
@@ -386,9 +384,9 @@ export default function TagModal({
                       onChange={() => handlePageToggle(page.facebook_page_id)}
                       disabled={isSubmitting}
                     />
-                    {page.picture_cloudflare_key ? (
+                    {page.picture_url ? (
                         <img 
-                            src={`${R2_BUCKET_URL}/${page.picture_cloudflare_key}`} 
+                            src={page.picture_url} 
                             alt={`${page.name} logo`}
                             className="tag-page-avatar"
                             loading="lazy"

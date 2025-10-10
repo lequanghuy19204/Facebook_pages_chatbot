@@ -11,6 +11,7 @@ import { FacebookMessage, FacebookMessageDocument } from '../schemas/facebook-me
 import { FacebookPage, FacebookPageDocument } from '../schemas/facebook-page.schema';
 import { CreateMessageDto, ReplyMessageDto, UpdateConversationDto, UpdateCustomerDto, GetConversationsQuery } from '../dto/facebook-messaging.dto';
 import { MessagingGateway } from '../websocket/messaging.gateway';
+import { MinioStorageService } from '../minio/minio-storage.service';
 
 @Injectable()
 export class FacebookMessagingService {
@@ -31,6 +32,7 @@ export class FacebookMessagingService {
     
     private readonly configService: ConfigService,
     private readonly messagingGateway: MessagingGateway,
+    private readonly minioService: MinioStorageService,
   ) {}
 
   // ===== CUSTOMER MANAGEMENT =====
@@ -62,6 +64,19 @@ export class FacebookMessagingService {
       if (facebookUserInfo.profile_pic && customer.profile_pic !== facebookUserInfo.profile_pic) {
         customer.profile_pic = facebookUserInfo.profile_pic;
         needsUpdate = true;
+        
+        const folder = `customers/${customer.customer_id}`;
+        const uploadResult = await this.minioService.downloadAndUploadFromUrl(
+          facebookUserInfo.profile_pic,
+          folder,
+          'avatar'
+        );
+        
+        if (uploadResult) {
+          customer.profile_pic_url = uploadResult.publicUrl;
+          customer.profile_pic_key = uploadResult.key;
+          this.logger.log(`Uploaded customer avatar to MinIO: ${uploadResult.key}`);
+        }
       }
       
       customer.last_interaction_at = new Date();
@@ -79,6 +94,24 @@ export class FacebookMessagingService {
     
     const customerId = this.generateCustomerId();
     
+    let profilePicUrl: string | undefined;
+    let profilePicKey: string | undefined;
+    
+    if (facebookUserInfo.profile_pic) {
+      const folder = `customers/${customerId}`;
+      const uploadResult = await this.minioService.downloadAndUploadFromUrl(
+        facebookUserInfo.profile_pic,
+        folder,
+        'avatar'
+      );
+      
+      if (uploadResult) {
+        profilePicUrl = uploadResult.publicUrl;
+        profilePicKey = uploadResult.key;
+        this.logger.log(`Uploaded new customer avatar to MinIO: ${uploadResult.key}`);
+      }
+    }
+    
     customer = new this.customerModel({
       customer_id: customerId,
       company_id: companyId,
@@ -88,6 +121,8 @@ export class FacebookMessagingService {
       first_name: facebookUserInfo.first_name,
       last_name: facebookUserInfo.last_name,
       profile_pic: facebookUserInfo.profile_pic,
+      profile_pic_url: profilePicUrl,
+      profile_pic_key: profilePicKey,
       locale: facebookUserInfo.locale,
       timezone: facebookUserInfo.timezone,
       first_contact_at: new Date(),
@@ -126,6 +161,8 @@ export class FacebookMessagingService {
         customer_name: customer.name,
         customer_first_name: customer.first_name,
         customer_profile_pic: customer.profile_pic,
+        customer_profile_pic_url: customer.profile_pic_url,
+        customer_profile_pic_key: customer.profile_pic_key,
         customer_phone: customer.phone,
         updated_at: new Date(),
       };
@@ -204,8 +241,9 @@ export class FacebookMessagingService {
     }
 
     if (!conversation) {
-      // Lấy thông tin customer để denormalize vào conversation
+      // Lấy thông tin customer và page để denormalize vào conversation
       const customer = await this.customerModel.findOne({ customer_id: customerId });
+      const page = await this.pageModel.findOne({ facebook_page_id: facebookPageId });
       
       // Tạo conversation mới
       const conversationId = this.generateConversationId();
@@ -218,7 +256,13 @@ export class FacebookMessagingService {
         customer_name: customer?.name,
         customer_first_name: customer?.first_name,
         customer_profile_pic: customer?.profile_pic,
+        customer_profile_pic_url: customer?.profile_pic_url,
+        customer_profile_pic_key: customer?.profile_pic_key,
         customer_phone: customer?.phone,
+        page_name: page?.name,
+        page_picture: page?.picture,
+        page_picture_url: page?.picture_url,
+        page_picture_key: page?.picture_key,
         facebook_thread_id: facebookThreadId,
         source: source,
         status: 'open',
@@ -573,7 +617,7 @@ export class FacebookMessagingService {
               attachment: {
                 type: this.mapAttachmentType(attachment.type),
                 payload: {
-                  url: attachment.cloudflare_url,
+                  url: attachment.minio_url,
                   is_reusable: true,
                 },
               },
@@ -661,17 +705,24 @@ export class FacebookMessagingService {
     if (messageData.attachments && messageData.attachments.length > 0) {
       dbAttachments = messageData.attachments.map(att => ({
         type: att.type,
-        cloudflare_url: att.cloudflare_url,
-        cloudflare_key: att.cloudflare_key,
+        facebook_url: att.facebook_url,
+        minio_url: att.minio_url,
+        minio_key: att.minio_key,
         filename: att.filename,
       }));
     }
 
-    // Gửi message qua Facebook API
+    // Gửi message qua Facebook API (dùng minio_url hoặc facebook_url)
+    const fbAttachments = dbAttachments?.map(att => ({
+      type: att.type,
+      minio_url: att.minio_url,
+      filename: att.filename,
+    }));
+    
     const fbResponse = await this.sendMessageToFacebook(
       conversation.facebook_page_id,
       customer.facebook_user_id,
-      { text: messageData.text, attachments: dbAttachments },
+      { text: messageData.text, attachments: fbAttachments },
     );
 
     // Xác định message type
