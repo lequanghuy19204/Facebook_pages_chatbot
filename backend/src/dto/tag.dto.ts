@@ -3,9 +3,9 @@ import { IsString, IsArray, IsOptional, IsBoolean, Matches, ArrayMinSize } from 
 // DTO để tạo tag mới
 export class CreateTagDto {
   @IsArray()
-  @ArrayMinSize(1, { message: 'page_ids phải chứa ít nhất 1 page' })
+  @ArrayMinSize(1, { message: 'facebook_page_ids phải chứa ít nhất 1 page' })
   @IsString({ each: true })
-  page_ids: string[]; // Mảng page_id - tag áp dụng cho các pages này
+  facebook_page_ids: string[]; // Mảng facebook_page_id - tag áp dụng cho các pages này
 
   @IsString()
   tag_name: string; // Tên tag
@@ -23,9 +23,9 @@ export class CreateTagDto {
 export class UpdateTagDto {
   @IsOptional()
   @IsArray()
-  @ArrayMinSize(1, { message: 'page_ids phải chứa ít nhất 1 page' })
+  @ArrayMinSize(1, { message: 'facebook_page_ids phải chứa ít nhất 1 page' })
   @IsString({ each: true })
-  page_ids?: string[];
+  facebook_page_ids?: string[];
 
   @IsOptional()
   @IsString()
@@ -56,7 +56,7 @@ export class AssignTagsDto {
 export class QueryTagsDto {
   @IsOptional()
   @IsString()
-  page_id?: string; // Filter tags theo page
+  facebook_page_id?: string; // Filter tags theo page
 
   @IsOptional()
   @IsString()

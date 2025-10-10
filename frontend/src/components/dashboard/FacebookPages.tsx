@@ -126,7 +126,7 @@ export default function FacebookPages({ className = '' }: FacebookPagesProps) {
   
   const renderPageCard = (page: any) => {
     return (
-    <div key={page.page_id} className="page-card">
+    <div key={page.facebook_page_id} className="page-card">
       <div className="page-avatar">
         {page.picture_cloudflare_key ? (
           <img 

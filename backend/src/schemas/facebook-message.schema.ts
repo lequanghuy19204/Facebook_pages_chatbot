@@ -12,7 +12,7 @@ export class FacebookMessage {
   company_id: string; // ID công ty
 
   @Prop({ required: true, index: true })
-  page_id: string; // ID Facebook Page
+  facebook_page_id: string; // ID chính thức từ Facebook
 
   @Prop({ required: true, index: true })
   customer_id: string; // ID khách hàng

@@ -12,7 +12,7 @@ export class FacebookCustomer {
   company_id: string; // ID công ty (multi-tenant)
 
   @Prop({ required: true, index: true })
-  page_id: string; // ID Facebook Page
+  facebook_page_id: string; // ID chính thức từ Facebook
 
   @Prop({ required: true, unique: true, index: true })
   facebook_user_id: string; // Facebook User ID từ sender.id
@@ -86,9 +86,9 @@ export const FacebookCustomerSchema = SchemaFactory.createForClass(FacebookCusto
 // Indexes
 FacebookCustomerSchema.index({ customer_id: 1 }, { unique: true });
 // Một khách hàng Facebook có thể tương tác với nhiều page khác nhau của cùng 1 company
-// Nên phải có composite index: company_id + page_id + facebook_user_id
-FacebookCustomerSchema.index({ company_id: 1, page_id: 1, facebook_user_id: 1 }, { unique: true });
-FacebookCustomerSchema.index({ company_id: 1, page_id: 1 });
+// Nên phải có composite index: company_id + facebook_page_id + facebook_user_id
+FacebookCustomerSchema.index({ company_id: 1, facebook_page_id: 1, facebook_user_id: 1 }, { unique: true });
+FacebookCustomerSchema.index({ company_id: 1, facebook_page_id: 1 });
 FacebookCustomerSchema.index({ company_id: 1, last_interaction_at: -1 });
 FacebookCustomerSchema.index({ tags: 1 }); // Find customers by tags
 FacebookCustomerSchema.index({ company_id: 1, tags: 1 }); // Filter customers by tags in company

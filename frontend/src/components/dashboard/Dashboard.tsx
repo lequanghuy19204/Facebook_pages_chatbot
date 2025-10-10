@@ -104,7 +104,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     setIsMergeModalOpen(false);
   };
 
-  const handleSaveMergedPages = async (selectedPageIds: string[]) => {
+  const handleSaveMergedPages = async (selectedFacebookPageIds: string[]) => {
     if (!token || !user) {
       toast.error('Phiên đăng nhập đã hết hạn');
       return;
@@ -112,7 +112,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
     try {
       setIsSavingFilter(true);
-      const result = await ApiService.users.updateMergedPagesFilter(token, selectedPageIds);
+      const result = await ApiService.users.updateMergedPagesFilter(token, selectedFacebookPageIds);
       
       // Update user info in context
       if (user) {

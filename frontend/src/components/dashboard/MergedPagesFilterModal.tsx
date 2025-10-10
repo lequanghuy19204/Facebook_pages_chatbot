@@ -8,8 +8,8 @@ interface MergedPagesFilterModalProps {
   isOpen: boolean;
   onClose: () => void;
   facebookPages: FacebookPage[];
-  currentMergedPages: string[]; // merged_pages_filter hiện tại của user
-  onSave: (selectedPageIds: string[]) => Promise<void>;
+  currentMergedPages: string[]; // merged_pages_filter hiện tại của user (chứa facebook_page_id)
+  onSave: (selectedFacebookPageIds: string[]) => Promise<void>;
   loading: boolean;
 }
 
@@ -113,29 +113,29 @@ export default function MergedPagesFilterModal({
   }, [facebookPages, searchQuery]);
 
   // Handle page selection toggle
-  const handlePageChange = (pageId: string) => {
+  const handlePageChange = (facebookPageId: string) => {
     setSelectedPages(prev => {
-      if (prev.includes(pageId)) {
-        return prev.filter(id => id !== pageId);
+      if (prev.includes(facebookPageId)) {
+        return prev.filter(id => id !== facebookPageId);
       } else {
-        return [...prev, pageId];
+        return [...prev, facebookPageId];
       }
     });
   };
 
   // Select/Deselect all filtered pages
   const handleSelectAllPages = () => {
-    const filteredPageIds = filteredPages.map(page => page.page_id);
-    const allFilteredSelected = filteredPageIds.every(id => selectedPages.includes(id));
+    const filteredFacebookPageIds = filteredPages.map(page => page.facebook_page_id);
+    const allFilteredSelected = filteredFacebookPageIds.every(id => selectedPages.includes(id));
 
     if (allFilteredSelected) {
       // Deselect all filtered pages
-      setSelectedPages(prev => prev.filter(id => !filteredPageIds.includes(id)));
+      setSelectedPages(prev => prev.filter(id => !filteredFacebookPageIds.includes(id)));
     } else {
       // Select all filtered pages
       setSelectedPages(prev => {
         const newSelected = [...prev];
-        filteredPageIds.forEach(id => {
+        filteredFacebookPageIds.forEach(id => {
           if (!newSelected.includes(id)) {
             newSelected.push(id);
           }
@@ -147,7 +147,7 @@ export default function MergedPagesFilterModal({
 
   // Check if all filtered pages are selected
   const areAllFilteredPagesSelected = filteredPages.length > 0 && 
-    filteredPages.every(page => selectedPages.includes(page.page_id));
+    filteredPages.every(page => selectedPages.includes(page.facebook_page_id));
 
   // Handle clear all selection (show all pages)
   const handleClearSelection = () => {
@@ -270,17 +270,17 @@ export default function MergedPagesFilterModal({
             {filteredPages.length > 0 ? (
               <div className="merged-pages-grid">
                 {filteredPages.map((page) => {
-                  const isSelected = selectedPages.includes(page.page_id);
+                  const isSelected = selectedPages.includes(page.facebook_page_id);
                   
                   return (
                     <label 
-                      key={page.page_id} 
+                      key={page.facebook_page_id} 
                       className={`merged-page-card ${isSelected ? 'selected' : ''}`}
                     >
                       <input
                         type="checkbox"
                         checked={isSelected}
-                        onChange={() => handlePageChange(page.page_id)}
+                        onChange={() => handlePageChange(page.facebook_page_id)}
                         disabled={isSubmitting}
                       />
                       

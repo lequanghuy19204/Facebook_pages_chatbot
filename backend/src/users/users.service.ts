@@ -309,7 +309,7 @@ export class UsersService {
     };
   }
 
-  async updateFacebookPagesAccess(userId: string, companyId: string, pageIds: string[]): Promise<any> {
+  async updateFacebookPagesAccess(userId: string, companyId: string, facebookPageIds: string[]): Promise<any> {
     // Find user
     const user = await this.userModel.findOne({ 
       user_id: userId, 
@@ -323,13 +323,13 @@ export class UsersService {
     // Update Facebook pages access
     await this.userModel.updateOne(
       { user_id: userId },
-      { facebook_pages_access: pageIds }
+      { facebook_pages_access: facebookPageIds }
     );
 
     return {
       success: true,
       message: 'Facebook pages access updated successfully',
-      facebook_pages_access: pageIds,
+      facebook_pages_access: facebookPageIds,
     };
   }
 
@@ -530,17 +530,17 @@ export class UsersService {
       // Admin/manage_user: Validate pages tồn tại và thuộc company
       const pages = await this.facebookPageModel.find({
         company_id: companyId,
-        page_id: { $in: mergedPagesFilter },
+        facebook_page_id: { $in: mergedPagesFilter },
         is_active: true,
       }).exec();
 
       if (pages.length !== mergedPagesFilter.length) {
-        throw new BadRequestException('Một hoặc nhiều page_id không hợp lệ hoặc không thuộc công ty này');
+        throw new BadRequestException('Một hoặc nhiều facebook_page_id không hợp lệ hoặc không thuộc công ty này');
       }
     } else {
       // Staff: Check pages trong merged_pages_filter phải nằm trong facebook_pages_access
       const allowedPages = user.facebook_pages_access || [];
-      const invalidPages = mergedPagesFilter.filter(pageId => !allowedPages.includes(pageId));
+      const invalidPages = mergedPagesFilter.filter(facebookPageId => !allowedPages.includes(facebookPageId));
       
       if (invalidPages.length > 0) {
         throw new BadRequestException(

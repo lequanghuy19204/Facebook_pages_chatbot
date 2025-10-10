@@ -49,7 +49,7 @@ export default function TagModal({
   const [formData, setFormData] = useState({
     tag_name: '',
     tag_color: '#2196F3',
-    page_ids: [] as string[]
+    facebook_page_ids: [] as string[]
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -66,14 +66,14 @@ export default function TagModal({
         setFormData({
           tag_name: tag.tag_name,
           tag_color: tag.tag_color,
-          page_ids: [...tag.page_ids]
+          facebook_page_ids: [...tag.facebook_page_ids]
         });
       } else {
         // Create mode
         setFormData({
           tag_name: '',
           tag_color: '#2196F3',
-          page_ids: []
+          facebook_page_ids: []
         });
       }
       setErrors({});
@@ -129,8 +129,8 @@ export default function TagModal({
       newErrors.tag_color = 'Mã màu không hợp lệ';
     }
 
-    if (formData.page_ids.length === 0) {
-      newErrors.page_ids = 'Vui lòng chọn ít nhất 1 trang';
+    if (formData.facebook_page_ids.length === 0) {
+      newErrors.facebook_page_ids = 'Vui lòng chọn ít nhất 1 trang';
     }
 
     setErrors(newErrors);
@@ -165,19 +165,19 @@ export default function TagModal({
   };
 
   // Handle page selection
-  const handlePageToggle = (pageId: string) => {
+  const handlePageToggle = (facebookPageId: string) => {
     setFormData(prev => {
-      const newPageIds = prev.page_ids.includes(pageId)
-        ? prev.page_ids.filter(id => id !== pageId)
-        : [...prev.page_ids, pageId];
+      const newPageIds = prev.facebook_page_ids.includes(facebookPageId)
+        ? prev.facebook_page_ids.filter(id => id !== facebookPageId)
+        : [...prev.facebook_page_ids, facebookPageId];
       
-      return { ...prev, page_ids: newPageIds };
+      return { ...prev, facebook_page_ids: newPageIds };
     });
     
-    if (errors.page_ids) {
+    if (errors.facebook_page_ids) {
       setErrors(prev => {
         const newErrors = { ...prev };
-        delete newErrors.page_ids;
+        delete newErrors.facebook_page_ids;
         return newErrors;
       });
     }
@@ -185,20 +185,20 @@ export default function TagModal({
 
   // Select/Deselect all pages
   const handleSelectAllPages = () => {
-    const filteredPageIds = filteredPages.map(p => p.page_id);
-    const allSelected = filteredPageIds.every(id => formData.page_ids.includes(id));
+    const filteredFacebookPageIds = filteredPages.map(p => p.facebook_page_id);
+    const allSelected = filteredFacebookPageIds.every(id => formData.facebook_page_ids.includes(id));
     
     if (allSelected) {
       // Deselect all filtered
       setFormData(prev => ({
         ...prev,
-        page_ids: prev.page_ids.filter(id => !filteredPageIds.includes(id))
+        facebook_page_ids: prev.facebook_page_ids.filter(id => !filteredFacebookPageIds.includes(id))
       }));
     } else {
       // Select all filtered
       setFormData(prev => ({
         ...prev,
-        page_ids: [...new Set([...prev.page_ids, ...filteredPageIds])]
+        facebook_page_ids: [...new Set([...prev.facebook_page_ids, ...filteredFacebookPageIds])]
       }));
     }
   };
@@ -363,12 +363,12 @@ export default function TagModal({
                 onClick={handleSelectAllPages}
                 disabled={filteredPages.length === 0 || isSubmitting}
               >
-                {filteredPages.every(p => formData.page_ids.includes(p.page_id))
+                {filteredPages.every(p => formData.facebook_page_ids.includes(p.facebook_page_id))
                   ? '✓ Bỏ chọn tất cả'
                   : '☐ Chọn tất cả'}
               </button>
               <span className="tag-selection-count">
-                Đã chọn: {formData.page_ids.length} / {facebookPages.length}
+                Đã chọn: {formData.facebook_page_ids.length} / {facebookPages.length}
               </span>
             </div>
 
@@ -377,13 +377,13 @@ export default function TagModal({
               {filteredPages.length > 0 ? (
                 filteredPages.map(page => (
                   <label 
-                    key={page.page_id}
-                    className={`tag-page-item ${formData.page_ids.includes(page.page_id) ? 'selected' : ''}`}
+                    key={page.facebook_page_id}
+                    className={`tag-page-item ${formData.facebook_page_ids.includes(page.facebook_page_id) ? 'selected' : ''}`}
                   >
                     <input
                       type="checkbox"
-                      checked={formData.page_ids.includes(page.page_id)}
-                      onChange={() => handlePageToggle(page.page_id)}
+                      checked={formData.facebook_page_ids.includes(page.facebook_page_id)}
+                      onChange={() => handlePageToggle(page.facebook_page_id)}
                       disabled={isSubmitting}
                     />
                     {page.picture_cloudflare_key ? (
@@ -419,8 +419,8 @@ export default function TagModal({
               )}
             </div>
 
-            {errors.page_ids && (
-              <div className="tag-form-error">{errors.page_ids}</div>
+            {errors.facebook_page_ids && (
+              <div className="tag-form-error">{errors.facebook_page_ids}</div>
             )}
           </div>
         </div>

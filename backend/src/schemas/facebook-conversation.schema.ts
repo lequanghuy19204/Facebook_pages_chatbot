@@ -12,7 +12,7 @@ export class FacebookConversation {
   company_id: string; // ID công ty (multi-tenant)
 
   @Prop({ required: true, index: true })
-  page_id: string; // ID Facebook Page
+  facebook_page_id: string; // ID chính thức từ Facebook
 
   @Prop({ required: true, index: true })
   customer_id: string; // ID khách hàng
@@ -150,7 +150,7 @@ FacebookConversationSchema.index({
   last_message_at: -1 
 }); // Dashboard sorting - KEY INDEX
 FacebookConversationSchema.index({ assigned_to: 1, status: 1 });
-FacebookConversationSchema.index({ company_id: 1, page_id: 1, current_handler: 1 });
+FacebookConversationSchema.index({ company_id: 1, facebook_page_id: 1, current_handler: 1 });
 // Indexes cho comment tracking
 FacebookConversationSchema.index({ post_id: 1 }, { sparse: true });
 FacebookConversationSchema.index({ comment_id: 1 }, { sparse: true });

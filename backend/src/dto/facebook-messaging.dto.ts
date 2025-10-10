@@ -191,7 +191,7 @@ export class GetConversationsQuery {
 
   @IsOptional()
   @IsString()
-  pageId?: string;
+  facebookPageId?: string;
 
   @IsOptional()
   @IsString()
@@ -199,7 +199,7 @@ export class GetConversationsQuery {
 
   @IsOptional()
   @IsArray()
-  pageIds?: string[];
+  facebookPageIds?: string[];
 
   @IsOptional()
   page?: number = 1;

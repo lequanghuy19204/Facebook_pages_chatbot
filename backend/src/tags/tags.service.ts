@@ -24,17 +24,17 @@ export class TagsService {
    * Chỉ admin hoặc manage_user có quyền
    */
   async createTag(createTagDto: CreateTagDto, companyId: string, userId: string): Promise<FacebookTag> {
-    const { page_ids, tag_name, tag_color, description } = createTagDto;
+    const { facebook_page_ids, tag_name, tag_color, description } = createTagDto;
 
-    // Validate page_ids thuộc company
+    // Validate facebook_page_ids thuộc company
     const pages = await this.pageModel.find({
       company_id: companyId,
-      page_id: { $in: page_ids },
+      facebook_page_id: { $in: facebook_page_ids },
       is_active: true,
     });
 
-    if (pages.length !== page_ids.length) {
-      throw new BadRequestException('Một hoặc nhiều page_id không hợp lệ hoặc không thuộc công ty này');
+    if (pages.length !== facebook_page_ids.length) {
+      throw new BadRequestException('Một hoặc nhiều facebook_page_id không hợp lệ hoặc không thuộc công ty này');
     }
 
     // Check tag_name duplicate trong company
@@ -54,7 +54,7 @@ export class TagsService {
     const newTag = new this.tagModel({
       tag_id: tagId,
       company_id: companyId,
-      page_ids: page_ids,
+      facebook_page_ids: facebook_page_ids,
       tag_name: tag_name,
       tag_color: tag_color,
       description: description || '',
@@ -71,13 +71,13 @@ export class TagsService {
    * Tất cả roles có thể xem
    */
   async getTags(companyId: string, query: QueryTagsDto): Promise<{ tags: FacebookTag[]; total: number }> {
-    const { page_id, search, is_active } = query;
+    const { facebook_page_id, search, is_active } = query;
 
     const filter: any = { company_id: companyId };
 
-    // Filter by page_id
-    if (page_id) {
-      filter.page_ids = page_id;
+    // Filter by facebook_page_id
+    if (facebook_page_id) {
+      filter.facebook_page_ids = facebook_page_id;
     }
 
     // Filter by is_active
@@ -139,21 +139,21 @@ export class TagsService {
       }
     }
 
-    // Validate page_ids nếu có update
-    if (updateTagDto.page_ids) {
+    // Validate facebook_page_ids nếu có update
+    if (updateTagDto.facebook_page_ids) {
       const pages = await this.pageModel.find({
         company_id: companyId,
-        page_id: { $in: updateTagDto.page_ids },
+        facebook_page_id: { $in: updateTagDto.facebook_page_ids },
         is_active: true,
       });
 
-      if (pages.length !== updateTagDto.page_ids.length) {
-        throw new BadRequestException('Một hoặc nhiều page_id không hợp lệ');
+      if (pages.length !== updateTagDto.facebook_page_ids.length) {
+        throw new BadRequestException('Một hoặc nhiều facebook_page_id không hợp lệ');
       }
     }
 
     // Update fields
-    if (updateTagDto.page_ids) tag.page_ids = updateTagDto.page_ids;
+    if (updateTagDto.facebook_page_ids) tag.facebook_page_ids = updateTagDto.facebook_page_ids;
     if (updateTagDto.tag_name) tag.tag_name = updateTagDto.tag_name;
     if (updateTagDto.tag_color) tag.tag_color = updateTagDto.tag_color;
     if (updateTagDto.description !== undefined) tag.description = updateTagDto.description;
@@ -229,7 +229,7 @@ export class TagsService {
     }
 
     // Validate tags áp dụng cho page của conversation
-    const invalidTags = tags.filter(tag => !tag.page_ids.includes(conversation.page_id));
+    const invalidTags = tags.filter(tag => !tag.facebook_page_ids.includes(conversation.facebook_page_id));
     if (invalidTags.length > 0) {
       throw new BadRequestException(`Tag "${invalidTags[0].tag_name}" không áp dụng cho page này`);
     }
@@ -316,7 +316,7 @@ export class TagsService {
     }
 
     // Validate tags áp dụng cho page của customer
-    const invalidTags = tags.filter(tag => !tag.page_ids.includes(customer.page_id));
+    const invalidTags = tags.filter(tag => !tag.facebook_page_ids.includes(customer.facebook_page_id));
     if (invalidTags.length > 0) {
       throw new BadRequestException(`Tag "${invalidTags[0].tag_name}" không áp dụng cho page này`);
     }

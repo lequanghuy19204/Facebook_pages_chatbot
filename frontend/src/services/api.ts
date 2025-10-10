@@ -287,7 +287,7 @@ export interface ProductStats {
 export interface FacebookConversation {
   conversation_id: string;
   company_id: string;
-  page_id: string;
+  facebook_page_id: string;
   customer_id: string;
   
   // CUSTOMER INFO (Denormalized)
@@ -349,7 +349,7 @@ export interface FacebookConversation {
 export interface FacebookCustomer {
   customer_id: string;
   company_id: string;
-  page_id: string;
+  facebook_page_id: string;
   facebook_user_id: string;
   name: string;
   first_name?: string;
@@ -381,7 +381,7 @@ export interface FacebookCustomer {
 export interface FacebookMessage {
   message_id: string;
   company_id: string;
-  page_id: string;
+  facebook_page_id: string;
   customer_id: string;
   conversation_id: string;
   facebook_message_id?: string;
@@ -454,7 +454,7 @@ export interface MessagesResponse {
 export interface FacebookTag {
   tag_id: string;
   company_id: string;
-  page_ids: string[]; // Tag có thể thuộc nhiều pages
+  facebook_page_ids: string[]; // Tag có thể thuộc nhiều pages
   tag_name: string;
   tag_color: string; // Hex color code
   usage_count: number;
@@ -466,20 +466,20 @@ export interface FacebookTag {
 export interface CreateTagDto {
   tag_name: string;
   tag_color: string;
-  page_ids: string[];
+  facebook_page_ids: string[];
 }
 
 export interface UpdateTagDto {
   tag_name?: string;
   tag_color?: string;
-  page_ids?: string[];
+  facebook_page_ids?: string[];
 }
 
 export interface QueryTagsDto {
   page?: number;
   limit?: number;
   search?: string;
-  page_id?: string;
+  facebook_page_id?: string;
 }
 
 export interface TagsResponse {
@@ -893,7 +893,7 @@ const ApiService = {
     updateFacebookPagesAccess: async (
       token: string, 
       userId: string, 
-      pageIds: string[]
+      facebookPageIds: string[]
     ): Promise<{ success: boolean; message: string; facebook_pages_access: string[] }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/users/${userId}/facebook-pages`, {
@@ -902,7 +902,7 @@ const ApiService = {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ page_ids: pageIds }),
+          body: JSON.stringify({ facebook_page_ids: facebookPageIds }),
         });
 
         if (!response.ok) {
@@ -920,7 +920,7 @@ const ApiService = {
     // Update merged pages filter (UI preference for dashboard display)
     updateMergedPagesFilter: async (
       token: string,
-      pageIds: string[]
+      facebookPageIds: string[]
     ): Promise<{ success: boolean; message: string; merged_pages_filter: string[] }> => {
       try {
         const response = await fetch(`${API_BASE_URL}/users/merged-pages-filter`, {
@@ -929,7 +929,7 @@ const ApiService = {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ page_ids: pageIds }),
+          body: JSON.stringify({ facebook_page_ids: facebookPageIds }),
         });
 
         if (!response.ok) {
@@ -1426,8 +1426,8 @@ const ApiService = {
         needsAttention?: boolean;
         assignedTo?: string;
         source?: string;
-        pageId?: string;
-        pageIds?: string[];
+        facebookPageId?: string;
+        facebookPageIds?: string[];
         search?: string;
         page?: number;
         limit?: number;
@@ -1446,10 +1446,10 @@ const ApiService = {
         if (params) {
           Object.entries(params).forEach(([key, value]) => {
             if (value !== undefined && value !== null) {
-              // Xử lý array pageIds
-              if (key === 'pageIds' && Array.isArray(value)) {
-                value.forEach(pageId => {
-                  queryParams.append('pageIds', pageId);
+              // Xử lý array facebookPageIds
+              if (key === 'facebookPageIds' && Array.isArray(value)) {
+                value.forEach(facebookPageId => {
+                  queryParams.append('facebookPageIds', facebookPageId);
                 });
               } else {
                 queryParams.append(key, String(value));
@@ -1810,7 +1810,7 @@ const ApiService = {
         if (params?.page) queryParams.append('page', params.page.toString());
         if (params?.limit) queryParams.append('limit', params.limit.toString());
         if (params?.search) queryParams.append('search', params.search);
-        if (params?.page_id) queryParams.append('page_id', params.page_id);
+        if (params?.facebook_page_id) queryParams.append('facebook_page_id', params.facebook_page_id);
 
         const url = `${API_BASE_URL}/tags${queryParams.toString() ? `?${queryParams}` : ''}`;
         

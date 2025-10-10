@@ -37,14 +37,13 @@ export class FacebookMessagingService {
 
   async findOrCreateCustomer(
     companyId: string,
-    pageId: string,
-    facebookUserId: string,
     facebookPageId: string,
+    facebookUserId: string,
   ): Promise<FacebookCustomerDocument> {
     // Tìm customer đã tồn tại - PHẢI PHÂN BIỆT GIỮA CÁC PAGE
     let customer = await this.customerModel.findOne({
       company_id: companyId,
-      page_id: pageId,
+      facebook_page_id: facebookPageId,
       facebook_user_id: facebookUserId,
     });
 
@@ -83,7 +82,7 @@ export class FacebookMessagingService {
     customer = new this.customerModel({
       customer_id: customerId,
       company_id: companyId,
-      page_id: pageId,
+      facebook_page_id: facebookPageId,
       facebook_user_id: facebookUserId,
       name: facebookUserInfo.name || 'Unknown User',
       first_name: facebookUserInfo.first_name,
@@ -158,7 +157,7 @@ export class FacebookMessagingService {
 
   async findOrCreateConversation(
     companyId: string,
-    pageId: string,
+    facebookPageId: string,
     customerId: string,
     facebookThreadId?: string,
     source: 'messenger' | 'comment' = 'messenger',
@@ -214,7 +213,7 @@ export class FacebookMessagingService {
       const conversationData: any = {
         conversation_id: conversationId,
         company_id: companyId,
-        page_id: pageId,
+        facebook_page_id: facebookPageId,
         customer_id: customerId,
         customer_name: customer?.name,
         customer_first_name: customer?.first_name,
@@ -237,7 +236,7 @@ export class FacebookMessagingService {
       this.messagingGateway.emitNewConversation(companyId, {
         conversation_id: conversationId,
         customer_id: customerId,
-        page_id: pageId,
+        facebook_page_id: facebookPageId,
         source: source,
         status: 'open',
         created_at: conversation.created_at,
@@ -351,12 +350,12 @@ export class FacebookMessagingService {
     if (query.assignedTo) filter.assigned_to = query.assignedTo;
     if (query.needsAttention !== undefined) filter.needs_attention = query.needsAttention;
     if (query.source) filter.source = query.source;
-    if (query.pageId) filter.page_id = query.pageId;
+    if (query.facebookPageId) filter.facebook_page_id = query.facebookPageId;
 
     // FILTER THEO MERGED_PAGES_FILTER của user
-    if (query.pageIds && query.pageIds.length > 0) {
-      filter.page_id = { $in: query.pageIds };
-      this.logger.log(`Filtering conversations by merged_pages_filter: ${query.pageIds.join(', ')}`);
+    if (query.facebookPageIds && query.facebookPageIds.length > 0) {
+      filter.facebook_page_id = { $in: query.facebookPageIds };
+      this.logger.log(`Filtering conversations by merged_pages_filter: ${query.facebookPageIds.join(', ')}`);
     }
 
     const page = query.page || 1;
@@ -457,7 +456,7 @@ export class FacebookMessagingService {
 
   async createMessage(
     companyId: string,
-    pageId: string,
+    facebookPageId: string,
     customerId: string,
     conversationId: string,
     messageData: {
@@ -478,7 +477,7 @@ export class FacebookMessagingService {
     const message = new this.messageModel({
       message_id: messageId,
       company_id: companyId,
-      page_id: pageId,
+      facebook_page_id: facebookPageId,
       customer_id: customerId,
       conversation_id: conversationId,
       facebook_message_id: messageData.facebookMessageId,
@@ -549,13 +548,13 @@ export class FacebookMessagingService {
   }
 
   async sendMessageToFacebook(
-    pageId: string,
+    facebookPageId: string,
     facebookUserId: string,
     message: { text: string; attachments?: any[] },
   ): Promise<any> {
     try {
       // Lấy page access token
-      const page = await this.pageModel.findOne({ page_id: pageId });
+      const page = await this.pageModel.findOne({ facebook_page_id: facebookPageId });
       if (!page || !page.access_token) {
         throw new Error('Page access token not found');
       }
@@ -670,7 +669,7 @@ export class FacebookMessagingService {
 
     // Gửi message qua Facebook API
     const fbResponse = await this.sendMessageToFacebook(
-      conversation.page_id,
+      conversation.facebook_page_id,
       customer.facebook_user_id,
       { text: messageData.text, attachments: dbAttachments },
     );
@@ -691,7 +690,7 @@ export class FacebookMessagingService {
     // Lưu message vào DB với thông tin nhân viên
     const message = await this.createMessage(
       companyId,
-      conversation.page_id,
+      conversation.facebook_page_id,
       conversation.customer_id,
       conversationId,
       {

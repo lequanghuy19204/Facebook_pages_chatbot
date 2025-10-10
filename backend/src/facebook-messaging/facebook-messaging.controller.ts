@@ -86,24 +86,24 @@ export class FacebookMessagingController {
       const companyId = req.user.company_id;
       const userId = req.user.user_id;
       
-      // Xử lý pageIds từ query params (có thể là string hoặc array)
-      let pageIds: string[] | undefined = undefined;
-      if (query.pageIds) {
-        if (Array.isArray(query.pageIds)) {
-          pageIds = query.pageIds;
+      // Xử lý facebookPageIds từ query params (có thể là string hoặc array)
+      let facebookPageIds: string[] | undefined = undefined;
+      if (query.facebookPageIds) {
+        if (Array.isArray(query.facebookPageIds)) {
+          facebookPageIds = query.facebookPageIds;
         } else {
-          pageIds = [query.pageIds];
+          facebookPageIds = [query.facebookPageIds];
         }
       }
       
       const parsedQuery: GetConversationsQuery = {
         ...query,
-        pageIds: pageIds,
+        facebookPageIds: facebookPageIds,
         page: query.page ? parseInt(query.page) : 1,
         limit: query.limit ? parseInt(query.limit) : 20,
       };
       
-      this.logger.log(`Getting conversations for user ${userId}, pageIds: ${pageIds?.join(', ') || 'all'}`);
+      this.logger.log(`Getting conversations for user ${userId}, facebookPageIds: ${facebookPageIds?.join(', ') || 'all'}`);
       
       // Lấy merged_pages_filter từ user để filter conversations
       const result = await this.messagingService.getConversations(
@@ -237,7 +237,7 @@ export class FacebookMessagingController {
       
       const message = await this.messagingService.createMessage(
         companyId,
-        conversation.page_id,
+        conversation.facebook_page_id,
         conversation.customer_id,
         conversationId,
         {

@@ -33,7 +33,7 @@ export default function TagsManagement({
   // Filter tags
   const filteredTags = tags.filter(tag => {
     const matchesSearch = tag.tag_name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPage = selectedPageFilter === 'all' || tag.page_ids.includes(selectedPageFilter);
+    const matchesPage = selectedPageFilter === 'all' || tag.facebook_page_ids.includes(selectedPageFilter);
     return matchesSearch && matchesPage;
   });
 
@@ -80,10 +80,10 @@ export default function TagsManagement({
   };
 
   // Get page names for a tag
-  const getPageNames = (pageIds: string[]): string => {
-    const names = pageIds
+  const getPageNames = (facebookPageIds: string[]): string => {
+    const names = facebookPageIds
       .map(id => {
-        const page = facebookPages.find(p => p.page_id === id);
+        const page = facebookPages.find(p => p.facebook_page_id === id);
         return page?.name;
       })
       .filter(Boolean);
@@ -148,7 +148,7 @@ export default function TagsManagement({
           >
             <option value="all">Tất cả pages ({facebookPages.length})</option>
             {facebookPages.map(page => (
-              <option key={page.page_id} value={page.page_id}>
+              <option key={page.facebook_page_id} value={page.facebook_page_id}>
                 {page.name}
               </option>
             ))}
@@ -213,7 +213,7 @@ export default function TagsManagement({
                 <div className="tag-card-body">
                   <div className="tag-card-info">
                     <span className="tag-card-label">Pages:</span>
-                    <span className="tag-card-value">{getPageNames(tag.page_ids)}</span>
+                    <span className="tag-card-value">{getPageNames(tag.facebook_page_ids)}</span>
                   </div>
                   <div className="tag-card-info">
                     <span className="tag-card-label">Số lần sử dụng:</span>

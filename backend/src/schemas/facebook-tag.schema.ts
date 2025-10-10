@@ -16,7 +16,7 @@ export class FacebookTag {
   company_id: string;
 
   @Prop({ type: [String], required: true, default: [] })
-  page_ids: string[]; // Mảng page_id - tag có thể dùng chung cho nhiều pages
+  facebook_page_ids: string[]; // Mảng facebook_page_id - tag có thể dùng chung cho nhiều pages
 
   // === THÔNG TIN TAG ===
   @Prop({ required: true })
@@ -49,8 +49,8 @@ export const FacebookTagSchema = SchemaFactory.createForClass(FacebookTag);
 // Indexes
 FacebookTagSchema.index({ tag_id: 1 }, { unique: true });
 FacebookTagSchema.index({ company_id: 1, tag_name: 1 }, { unique: true }); // Tag name unique trong company
-FacebookTagSchema.index({ page_ids: 1 }); // Find tags by page (array field)
-FacebookTagSchema.index({ company_id: 1, page_ids: 1 }); // Tags of company by specific page
+FacebookTagSchema.index({ facebook_page_ids: 1 }); // Find tags by page (array field)
+FacebookTagSchema.index({ company_id: 1, facebook_page_ids: 1 }); // Tags of company by specific page
 FacebookTagSchema.index({ company_id: 1, is_active: 1 });
 FacebookTagSchema.index({ usage_count: -1 }); // Sort by popularity
 FacebookTagSchema.index({ created_by: 1 });

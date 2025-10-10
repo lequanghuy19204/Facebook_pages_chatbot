@@ -85,10 +85,10 @@ export class UsersController {
   async updateFacebookPagesAccess(
     @Request() req: any, 
     @Param('userId') userId: string, 
-    @Body() body: { page_ids: string[] }
+    @Body() body: { facebook_page_ids: string[] }
   ) {
     const { user } = req;
-    return this.usersService.updateFacebookPagesAccess(userId, user.company_id, body.page_ids);
+    return this.usersService.updateFacebookPagesAccess(userId, user.company_id, body.facebook_page_ids);
   }
 
   @Post('heartbeat')
@@ -133,12 +133,12 @@ export class UsersController {
   @UseGuards(AuthGuard('jwt'))
   async updateOwnMergedPagesFilter(
     @Request() req: any,
-    @Body() body: { page_ids: string[] }
+    @Body() body: { facebook_page_ids: string[] }
   ) {
     const { user } = req;
     return this.usersService.updateMergedPagesFilter(
       user.user_id,
-      body.page_ids,
+      body.facebook_page_ids,
       user.company_id,
       user.user_id,
       user.roles
@@ -150,12 +150,12 @@ export class UsersController {
   async updateMergedPagesFilter(
     @Request() req: any,
     @Param('userId') userId: string,
-    @Body() body: { page_ids: string[] }
+    @Body() body: { facebook_page_ids: string[] }
   ) {
     const { user } = req;
     return this.usersService.updateMergedPagesFilter(
       userId,
-      body.page_ids,
+      body.facebook_page_ids,
       user.company_id,
       user.user_id,
       user.roles

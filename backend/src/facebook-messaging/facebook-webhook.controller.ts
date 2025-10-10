@@ -238,9 +238,8 @@ export class FacebookWebhookController {
       // Tìm hoặc tạo customer (luôn dùng customer ID thực, không phải page ID)
       const customer = await this.messagingService.findOrCreateCustomer(
         page.company_id,
-        page.page_id,
-        facebookUserId,
         facebookPageId,
+        facebookUserId,
       );
 
       // Tìm hoặc tạo conversation cho messenger
@@ -248,7 +247,7 @@ export class FacebookWebhookController {
       const threadId = `messenger_${facebookPageId}_${facebookUserId}`;
       const conversation = await this.messagingService.findOrCreateConversation(
         page.company_id,
-        page.page_id,
+        facebookPageId,
         customer.customer_id,
         threadId, // thread_id riêng cho messenger
         'messenger', // source = messenger
@@ -330,7 +329,7 @@ export class FacebookWebhookController {
       // Tạo message record
       await this.messagingService.createMessage(
         page.company_id,
-        page.page_id,
+        page.facebook_page_id,
         customer.customer_id,
         conversation.conversation_id,
         {
@@ -378,7 +377,7 @@ export class FacebookWebhookController {
       // Tạo message record cho postback
       await this.messagingService.createMessage(
         page.company_id,
-        page.page_id,
+        page.facebook_page_id,
         customer.customer_id,
         conversation.conversation_id,
         {
@@ -500,9 +499,8 @@ export class FacebookWebhookController {
       // Tìm hoặc tạo customer từ comment author
       const customer = await this.messagingService.findOrCreateCustomer(
         page.company_id,
-        page.page_id,
-        fromUser.id,
         pageId,
+        fromUser.id,
       );
 
       // GỌI FACEBOOK API để lấy thông tin bài đăng đầy đủ
@@ -543,7 +541,7 @@ export class FacebookWebhookController {
       const threadId = `comment_${pageId}_${customer.customer_id}`; // Thread theo customer, không theo comment riêng
       const conversation = await this.messagingService.findOrCreateConversation(
         page.company_id,
-        page.page_id,
+        pageId,
         customer.customer_id,
         threadId,
         'comment',
@@ -557,7 +555,7 @@ export class FacebookWebhookController {
       // Tạo message record cho comment
       await this.messagingService.createMessage(
         page.company_id,
-        page.page_id,
+        pageId,
         customer.customer_id,
         conversation.conversation_id,
         {
