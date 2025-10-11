@@ -57,7 +57,6 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
       // THÊM FILTER THEO MERGED_PAGES_FILTER
       if (currentUser?.merged_pages_filter && currentUser.merged_pages_filter.length > 0) {
         params.facebookPageIds = currentUser.merged_pages_filter;
-        console.log('Filtering conversations by merged_pages_filter:', currentUser.merged_pages_filter);
       } else {
         console.log('No merged_pages_filter found - showing all conversations');
       }
@@ -110,7 +109,6 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
 
     const token = localStorage.getItem('auth_token');
     if (!token) {
-      console.log('No token found, skipping socket connection');
       return;
     }
 
@@ -121,7 +119,6 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
 
     // Listen for new messages
     const handleNewMessage = (message: any) => {
-      console.log('New message received:', message);
       
       if (!message || !message.conversation_id) {
         console.warn('Invalid message format:', message);
@@ -191,7 +188,6 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
 
     // Listen for conversation updates
     const handleConversationUpdated = (data: any) => {
-      console.log('Conversation updated:', data);
       setConversations(prev => {
         const updated = prev.map(conv =>
           conv.conversation_id === data.conversation_id
@@ -215,7 +211,6 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
 
     // Listen for new conversations
     const handleNewConversation = (data: any) => {
-      console.log('New conversation:', data);
       setConversations(prev => [data, ...prev]);
     };
 
@@ -372,11 +367,18 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
                         </>
                       )}
                     </div>
-                    <div className="chat-list-source-icon">
-                      <img 
-                        src={conversation.source === 'comment' ? '/comment.png' : '/message.png'} 
-                        alt={conversation.source === 'comment' ? 'comment' : 'message'} 
-                      />
+                    <div className="chat-list-icons-group">
+                      {conversation.page_picture_url && (
+                        <div className="chat-list-page-icon">
+                          <img src={conversation.page_picture_url} alt="page avatar" />
+                        </div>
+                      )}
+                      <div className="chat-list-source-icon">
+                        <img 
+                          src={conversation.source === 'comment' ? '/comment.png' : '/message.png'} 
+                          alt={conversation.source === 'comment' ? 'comment' : 'message'} 
+                        />
+                      </div>
                     </div>
                   </div>
                   

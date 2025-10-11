@@ -350,9 +350,35 @@
   background-color: rgba(75, 89, 94, 1);
 }
 
+.chat-list-icons-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.chat-list-page-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background-color: rgba(238, 238, 238, 1);
+}
+
+.chat-list-page-icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: cover;
+}
+
 .chat-list-source-icon {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   overflow: hidden;
   box-sizing: border-box;
   display: flex;
