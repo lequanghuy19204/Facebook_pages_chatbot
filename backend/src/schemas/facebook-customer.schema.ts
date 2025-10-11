@@ -14,7 +14,7 @@ export class FacebookCustomer {
   @Prop({ required: true, index: true })
   facebook_page_id: string; // ID chính thức từ Facebook
 
-  @Prop({ required: true, unique: true, index: true })
+  @Prop({ required: true, index: true })
   facebook_user_id: string; // Facebook User ID từ sender.id
 
   @Prop({ required: true })

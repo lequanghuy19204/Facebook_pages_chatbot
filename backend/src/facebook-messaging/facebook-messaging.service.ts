@@ -595,6 +595,27 @@ export class FacebookMessagingService {
     return await this.messageModel.findOne({ facebook_message_id: facebookMessageId });
   }
 
+  async findRecentStaffMessage(conversationId: string, timeWindowMs: number): Promise<FacebookMessageDocument | null> {
+    const timeThreshold = new Date(Date.now() - timeWindowMs);
+    return await this.messageModel.findOne({
+      conversation_id: conversationId,
+      sender_type: 'staff',
+      created_at: { $gte: timeThreshold },
+    }).sort({ created_at: -1 });
+  }
+
+  async updateMessageFacebookId(messageId: string, facebookMessageId: string): Promise<void> {
+    await this.messageModel.updateOne(
+      { message_id: messageId },
+      { 
+        $set: { 
+          facebook_message_id: facebookMessageId,
+          updated_at: new Date(),
+        } 
+      }
+    );
+  }
+
   async sendMessageToFacebook(
     facebookPageId: string,
     facebookUserId: string,

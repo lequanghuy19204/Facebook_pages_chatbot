@@ -292,31 +292,31 @@ export class FacebookWebhookController {
     try {
       this.logger.log(`[processMessage] Message: ${message.text || 'No text'}, IsEcho: ${isEcho}, MID: ${message.mid}`);
 
-      // KIỂM TRA xem message đã tồn tại chưa (tránh lưu trùng)
-      const existingMessage = await this.messagingService.findMessageByFacebookId(message.mid);
-      if (existingMessage) {
-        this.logger.log(`[processMessage] Message already exists (MID: ${message.mid}), skipping...`);
+      // NẾU LÀ ECHO: Skip tất cả echo messages
+      // Vì message đã được tạo khi gửi từ replyToConversation() rồi
+      if (isEcho) {
+        this.logger.log(`[processMessage] ⏭️  SKIPPING echo message (app_id: ${message.app_id}) - already created when sending from system`);
         return;
       }
 
-      // Xác định sender type và sender info
+      // KIỂM TRA xem message đã tồn tại chưa (tránh lưu trùng từ customer)
+      const existingMessage = await this.messagingService.findMessageByFacebookId(message.mid);
+      if (existingMessage) {
+        this.logger.log(`[processMessage] ✅ Message already exists (MID: ${message.mid}), skipping duplicate. Existing message_id: ${existingMessage.message_id}`);
+        return;
+      }
+      
+      this.logger.log(`[processMessage] Processing customer message - MID: ${message.mid}`);
+
+      // Xác định sender type và sender info - CHỈ XỬ LÝ CUSTOMER MESSAGES
       let senderType: 'customer' | 'chatbot' | 'staff';
       let senderId: string;
       let senderName: string;
       
-      if (isEcho) {
-        // Tin nhắn từ page - có thể là staff hoặc chatbot gửi từ Facebook web
-        // Hiện tại xác định là staff (sau này có thể phân biệt bằng app_id)
-        senderType = 'staff';
-        senderId = 'facebook_web_staff';
-        senderName = page.name || 'Page Staff';
-        this.logger.log(`[processMessage] Echo message from page staff via Facebook web`);
-      } else {
-        // Tin nhắn từ customer
-        senderType = 'customer';
-        senderId = customer.customer_id;
-        senderName = customer.name;
-      }
+      // Vì đã skip echo ở trên, nên đây chắc chắn là message từ customer
+      senderType = 'customer';
+      senderId = customer.customer_id;
+      senderName = customer.name;
 
       // Chuẩn hóa attachments format từ Facebook Messenger và upload vào MinIO
       let normalizedAttachments: any[] | undefined = undefined;
@@ -362,18 +362,13 @@ export class FacebookWebhookController {
       );
 
       // Logic xử lý theo thiết kế:
-      if (!isEcho) {
-        // Tin nhắn từ customer
-        if (conversation.current_handler === 'chatbot') {
-          // TODO: Xử lý chatbot logic ở đây
-          this.logger.log('[processMessage] Customer message saved, chatbot should handle');
-        } else {
-          // current_handler = "human" -> needs_attention sẽ được set = true trong updateConversationLastMessage
-          this.logger.log('[processMessage] Customer message saved, staff should handle');
-        }
+      // Vì đã skip tất cả echo messages, nên đây chắc chắn là tin nhắn từ customer
+      if (conversation.current_handler === 'chatbot') {
+        // TODO: Xử lý chatbot logic ở đây
+        this.logger.log('[processMessage] Customer message saved, chatbot should handle');
       } else {
-        // Echo message từ staff -> conversation đã được chuyển sang "human" handler trong updateConversationLastMessage
-        this.logger.log('[processMessage] Staff echo message saved, conversation switched to human handler');
+        // current_handler = "human" -> needs_attention sẽ được set = true trong updateConversationLastMessage
+        this.logger.log('[processMessage] Customer message saved, staff should handle');
       }
     } catch (error) {
       this.logger.error('[processMessage] Error:', error);
