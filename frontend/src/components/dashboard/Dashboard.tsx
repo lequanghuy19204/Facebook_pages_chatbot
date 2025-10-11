@@ -111,20 +111,24 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       setIsSavingFilter(true);
       const result = await ApiService.users.updateMergedPagesFilter(token, selectedFacebookPageIds);
       
-      // Update user info in context
-      if (user) {
-        updateUserInfo({
-          ...user,
-          merged_pages_filter: result.merged_pages_filter
-        });
-      }
+      // Update user info in context AND localStorage
+      const updatedUser = {
+        ...user,
+        merged_pages_filter: result.merged_pages_filter
+      };
+      
+      updateUserInfo(updatedUser);
+      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
 
       toast.success(result.message || 'Đã cập nhật bộ lọc pages');
+      
+      // Close modal
+      handleCloseMergeModal();
       
       // Navigate to chat page after successful save
       setTimeout(() => {
         router.push('/chat');
-      }, 500); // Small delay to show toast message
+      }, 800); // Delay to show toast and close modal animation
     } catch (error: any) {
       console.error('Error saving merged pages filter:', error);
       toast.error(error.message || 'Không thể cập nhật bộ lọc pages');

@@ -399,8 +399,12 @@ export class FacebookMessagingService {
     // FILTER THEO MERGED_PAGES_FILTER của user
     if (query.facebookPageIds && query.facebookPageIds.length > 0) {
       filter.facebook_page_id = { $in: query.facebookPageIds };
-      this.logger.log(`Filtering conversations by merged_pages_filter: ${query.facebookPageIds.join(', ')}`);
+      this.logger.log(`✅ FILTERING conversations by facebook_page_ids: ${query.facebookPageIds.join(', ')}`);
+    } else {
+      this.logger.log(`⚠️ NO FILTER - showing all conversations for company: ${companyId}`);
     }
+
+    this.logger.log(`📊 Query filter:`, JSON.stringify(filter, null, 2));
 
     const page = query.page || 1;
     const limit = query.limit || 20;
@@ -415,7 +419,7 @@ export class FacebookMessagingService {
 
     const total = await this.conversationModel.countDocuments(filter);
 
-    this.logger.log(`Retrieved ${conversations.length} conversations (total: ${total}) for company: ${companyId}`);
+    this.logger.log(`✅ Retrieved ${conversations.length} conversations (total: ${total}) for company: ${companyId}`);
 
     return {
       conversations,

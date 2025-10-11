@@ -156,11 +156,12 @@ export default function MergedPagesFilterModal({
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
+      console.log('Saving merged pages filter:', selectedPages);
       await onSave(selectedPages);
-      onClose();
+      // Modal sẽ được đóng từ parent component (Dashboard.tsx)
     } catch (error) {
       console.error('Error saving merged pages filter:', error);
-    } finally {
+      // Nếu có lỗi, vẫn cho phép đóng modal
       setIsSubmitting(false);
     }
   };

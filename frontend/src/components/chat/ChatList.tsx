@@ -37,6 +37,10 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
         return;
       }
 
+      // Lấy user info từ localStorage để đảm bảo có merged_pages_filter mới nhất
+      const storedUser = localStorage.getItem('auth_user');
+      const currentUser = storedUser ? JSON.parse(storedUser) : user;
+
       const params: any = {
         page: 1,
         limit: 50,
@@ -51,9 +55,11 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
       }
 
       // THÊM FILTER THEO MERGED_PAGES_FILTER
-      if (user?.merged_pages_filter && user.merged_pages_filter.length > 0) {
-        params.pageIds = user.merged_pages_filter;
-        console.log('Filtering conversations by merged_pages_filter:', user.merged_pages_filter);
+      if (currentUser?.merged_pages_filter && currentUser.merged_pages_filter.length > 0) {
+        params.facebookPageIds = currentUser.merged_pages_filter;
+        console.log('Filtering conversations by merged_pages_filter:', currentUser.merged_pages_filter);
+      } else {
+        console.log('No merged_pages_filter found - showing all conversations');
       }
 
       const result = await ApiService.messaging.getConversations(token, params);
@@ -81,7 +87,9 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
 
   // Initial load - reload khi user.merged_pages_filter thay đổi
   useEffect(() => {
-    fetchConversations();
+    if (!loading) {
+      fetchConversations();
+    }
   }, [filterSource, user?.merged_pages_filter]);
 
   // Search with debounce

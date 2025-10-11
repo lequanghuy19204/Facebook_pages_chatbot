@@ -1,20 +1,22 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useFacebook } from '@/contexts/FacebookContext';
 import '@/styles/shared/Header.css';
 
 interface HeaderProps {
   className?: string;
   onLogout?: () => void;
 }
-const R2_BUCKET_URL = process.env.NEXT_PUBLIC_CLOUDFLARE_R2_BUCKET_URL || '';
 
 export default function Header({ className = '', onLogout }: HeaderProps) {
   const { user, logout } = useAuth();
+  const { pages } = useFacebook();
   const router = useRouter();
   const pathname = usePathname();
+  const [showMergedPagesDropdown, setShowMergedPagesDropdown] = useState(false);
   
   const handleLogout = async () => {
     await logout();
@@ -37,6 +39,13 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
   
   
   const canAccessProducts = user?.roles.includes('admin') || user?.roles.includes('manage_products');
+
+  // Lấy danh sách pages đang được gộp
+  const mergedPages = user?.merged_pages_filter && user.merged_pages_filter.length > 0
+    ? pages.filter(page => user.merged_pages_filter!.includes(page.facebook_page_id))
+    : [];
+  
+  const isMergedPagesActive = mergedPages.length > 0;
   
   return (
     <div className="header-container">
@@ -84,10 +93,77 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
         
         {/* User Profile */}
         <div className="user-profile">
+          {/* Merged Pages Indicator */}
+          {isMergedPagesActive && (
+            <div 
+              className="merged-pages-indicator"
+              onMouseEnter={() => setShowMergedPagesDropdown(true)}
+              onMouseLeave={() => setShowMergedPagesDropdown(false)}
+              onClick={() => navigateTo('/dashboard')}
+            >
+              <div className="merged-pages-icon">
+                <img src="/megre_page.svg" alt="Merged Pages" />
+              </div>
+              <div className="merged-pages-count">{mergedPages.length}</div>
+              
+              {/* Dropdown hiển thị danh sách pages */}
+              {showMergedPagesDropdown && (
+                <div className="merged-pages-dropdown">
+                  <div className="dropdown-header">
+                    <span className="dropdown-title">Pages đang gộp</span>
+                    <span className="dropdown-count">({mergedPages.length})</span>
+                  </div>
+                  <div className="dropdown-list">
+                    {mergedPages.map((page) => (
+                      <div key={page.facebook_page_id} className="dropdown-page-item">
+                        <div className="dropdown-page-avatar">
+                          {page.picture_url ? (
+                            <img 
+                              src={page.picture_url}
+                              alt={page.name}
+                              className="dropdown-avatar-img"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.innerHTML = `<div class="dropdown-avatar-placeholder">${page.name.charAt(0).toUpperCase()}</div>`;
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div className="dropdown-avatar-placeholder">
+                              {page.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="dropdown-page-info">
+                          <div className="dropdown-page-name">{page.name}</div>
+                          <div className="dropdown-page-id">{page.facebook_page_id}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="dropdown-footer">
+                    <button 
+                      className="dropdown-action-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateTo('/dashboard');
+                      }}
+                    >
+                      Quản lý gộp trang
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="user-pages" onClick={() => navigateTo('/settings')}>
-            {user?.avatar_cloudflare_key ? (
+            {user?.avatar_cloudflare_url ? (
               <img 
-                src={`${R2_BUCKET_URL}/${user.avatar_cloudflare_key}`} 
+                src={user.avatar_cloudflare_url}
                 alt={user.full_name || 'User'} 
                 className="user-avatar-circle" 
               />
