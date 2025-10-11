@@ -247,7 +247,7 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
   const getReplyIcon = (lastMessageFrom?: 'customer' | 'chatbot' | 'staff') => {
     // Only show icon if message is from chatbot or staff
     if (lastMessageFrom === 'chatbot' || lastMessageFrom === 'staff') {
-      return <img src="/reply.png" alt="reply" />;
+      return <img src="/reply.svg" alt="reply" />;
     }
     return null;
   };

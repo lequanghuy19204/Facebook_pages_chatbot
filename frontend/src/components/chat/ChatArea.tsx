@@ -25,8 +25,42 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
   const [skipAutoMarkRead, setSkipAutoMarkRead] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (behavior: 'smooth' | 'auto' = 'smooth') => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+    }
+  };
+
+  // Scroll sau khi ảnh load xong
+  const scrollToBottomAfterImagesLoad = () => {
+    const images = document.querySelectorAll('.chat-area-messages img');
+    if (images.length === 0) {
+      // Không có ảnh, scroll ngay
+      setTimeout(() => scrollToBottom('auto'), 50);
+      return;
+    }
+
+    let loadedCount = 0;
+    const totalImages = images.length;
+
+    const checkAllLoaded = () => {
+      loadedCount++;
+      if (loadedCount === totalImages) {
+        // Tất cả ảnh đã load xong, scroll xuống cuối
+        setTimeout(() => scrollToBottom('auto'), 100);
+      }
+    };
+
+    images.forEach((img) => {
+      if ((img as HTMLImageElement).complete) {
+        // Ảnh đã load sẵn (cached)
+        checkAllLoaded();
+      } else {
+        // Đợi ảnh load
+        img.addEventListener('load', checkAllLoaded);
+        img.addEventListener('error', checkAllLoaded); // Cả khi lỗi cũng scroll
+      }
+    });
   };
 
   // Fetch conversation details and messages
@@ -61,6 +95,9 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
       setConversation(conversationData);
       setMessages(messagesData.messages || []);
 
+      // Scroll xuống cuối SAU KHI ẢNH LOAD XONG
+      setTimeout(() => scrollToBottomAfterImagesLoad(), 100);
+
       // Chỉ mark as read nếu không bị skip (ví dụ: sau khi mark unread)
       if (shouldMarkAsRead && !skipAutoMarkRead) {
         const userStr = localStorage.getItem('auth_user');
@@ -94,10 +131,15 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
     }
   }, [conversationId]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom NGAY KHI messages thay đổi
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (messages.length > 0 && !loading) {
+      // Đợi ảnh load xong rồi mới scroll
+      requestAnimationFrame(() => {
+        scrollToBottomAfterImagesLoad();
+      });
+    }
+  }, [messages, loading]);
 
   // Setup Socket.IO listeners for real-time updates
   useEffect(() => {
@@ -121,6 +163,9 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
         if (message.conversation) {
           setConversation(prev => prev ? { ...prev, ...message.conversation } : message.conversation);
         }
+        
+        // Scroll xuống cuối SAU KHI ẢNH LOAD XONG
+        setTimeout(() => scrollToBottomAfterImagesLoad(), 200);
       }
     };
 
@@ -187,6 +232,9 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
       console.log(`✅ Sent message in ${sendTime}ms`);
 
       setInputMessage('');
+      
+      // Scroll xuống cuối SAU KHI ẢNH LOAD XONG
+      setTimeout(() => scrollToBottomAfterImagesLoad(), 200);
     } catch (err: any) {
       console.error('Failed to send message:', err);
       setError(err.message || 'Failed to send message');
