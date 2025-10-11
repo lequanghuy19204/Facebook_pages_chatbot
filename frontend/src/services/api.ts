@@ -294,7 +294,15 @@ export interface FacebookConversation {
   customer_name?: string;
   customer_first_name?: string;
   customer_profile_pic?: string;
+  customer_profile_pic_url?: string;
+  customer_profile_pic_key?: string;
   customer_phone?: string;
+  
+  // PAGE INFO (Denormalized)
+  page_name?: string;
+  page_picture?: string;
+  page_picture_url?: string;
+  page_picture_key?: string;
   
   facebook_thread_id?: string;
   source: 'messenger' | 'comment';
@@ -305,6 +313,11 @@ export interface FacebookConversation {
   post_content?: string;
   post_permalink_url?: string;
   post_photos?: string[];
+  post_photos_minio?: Array<{
+    facebook_url: string;
+    minio_url: string;
+    minio_key: string;
+  }>;
   post_status_type?: string;
   post_created_time?: Date;
   post_updated_time?: Date;
@@ -355,6 +368,8 @@ export interface FacebookCustomer {
   first_name?: string;
   last_name?: string;
   profile_pic?: string;
+  profile_pic_url?: string;
+  profile_pic_key?: string;
   locale?: string;
   timezone?: number;
   email?: string;
@@ -391,6 +406,8 @@ export interface FacebookMessage {
   attachments?: Array<{
     type: 'image' | 'video' | 'audio' | 'file';
     facebook_url: string;
+    minio_url?: string;
+    minio_key?: string;
     filename: string;
   }>;
   

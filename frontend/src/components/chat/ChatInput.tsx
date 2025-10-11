@@ -143,13 +143,13 @@ const ChatInputChatInput = React.memo(({
 
   const getPageAvatar = () => {
     if (!conversation) return '';
-    return conversation.customer_profile_pic || 
-      `https://ui-avatars.com/api/?name=${encodeURIComponent(conversation.customer_name || 'Page')}&background=random&size=200`;
+    return conversation.page_picture_url || conversation.page_picture || 
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(conversation.page_name || 'Page')}&background=random&size=200`;
   };
 
   const getPageName = () => {
     if (!conversation) return 'Page';
-    return conversation.customer_name || 'Unknown Page';
+    return conversation.page_name || 'Unknown Page';
   };
 
   return (

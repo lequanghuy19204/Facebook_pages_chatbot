@@ -312,7 +312,7 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
 
         {!loading && !error && conversations.map((conversation) => {
           const customerName = conversation.customer_name || 'Unknown User';
-          const customerAvatar = conversation.customer_profile_pic || 
+          const customerAvatar = conversation.customer_profile_pic_url || conversation.customer_profile_pic || 
             `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=random&size=200`;
           
           return (

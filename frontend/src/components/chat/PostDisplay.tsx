@@ -15,23 +15,32 @@ const PostDisplay = React.memo(({ conversation }: PostDisplayProps) => {
     return null;
   }
 
-  const hasPhotos = conversation.post_photos && conversation.post_photos.length > 0;
-  const hasMultiplePhotos = hasPhotos && conversation.post_photos!.length > 1;
+  // Ưu tiên dùng post_photos_minio, fallback về post_photos
+  const photos = conversation.post_photos_minio || conversation.post_photos;
+  const hasPhotos = photos && photos.length > 0;
+  const hasMultiplePhotos = hasPhotos && photos!.length > 1;
 
   const handlePrevImage = () => {
-    if (conversation.post_photos) {
+    if (photos) {
       setCurrentImageIndex((prev) => 
-        prev === 0 ? conversation.post_photos!.length - 1 : prev - 1
+        prev === 0 ? photos!.length - 1 : prev - 1
       );
     }
   };
 
   const handleNextImage = () => {
-    if (conversation.post_photos) {
+    if (photos) {
       setCurrentImageIndex((prev) => 
-        prev === conversation.post_photos!.length - 1 ? 0 : prev + 1
+        prev === photos!.length - 1 ? 0 : prev + 1
       );
     }
+  };
+
+  const getCurrentPhotoUrl = () => {
+    if (!photos || photos.length === 0) return '';
+    const photo = photos[currentImageIndex];
+    // Nếu là object thì lấy minio_url, không thì là string URL trực tiếp
+    return typeof photo === 'object' ? photo.minio_url : photo;
   };
 
   const formatDate = (date?: Date | string) => {
@@ -76,7 +85,7 @@ const PostDisplay = React.memo(({ conversation }: PostDisplayProps) => {
         <div className="post-display-images">
           <div className="post-display-image-container">
             <img 
-              src={conversation.post_photos![currentImageIndex]} 
+              src={getCurrentPhotoUrl()} 
               alt={`Post image ${currentImageIndex + 1}`}
               className="post-display-image"
             />
@@ -98,7 +107,7 @@ const PostDisplay = React.memo(({ conversation }: PostDisplayProps) => {
                   ›
                 </button>
                 <div className="post-display-image-counter">
-                  {currentImageIndex + 1} / {conversation.post_photos!.length}
+                  {currentImageIndex + 1} / {photos!.length}
                 </div>
               </>
             )}

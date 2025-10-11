@@ -26,7 +26,7 @@ const ChatHeader = React.memo(({
 
   const getCustomerAvatar = () => {
     if (!conversation) return 'https://ui-avatars.com/api/?name=User&background=random&size=200';
-    return conversation.customer_profile_pic || 
+    return conversation.customer_profile_pic_url || conversation.customer_profile_pic || 
       `https://ui-avatars.com/api/?name=${encodeURIComponent(getCustomerName())}&background=random&size=200`;
   };
 

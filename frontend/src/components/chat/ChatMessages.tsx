@@ -31,7 +31,7 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
 
   const getCustomerAvatar = () => {
     if (!conversation) return 'https://ui-avatars.com/api/?name=User&background=random&size=200';
-    return conversation.customer_profile_pic || 
+    return conversation.customer_profile_pic_url || conversation.customer_profile_pic || 
       `https://ui-avatars.com/api/?name=${encodeURIComponent(getCustomerName())}&background=random&size=200`;
   };
 
@@ -118,13 +118,13 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
                               {message.attachments.map((att, idx) => (
                                 <div key={idx} className="chat-area-image-item-received">
                                   {att.type === 'image' && (
-                                    <img src={att.facebook_url} alt="attachment" />
+                                    <img src={att.minio_url || att.facebook_url} alt="attachment" />
                                   )}
                                   {att.type === 'video' && (
-                                    <video src={att.facebook_url} controls style={{ width: '100%', borderRadius: '8px' }} />
+                                    <video src={att.minio_url || att.facebook_url} controls style={{ width: '100%', borderRadius: '8px' }} />
                                   )}
                                   {att.type === 'file' && (
-                                    <a href={att.facebook_url} target="_blank" rel="noopener noreferrer">📎 {att.filename}</a>
+                                    <a href={att.minio_url || att.facebook_url} target="_blank" rel="noopener noreferrer">📎 {att.filename}</a>
                                   )}
                                 </div>
                               ))}
@@ -195,14 +195,14 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
                               <div key={idx} className="chat-area-image-item">
                                 {att.type === 'image' && (
                                   <>
-                                    <img src={att.facebook_url} alt="attachment" />
+                                    <img src={att.minio_url || att.facebook_url} alt="attachment" />
                                     <button className="chat-area-image-download">
                                       <img src="/assets/4cf588a1-b66c-4acb-ac99-6fe6db0ec42c.png" alt="download" />
                                     </button>
                                   </>
                                 )}
                                 {att.type === 'video' && (
-                                  <video src={att.facebook_url} controls style={{ width: '100%', borderRadius: '8px' }} />
+                                  <video src={att.minio_url || att.facebook_url} controls style={{ width: '100%', borderRadius: '8px' }} />
                                 )}
                               </div>
                             ))}
