@@ -100,8 +100,9 @@ export class MessageAttachmentDto {
 }
 
 export class ReplyMessageDto {
+  @IsOptional()
   @IsString()
-  text: string;
+  text?: string;
 
   @IsOptional()
   @IsEnum(['text', 'image', 'file', 'video', 'quick_reply', 'comment'])

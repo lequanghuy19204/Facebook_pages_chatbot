@@ -146,34 +146,45 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
 
       let attachments: any[] = [];
 
-      // Upload files nếu có
+      // Upload TẤT CẢ files SONG SONG để tăng tốc
       if (attachedFiles && attachedFiles.length > 0) {
-        console.log('Uploading files:', attachedFiles.length);
+        console.log(`⚡ Uploading ${attachedFiles.length} files in parallel...`);
+        const startTime = Date.now();
         
-        for (const fileData of attachedFiles) {
+        // Tạo promises cho tất cả uploads
+        const uploadPromises = attachedFiles.map(async (fileData) => {
           try {
             const uploadResult = await ApiService.messaging.uploadMessageFile(token, fileData.file);
-            
-            attachments.push({
+            return {
               type: fileData.type,
               facebook_url: uploadResult.minio_url || '',
               minio_url: uploadResult.minio_url,
               minio_key: uploadResult.minio_key,
               filename: fileData.file.name,
-            });
+            };
           } catch (uploadErr) {
             console.error('Failed to upload file:', fileData.file.name, uploadErr);
             throw new Error(`Không thể tải lên file: ${fileData.file.name}`);
           }
-        }
+        });
+
+        // Đợi TẤT CẢ uploads hoàn thành SONG SONG
+        attachments = await Promise.all(uploadPromises);
+        
+        const uploadTime = Date.now() - startTime;
+        console.log(`✅ Uploaded ${attachments.length} files in ${uploadTime}ms`);
       }
 
       // Gửi tin nhắn với attachments
+      const sendStartTime = Date.now();
       await ApiService.messaging.replyToConversation(token, conversationId, {
-        text: inputMessage || (attachments.length > 0 ? '📎 File đính kèm' : ''),
+        text: inputMessage || '',
         messageType: attachments.length > 0 ? 'file' : 'text',
         attachments: attachments.length > 0 ? attachments : undefined,
       });
+      
+      const sendTime = Date.now() - sendStartTime;
+      console.log(`✅ Sent message in ${sendTime}ms`);
 
       setInputMessage('');
     } catch (err: any) {

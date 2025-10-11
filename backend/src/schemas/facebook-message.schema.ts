@@ -25,10 +25,10 @@ export class FacebookMessage {
 
   // MESSAGE CONTENT
   @Prop({ required: true, default: 'text' })
-  message_type: 'text' | 'image' | 'file' | 'comment' | 'quick_reply' | 'postback';
+  message_type: 'text' | 'image' | 'video' | 'file' | 'comment' | 'quick_reply' | 'postback';
 
-  @Prop({ required: true })
-  text: string; // Nội dung văn bản
+  @Prop({ required: false, default: '' })
+  text: string; // Nội dung văn bản (có thể rỗng nếu chỉ có attachments)
 
   @Prop({ type: Array })
   attachments?: {

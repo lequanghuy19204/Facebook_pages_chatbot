@@ -66,10 +66,19 @@ const ChatInputChatInput = React.memo(({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
+    const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
     const newFiles: UploadedFile[] = [];
+    const errors: string[] = [];
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      
+      // Kiểm tra kích thước file
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(`${file.name}: Vượt quá 25MB (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+        continue;
+      }
+      
       const fileType = file.type.startsWith('image/') ? 'image' : 
                        file.type.startsWith('video/') ? 'video' : 'file';
       
@@ -82,6 +91,10 @@ const ChatInputChatInput = React.memo(({
         preview,
         type: fileType,
       });
+    }
+    
+    if (errors.length > 0) {
+      alert(`Một số file không thể tải lên:\n${errors.join('\n')}`);
     }
     
     setSelectedFiles(prev => [...prev, ...newFiles]);

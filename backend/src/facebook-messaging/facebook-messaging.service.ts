@@ -631,11 +631,12 @@ export class FacebookMessagingService {
       const apiVersion = this.configService.get('FACEBOOK_API_VERSION') || 'v23.0';
       const url = `https://graph.facebook.com/${apiVersion}/${page.facebook_page_id}/messages`;
 
-      // Nếu có attachments, gửi từng attachment riêng
+      // Nếu có attachments, gửi TẤT CẢ SONG SONG để tăng tốc
       if (message.attachments && message.attachments.length > 0) {
-        const results: any[] = [];
+        this.logger.log(`Sending ${message.attachments.length} attachments in parallel...`);
         
-        for (const attachment of message.attachments) {
+        // Tạo promises cho tất cả attachments
+        const attachmentPromises = message.attachments.map(attachment => {
           const payload: any = {
             recipient: { id: facebookUserId },
             message: {
@@ -649,34 +650,50 @@ export class FacebookMessagingService {
             },
           };
 
-          const response = await axios.post(url, payload, {
+          return axios.post(url, payload, {
             params: { access_token: page.access_token },
             headers: { 'Content-Type': 'application/json' },
+            timeout: 30000, // 30 giây timeout
+          }).then(response => {
+            this.logger.log(`✅ Attachment sent: ${response.data.message_id}`);
+            return response.data;
+          }).catch(error => {
+            this.logger.error(`❌ Failed to send attachment:`, error.response?.data || error.message);
+            throw error;
           });
+        });
 
-          this.logger.log(`Attachment sent to Facebook: ${response.data.message_id}`);
-          results.push(response.data);
-        }
-
-        // Nếu có text, gửi text sau attachments
+        // Gửi text message song song nếu có
         if (message.text && message.text.trim()) {
           const textPayload = {
             recipient: { id: facebookUserId },
             message: { text: message.text },
           };
 
-          const textResponse = await axios.post(url, textPayload, {
-            params: { access_token: page.access_token },
-            headers: { 'Content-Type': 'application/json' },
-          });
-
-          this.logger.log(`Text message sent to Facebook: ${textResponse.data.message_id}`);
-          results.push(textResponse.data);
+          attachmentPromises.push(
+            axios.post(url, textPayload, {
+              params: { access_token: page.access_token },
+              headers: { 'Content-Type': 'application/json' },
+              timeout: 30000,
+            }).then(response => {
+              this.logger.log(`✅ Text message sent: ${response.data.message_id}`);
+              return response.data;
+            })
+          );
         }
 
+        // Đợi TẤT CẢ requests hoàn thành SONG SONG
+        const results = await Promise.all(attachmentPromises);
+        
+        this.logger.log(`✅ All ${results.length} messages sent successfully in parallel`);
+        
         return results[results.length - 1]; // Return last message ID
       } else {
         // Gửi text message thông thường
+        if (!message.text || !message.text.trim()) {
+          throw new Error('Cannot send empty message without attachments');
+        }
+        
         const payload: any = {
           recipient: { id: facebookUserId },
           message: { text: message.text },
@@ -747,7 +764,7 @@ export class FacebookMessagingService {
     const fbResponse = await this.sendMessageToFacebook(
       conversation.facebook_page_id,
       customer.facebook_user_id,
-      { text: messageData.text, attachments: fbAttachments },
+      { text: messageData.text || '', attachments: fbAttachments },
     );
 
     // Xác định message type
@@ -772,7 +789,7 @@ export class FacebookMessagingService {
       {
         facebookMessageId: fbResponse.message_id,
         messageType: messageType,
-        text: messageData.text,
+        text: messageData.text || '',
         attachments: dbAttachments,
         senderType: 'staff',
         senderId: userId,
@@ -879,8 +896,42 @@ export class FacebookMessagingService {
     const conversation = await this.conversationModel.findOne({ conversation_id: conversationId });
     if (!conversation) return;
 
+    // Tạo text hiển thị cho last_message_text
+    let displayText = message.text;
+    
+    // Nếu text rỗng, tạo text mô tả dựa trên message_type
+    if (!displayText || displayText.trim() === '') {
+      switch (message.message_type) {
+        case 'image':
+          displayText = '📷 Ảnh';
+          break;
+        case 'video':
+          displayText = '🎥 Video';
+          break;
+        case 'file':
+          displayText = '📎 File';
+          break;
+        case 'comment':
+          displayText = '💬 Bình luận';
+          break;
+        case 'quick_reply':
+          displayText = '⚡ Quick Reply';
+          break;
+        case 'postback':
+          displayText = '🔘 Postback';
+          break;
+        default:
+          displayText = '💬 Tin nhắn';
+      }
+      
+      // Nếu có nhiều attachments, thêm số lượng
+      if (message.attachments && message.attachments.length > 1) {
+        displayText = `${displayText} (${message.attachments.length})`;
+      }
+    }
+
     const updateData: any = {
-      last_message_text: message.text.substring(0, 100),
+      last_message_text: displayText.substring(0, 100),
       last_message_at: message.sent_at,
       last_message_from: message.sender_type,
       $inc: { total_messages: 1 },

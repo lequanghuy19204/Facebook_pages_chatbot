@@ -102,7 +102,7 @@ export class MinioStorageController {
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor('file', {
     limits: {
-      fileSize: 50 * 1024 * 1024,
+      fileSize: 25 * 1024 * 1024,
     },
   }))
   @ApiOperation({ summary: 'Upload any file (images, videos, documents)' })
@@ -153,11 +153,63 @@ export class MinioStorageController {
     };
   }
 
+  @Post('upload/files')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FilesInterceptor('files', 10, {
+    limits: {
+      fileSize: 25 * 1024 * 1024,
+    },
+  }))
+  @ApiOperation({ summary: 'Upload multiple files (max 10, 25MB each)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Files uploaded successfully',
+  })
+  async uploadMultipleFiles(
+    @UploadedFiles() files: Express.Multer.File[],
+    @Request() req: any,
+    @Query('folder') folder?: string
+  ): Promise<{ success: boolean; data: MinioStorageUploadResult[]; summary: any }> {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No files provided');
+    }
+
+    const userId = req.user.user_id;
+    const uploadFolder = folder || `files/${userId}`;
+    
+    this.logger.log(`User ${userId} uploading ${files.length} files in parallel`);
+
+    // Upload TẤT CẢ files SONG SONG để tăng tốc
+    const uploadPromises = files.map(file => 
+      this.minioService.uploadFile(file, uploadFolder, file.originalname)
+        .catch(error => {
+          this.logger.error(`Error uploading ${file.originalname}:`, error);
+          return null;
+        })
+    );
+
+    const results = await Promise.all(uploadPromises);
+    const successfulUploads = results.filter(r => r !== null) as MinioStorageUploadResult[];
+
+    this.logger.log(`Successfully uploaded ${successfulUploads.length}/${files.length} files`);
+
+    return {
+      success: successfulUploads.length > 0,
+      data: successfulUploads,
+      summary: {
+        total: files.length,
+        successful: successfulUploads.length,
+        failed: files.length - successfulUploads.length,
+      },
+    };
+  }
+
   @Post('upload/images')
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FilesInterceptor('images', 10, {
     limits: {
-      fileSize: 10 * 1024 * 1024,
+      fileSize: 25 * 1024 * 1024,
     },
     fileFilter: (req, file, callback) => {
       if (!file.mimetype.startsWith('image/')) {
@@ -166,7 +218,7 @@ export class MinioStorageController {
       callback(null, true);
     },
   }))
-  @ApiOperation({ summary: 'Upload multiple images (max 10)' })
+  @ApiOperation({ summary: 'Upload multiple images (max 10, 25MB each)' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ 
     status: 200, 

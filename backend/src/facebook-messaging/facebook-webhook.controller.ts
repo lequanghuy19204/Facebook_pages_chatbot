@@ -351,7 +351,7 @@ export class FacebookWebhookController {
         {
           facebookMessageId: message.mid,
           messageType: message.attachments ? 'image' : message.quick_reply ? 'quick_reply' : 'text',
-          text: message.text || '🖼️ Ảnh',
+          text: message.text || '',
           attachments: normalizedAttachments,
           quickReply: message.quick_reply,
           senderType: senderType,
@@ -580,8 +580,8 @@ export class FacebookWebhookController {
         {
           facebookMessageId: commentId,
           messageType: 'comment',
-          text: message || '🖼️ Ảnh',
-          attachments: attachments, // Thêm ảnh comment nếu có
+          text: message || '',
+          attachments: attachments,
           senderType: 'customer',
           senderId: customer.customer_id,
           senderName: fromUser.name,
