@@ -156,8 +156,9 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
             
             attachments.push({
               type: fileData.type,
-              cloudflare_url: uploadResult.cloudflare_url,
-              cloudflare_key: uploadResult.cloudflare_key,
+              facebook_url: uploadResult.minio_url || '',
+              minio_url: uploadResult.minio_url,
+              minio_key: uploadResult.minio_key,
               filename: fileData.file.name,
             });
           } catch (uploadErr) {

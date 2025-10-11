@@ -1607,7 +1607,7 @@ const ApiService = {
     },
 
     // Upload file for messaging
-    uploadMessageFile: async (token: string, file: File): Promise<{cloudflare_url: string; cloudflare_key: string}> => {
+    uploadMessageFile: async (token: string, file: File): Promise<{minio_url: string; minio_key: string}> => {
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -1629,8 +1629,8 @@ const ApiService = {
 
         const result = await response.json();
         return {
-          cloudflare_url: result.data.publicUrl,
-          cloudflare_key: result.data.key,
+          minio_url: result.data.publicUrl,
+          minio_key: result.data.key,
         };
       } catch (error) {
         console.error('Upload message file error:', error);
