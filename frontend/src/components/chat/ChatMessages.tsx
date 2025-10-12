@@ -8,16 +8,26 @@ import '@/styles/chat/ChatArea.css';
 interface ChatMessagesProps {
   messages: FacebookMessage[];
   conversation: FacebookConversation | null;
+  messagesContainerRef: React.RefObject<HTMLDivElement | null>;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  onScroll: () => void;
+  loadingMore: boolean;
+  hasMore: boolean;
+  showNewMessageBadge: boolean;
+  onScrollToBottom: () => void;
 }
 
-const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: ChatMessagesProps) => {
-  console.log('ChatMessages rendering with:', {
-    messagesCount: messages.length,
-    conversationId: conversation?.conversation_id,
-    messages: messages
-  });
-
+const ChatMessages = React.memo(({ 
+  messages, 
+  conversation, 
+  messagesContainerRef,
+  messagesEndRef,
+  onScroll,
+  loadingMore,
+  hasMore,
+  showNewMessageBadge,
+  onScrollToBottom
+}: ChatMessagesProps) => {
   const formatTime = (date?: Date | string) => {
     if (!date) return '';
     const d = new Date(date);
@@ -51,23 +61,23 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
     return groups;
   };
 
-  // Check if this is the last message in a consecutive sender group
   const isLastInGroup = (currentIndex: number, messagesInDate: FacebookMessage[]) => {
-    // Last message in array is always last in group
     if (currentIndex === messagesInDate.length - 1) return true;
     
     const currentMsg = messagesInDate[currentIndex];
     const nextMsg = messagesInDate[currentIndex + 1];
     
-    // If next message is from different sender, current is last in group
     return currentMsg.sender_type !== nextMsg.sender_type;
   };
 
   const messageGroups = groupMessagesByDate(messages);
 
   return (
-    <div className="chat-area-messages">
-      {/* Hiển thị Post nếu source là comment */}
+    <div 
+      className="chat-area-messages" 
+      ref={messagesContainerRef}
+      onScroll={onScroll}
+    >
       {conversation && conversation.source === 'comment' && (
         <PostDisplay conversation={conversation} />
       )}
@@ -90,14 +100,10 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
                 const hasAttachment = message.attachments && message.attachments.length > 0;
                 const showAvatar = isLastInGroup(msgIndex, messageGroups[dateKey]);
                 
-                console.log('Rendering message:', message.message_id, message.sender_type, message.text);
-                
                 return (
                   <div key={message.message_id} className={`message-wrapper ${isCustomer ? 'received' : 'sent'}`}>
-                    {/* Customer messages (received) */}
                     {isCustomer && (
                       <div className="chat-area-message-row received">
-                        {/* Avatar chỉ hiển thị ở tin nhắn cuối cùng trong nhóm */}
                         {showAvatar ? (
                           <img 
                             src={getCustomerAvatar()} 
@@ -131,7 +137,6 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
                             </div>
                           )}
                         </div>
-                        {/* Thời gian hiển thị bên cạnh bubble */}
                         <div style={{ 
                           fontSize: '11px', 
                           color: '#65676b', 
@@ -145,10 +150,8 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
                       </div>
                     )}
                     
-                    {/* Staff/Chatbot messages (sent) */}
                     {!isCustomer && !hasAttachment && (
                       <div className="chat-area-message-row sent">
-                        {/* Tên người gửi và thời gian bên trái */}
                         <div style={{ 
                           fontSize: '11px', 
                           color: '#65676b',
@@ -163,17 +166,14 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
                           <span>•</span>
                           <span>{formatTime(message.sent_at)}</span>
                         </div>
-                        {/* Bubble tin nhắn */}
                         <div className="chat-area-message-bubble sent" style={{ whiteSpace: 'pre-wrap' }}>
                           {message.text}
                         </div>
                       </div>
                     )}
                     
-                    {/* Staff/Chatbot messages with images */}
                     {!isCustomer && hasAttachment && (
                       <div className="chat-area-message-row sent">
-                        {/* Tên người gửi và thời gian bên trái */}
                         <div style={{ 
                           fontSize: '11px', 
                           color: '#65676b',
@@ -188,7 +188,6 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
                           <span>•</span>
                           <span>{formatTime(message.sent_at)}</span>
                         </div>
-                        {/* Bubble ảnh/video */}
                         <div className="chat-area-message-bubble-image">
                           <div className="chat-area-images-grid">
                             {message.attachments && message.attachments.map((att, idx) => (
@@ -222,6 +221,15 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
       )}
       
       <div ref={messagesEndRef} />
+      
+      {showNewMessageBadge && (
+        <div 
+          className="new-message-badge"
+          onClick={onScrollToBottom}
+        >
+          <span>Tin nhắn mới ↓</span>
+        </div>
+      )}
     </div>
   );
 });
@@ -229,4 +237,3 @@ const ChatMessages = React.memo(({ messages, conversation, messagesEndRef }: Cha
 ChatMessages.displayName = 'ChatMessages';
 
 export default ChatMessages;
-

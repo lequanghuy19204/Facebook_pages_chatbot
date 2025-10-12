@@ -190,16 +190,28 @@ export class FacebookMessagingController {
     @Request() req,
     @Param('conversationId') conversationId: string,
     @Query('page') page = 1,
-    @Query('limit') limit = 100,
+    @Query('limit') limit = 30,
+    @Query('before') before?: string,
   ) {
     try {
       const companyId = req.user.company_id;
-      const result = await this.messagingService.getMessages(
-        conversationId,
-        companyId,
-        +page,
-        +limit,
-      );
+      
+      let result;
+      if (before) {
+        result = await this.messagingService.getMessagesBefore(
+          conversationId,
+          companyId,
+          new Date(before),
+          +limit,
+        );
+      } else {
+        result = await this.messagingService.getMessages(
+          conversationId,
+          companyId,
+          +page,
+          +limit,
+        );
+      }
       
       this.logger.log(`Retrieved ${result.messages.length} messages for conversation ${conversationId}`);
       

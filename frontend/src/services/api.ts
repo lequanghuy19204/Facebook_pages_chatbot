@@ -1561,10 +1561,48 @@ const ApiService = {
         const result = await response.json();
         console.log('Messages API response:', result);
         
-        // Backend trả về: { success: true, data: { messages: [], total: number } }
         return result.data;
       } catch (error) {
         console.error('Get messages error:', error);
+        throw error;
+      }
+    },
+
+    // Get messages before a certain timestamp (for infinite scroll)
+    getMessagesBefore: async (
+      token: string,
+      conversationId: string,
+      beforeCursor: string,
+      limit: number = 30
+    ): Promise<{
+      messages: FacebookMessage[];
+      total: number;
+    }> => {
+      try {
+        const queryParams = new URLSearchParams();
+        queryParams.append('before', beforeCursor);
+        queryParams.append('limit', String(limit));
+
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}/messages?${queryParams}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to get messages');
+        }
+
+        const result = await response.json();
+        return result.data;
+      } catch (error) {
+        console.error('Get messages before error:', error);
         throw error;
       }
     },

@@ -18,25 +18,60 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
   const [messages, setMessages] = useState<FacebookMessage[]>([]);
   const [conversation, setConversation] = useState<FacebookConversation | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputMessage, setInputMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [skipAutoMarkRead, setSkipAutoMarkRead] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const [hasMore, setHasMore] = useState(true);
+  const [oldestCursor, setOldestCursor] = useState<string | null>(null);
+  const [showNewMessageBadge, setShowNewMessageBadge] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [needsInitialScroll, setNeedsInitialScroll] = useState(false);
+  
+  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const isScrollingProgrammaticallyRef = useRef(false);
 
-  const scrollToBottom = (behavior: 'smooth' | 'auto' = 'smooth') => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
+  const deduplicateMessages = (messages: FacebookMessage[]): FacebookMessage[] => {
+    const seen = new Set<string>();
+    return messages.filter(msg => {
+      if (seen.has(msg.message_id)) {
+        return false;
+      }
+      seen.add(msg.message_id);
+      return true;
+    });
+  };
+
+  const scrollToBottom = (behavior: 'smooth' | 'auto' = 'auto') => {
+    if (messagesContainerRef.current) {
+      isScrollingProgrammaticallyRef.current = true;
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      setTimeout(() => {
+        isScrollingProgrammaticallyRef.current = false;
+      }, 100);
     }
   };
 
-  // Scroll sau khi ảnh load xong
-  const scrollToBottomAfterImagesLoad = () => {
-    const images = document.querySelectorAll('.chat-area-messages img');
+  const isNearBottom = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return false;
+    
+    const threshold = 150;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    return distanceFromBottom < threshold;
+  }, []);
+
+  const scrollToBottomAfterImagesLoad = (behavior: 'smooth' | 'auto' = 'auto') => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const images = container.querySelectorAll('img');
     if (images.length === 0) {
-      // Không có ảnh, scroll ngay
-      setTimeout(() => scrollToBottom('auto'), 50);
+      setTimeout(() => scrollToBottom(behavior), 50);
       return;
     }
 
@@ -46,30 +81,27 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
     const checkAllLoaded = () => {
       loadedCount++;
       if (loadedCount === totalImages) {
-        // Tất cả ảnh đã load xong, scroll xuống cuối
-        setTimeout(() => scrollToBottom('auto'), 100);
+        setTimeout(() => scrollToBottom(behavior), 50);
       }
     };
 
     images.forEach((img) => {
-      if ((img as HTMLImageElement).complete) {
-        // Ảnh đã load sẵn (cached)
+      if (img.complete) {
         checkAllLoaded();
       } else {
-        // Đợi ảnh load
-        img.addEventListener('load', checkAllLoaded);
-        img.addEventListener('error', checkAllLoaded); // Cả khi lỗi cũng scroll
+        img.addEventListener('load', checkAllLoaded, { once: true });
+        img.addEventListener('error', checkAllLoaded, { once: true });
       }
     });
   };
 
-  // Fetch conversation details and messages
-  const fetchConversationData = async (shouldMarkAsRead: boolean = true) => {
+  const fetchInitialMessages = async (shouldMarkAsRead: boolean = true) => {
     if (!conversationId) return;
 
     try {
       setLoading(true);
       setError(null);
+      setIsInitialLoad(true);
 
       if (typeof window === 'undefined') return;
 
@@ -79,26 +111,26 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
         return;
       }
 
-      console.log('Fetching conversation data for:', conversationId);
-
-      // Fetch conversation details and messages in parallel
       const [conversationData, messagesData] = await Promise.all([
         ApiService.messaging.getConversation(token, conversationId),
-        ApiService.messaging.getMessages(token, conversationId, 1, 100)
+        ApiService.messaging.getMessages(token, conversationId, 1, 30)
       ]);
 
-      console.log('Conversation data:', conversationData);
-      console.log('Messages data:', messagesData);
-      console.log('Messages array:', messagesData.messages);
-      console.log('Messages count:', messagesData.messages?.length || 0);
-
       setConversation(conversationData);
-      setMessages(messagesData.messages || []);
+      
+      const uniqueMessages = deduplicateMessages(messagesData.messages || []);
+      setMessages(uniqueMessages);
+      
+      const hasMoreMessages = uniqueMessages.length === 30;
+      setHasMore(hasMoreMessages);
+      
+      if (uniqueMessages.length > 0) {
+        const oldestMessage = uniqueMessages[0];
+        setOldestCursor(oldestMessage.sent_at.toString());
+      }
 
-      // Scroll xuống cuối SAU KHI ẢNH LOAD XONG
-      setTimeout(() => scrollToBottomAfterImagesLoad(), 100);
+      setNeedsInitialScroll(true);
 
-      // Chỉ mark as read nếu không bị skip (ví dụ: sau khi mark unread)
       if (shouldMarkAsRead && !skipAutoMarkRead) {
         const userStr = localStorage.getItem('auth_user');
         if (userStr) {
@@ -109,7 +141,6 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
         }
       }
       
-      // Reset skip flag
       if (skipAutoMarkRead) {
         setSkipAutoMarkRead(false);
       }
@@ -121,63 +152,141 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
     }
   };
 
-  // Load conversation data when conversationId changes
+  const loadMoreMessages = async () => {
+    if (!conversationId || !hasMore || loadingMore || !oldestCursor) return;
+
+    try {
+      setLoadingMore(true);
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const container = messagesContainerRef.current;
+      if (!container) return;
+
+      const oldScrollHeight = container.scrollHeight;
+      const oldScrollTop = container.scrollTop;
+
+      const messagesData = await ApiService.messaging.getMessagesBefore(
+        token, 
+        conversationId, 
+        oldestCursor,
+        30
+      );
+
+      if (messagesData.messages.length > 0) {
+        setMessages(prev => {
+          const existingIds = new Set(prev.map(m => m.message_id));
+          const newMessages = messagesData.messages.filter(m => !existingIds.has(m.message_id));
+          
+          if (newMessages.length === 0) {
+            return prev;
+          }
+          
+          const merged = [...newMessages, ...prev];
+          return deduplicateMessages(merged);
+        });
+        
+        const newOldestMessage = messagesData.messages[0];
+        setOldestCursor(newOldestMessage.sent_at.toString());
+        
+        const hasMoreMessages = messagesData.messages.length === 30;
+        setHasMore(hasMoreMessages);
+
+        requestAnimationFrame(() => {
+          const newScrollHeight = container.scrollHeight;
+          container.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+        });
+      } else {
+        setHasMore(false);
+      }
+    } catch (err: any) {
+      console.error('Failed to load more messages:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const handleScroll = useCallback(() => {
+    if (isScrollingProgrammaticallyRef.current) return;
+    
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    if (container.scrollTop < 100 && hasMore && !loadingMore && !loading) {
+      loadMoreMessages();
+    }
+
+    if (isNearBottom()) {
+      setShowNewMessageBadge(false);
+    }
+  }, [hasMore, loadingMore, loading, isNearBottom]);
+
   useEffect(() => {
     if (conversationId) {
-      fetchConversationData();
+      setMessages([]);
+      setHasMore(true);
+      setOldestCursor(null);
+      setShowNewMessageBadge(false);
+      setNeedsInitialScroll(false);
+      setIsInitialLoad(true);
+      fetchInitialMessages();
     } else {
       setMessages([]);
       setConversation(null);
     }
   }, [conversationId]);
 
-  // Scroll to bottom NGAY KHI messages thay đổi
   useEffect(() => {
-    if (messages.length > 0 && !loading) {
-      // Đợi ảnh load xong rồi mới scroll
+    if (needsInitialScroll && messages.length > 0 && !loading) {
       requestAnimationFrame(() => {
-        scrollToBottomAfterImagesLoad();
+        scrollToBottom('auto');
+        setNeedsInitialScroll(false);
+        setIsInitialLoad(false);
       });
     }
-  }, [messages, loading]);
+  }, [needsInitialScroll, messages.length, loading]);
 
-  // Setup Socket.IO listeners for real-time updates
   useEffect(() => {
     if (!conversationId || typeof window === 'undefined') return;
 
     const token = localStorage.getItem('auth_token');
     if (!token) return;
 
-    // Connect socket if not already connected
     if (!socketService.isConnected()) {
       socketService.connect(token);
     }
 
-    // Listen for new messages in this conversation
     const handleNewMessage = (message: any) => {
-      console.log('WebSocket new_message received:', message);
       if (message.conversation_id === conversationId) {
-        setMessages(prev => [...prev, message]);
+        setMessages(prev => {
+          const exists = prev.some(m => m.message_id === message.message_id);
+          if (exists) {
+            return prev;
+          }
+          return [...prev, message];
+        });
         
-        // Cập nhật conversation info nếu có (để cập nhật avatar, name realtime)
         if (message.conversation) {
           setConversation(prev => prev ? { ...prev, ...message.conversation } : message.conversation);
         }
         
-        // Scroll xuống cuối SAU KHI ẢNH LOAD XONG
-        setTimeout(() => scrollToBottomAfterImagesLoad(), 200);
+        setTimeout(() => {
+          if (isNearBottom() || isInitialLoad) {
+            scrollToBottom('auto');
+          } else {
+            setShowNewMessageBadge(true);
+          }
+        }, 50);
       }
     };
 
     socketService.onNewMessage(handleNewMessage);
 
-    // Cleanup
     return () => {
       socketService.off('new_message', handleNewMessage);
     };
-  }, [conversationId]);
+  }, [conversationId, isNearBottom, isInitialLoad]);
 
-  // Send message
   const handleSendMessage = async (attachedFiles?: any[]) => {
     if ((!inputMessage.trim() && !attachedFiles?.length) || !conversationId || sending) return;
 
@@ -191,12 +300,7 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
 
       let attachments: any[] = [];
 
-      // Upload TẤT CẢ files SONG SONG để tăng tốc
       if (attachedFiles && attachedFiles.length > 0) {
-        console.log(`⚡ Uploading ${attachedFiles.length} files in parallel...`);
-        const startTime = Date.now();
-        
-        // Tạo promises cho tất cả uploads
         const uploadPromises = attachedFiles.map(async (fileData) => {
           try {
             const uploadResult = await ApiService.messaging.uploadMessageFile(token, fileData.file);
@@ -213,28 +317,18 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
           }
         });
 
-        // Đợi TẤT CẢ uploads hoàn thành SONG SONG
         attachments = await Promise.all(uploadPromises);
-        
-        const uploadTime = Date.now() - startTime;
-        console.log(`✅ Uploaded ${attachments.length} files in ${uploadTime}ms`);
       }
 
-      // Gửi tin nhắn với attachments
-      const sendStartTime = Date.now();
       await ApiService.messaging.replyToConversation(token, conversationId, {
         text: inputMessage || '',
         messageType: attachments.length > 0 ? 'file' : 'text',
         attachments: attachments.length > 0 ? attachments : undefined,
       });
-      
-      const sendTime = Date.now() - sendStartTime;
-      console.log(`✅ Sent message in ${sendTime}ms`);
 
       setInputMessage('');
       
-      // Scroll xuống cuối SAU KHI ẢNH LOAD XONG
-      setTimeout(() => scrollToBottomAfterImagesLoad(), 200);
+      setTimeout(() => scrollToBottom('auto'), 50);
     } catch (err: any) {
       console.error('Failed to send message:', err);
       setError(err.message || 'Failed to send message');
@@ -271,11 +365,10 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
       const user = JSON.parse(userStr);
       await ApiService.messaging.markAsUnread(token, conversationId, user.user_id, user.full_name);
       
-      // Set flag để KHÔNG tự động mark as read khi refresh
       setSkipAutoMarkRead(true);
       
-      // Refresh conversation data nhưng KHÔNG mark as read
-      await fetchConversationData(false);
+      const conversationData = await ApiService.messaging.getConversation(token, conversationId);
+      setConversation(conversationData);
     } catch (err: any) {
       console.error('Failed to mark as unread:', err);
       setError(err.message || 'Failed to mark as unread');
@@ -302,24 +395,19 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
       const newHandler = conversation.current_handler === 'chatbot' ? 'human' : 'chatbot';
 
       if (newHandler === 'chatbot') {
-        // Chuyển về chatbot: return to bot
         await ApiService.messaging.returnToBot(token, conversationId);
-        
-        // Refresh để lấy dữ liệu mới nhất, KHÔNG tự động mark as read (vì chatbot xử lý)
-        await fetchConversationData(false);
+        const conversationData = await ApiService.messaging.getConversation(token, conversationId);
+        setConversation(conversationData);
       } else {
-        // Chuyển sang human: update conversation + mark as read trong 1 request
         await ApiService.messaging.updateConversation(token, conversationId, {
           currentHandler: 'human',
           needsAttention: false,
           assignedTo: user.user_id,
         });
         
-        // Mark as read khi chuyển sang human
         await ApiService.messaging.markAsRead(token, conversationId, user.user_id, user.full_name);
-        
-        // Refresh để lấy dữ liệu mới nhất, KHÔNG tự động mark as read nữa (đã mark rồi)
-        await fetchConversationData(false);
+        const conversationData = await ApiService.messaging.getConversation(token, conversationId);
+        setConversation(conversationData);
       }
     } catch (err: any) {
       console.error('Failed to toggle handler:', err);
@@ -329,6 +417,10 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
     }
   };
 
+  const handleScrollToBottom = () => {
+    setShowNewMessageBadge(false);
+    scrollToBottom('auto');
+  };
 
   if (!conversationId) {
     return (
@@ -371,7 +463,13 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
       <ChatMessages 
         messages={messages}
         conversation={conversation}
+        messagesContainerRef={messagesContainerRef}
         messagesEndRef={messagesEndRef}
+        onScroll={handleScroll}
+        loadingMore={loadingMore}
+        hasMore={hasMore}
+        showNewMessageBadge={showNewMessageBadge}
+        onScrollToBottom={handleScrollToBottom}
       />
       
       <ChatInput 

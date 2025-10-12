@@ -570,18 +570,59 @@ export class FacebookMessagingService {
     messages: FacebookMessageDocument[];
     total: number;
   }> {
-    // Verify conversation exists và thuộc company
     const conversation = await this.getConversation(conversationId, companyId);
     
-    const skip = (page - 1) * limit;
+    const total = await this.messageModel.countDocuments({
+      conversation_id: conversationId,
+      company_id: companyId,
+    });
+
+    if (page === 1) {
+      const messages = await this.messageModel.find({
+        conversation_id: conversationId,
+        company_id: companyId,
+      })
+      .sort({ sent_at: -1 })
+      .limit(limit);
+
+      messages.reverse();
+      
+      return { messages, total };
+    } else {
+      const skip = (page - 1) * limit;
+      
+      const messages = await this.messageModel.find({
+        conversation_id: conversationId,
+        company_id: companyId,
+      })
+      .sort({ sent_at: 1 })
+      .skip(skip)
+      .limit(limit);
+
+      return { messages, total };
+    }
+  }
+
+  async getMessagesBefore(
+    conversationId: string, 
+    companyId: string, 
+    beforeDate: Date, 
+    limit = 30
+  ): Promise<{
+    messages: FacebookMessageDocument[];
+    total: number;
+  }> {
+    const conversation = await this.getConversation(conversationId, companyId);
     
     const messages = await this.messageModel.find({
       conversation_id: conversationId,
       company_id: companyId,
+      sent_at: { $lt: beforeDate },
     })
-    .sort({ sent_at: 1 }) // Sắp xếp theo thời gian gửi tăng dần
-    .skip(skip)
+    .sort({ sent_at: -1 })
     .limit(limit);
+
+    messages.reverse();
 
     const total = await this.messageModel.countDocuments({
       conversation_id: conversationId,
