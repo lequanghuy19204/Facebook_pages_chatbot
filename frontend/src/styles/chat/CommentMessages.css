@@ -1,0 +1,212 @@
+.comment-messages-container {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background-color: #f0f2f5;
+  scroll-behavior: auto;
+  position: relative;
+}
+
+.comment-messages-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #65676b;
+  font-size: 14px;
+  font-family: 'Roboto', sans-serif;
+}
+
+.comment-messages-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background-color: #ffffff;
+}
+
+.comment-item-commentMessages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comment-header-commentMessages {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.comment-avatar-commentMessages {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #e4e6eb;
+}
+
+.comment-content-wrapper-commentMessages {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.comment-bubble-commentMessages {
+  background-color: #f0f2f5;
+  border-radius: 18px;
+  padding: 8px 12px;
+  display: inline-block;
+  width: fit-content;
+  max-width: 500px;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.comment-author-commentMessages {
+  font-family: 'Roboto', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #050505;
+  margin-bottom: 4px;
+  line-height: 16px;
+}
+
+.comment-text-commentMessages {
+  font-family: 'Roboto', sans-serif;
+  font-size: 15px;
+  color: #050505;
+  line-height: 20px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.comment-attachments-commentMessages {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comment-attachment-item-commentMessages {
+  max-width: 100%;
+}
+
+.comment-attachment-image-commentMessages {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  display: block;
+}
+
+.comment-attachment-image-commentMessages:hover {
+  opacity: 0.9;
+}
+
+.comment-attachment-video-commentMessages {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+}
+
+.comment-attachment-file-commentMessages {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background-color: #e4e6eb;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #050505;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.comment-attachment-file-commentMessages:hover {
+  background-color: #d8dadf;
+}
+
+.comment-meta-commentMessages {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+}
+
+.comment-time-commentMessages {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  color: #65676b;
+  line-height: 16px;
+}
+
+.comment-meta-dot-commentMessages {
+  font-size: 12px;
+  color: #65676b;
+}
+
+.comment-sender-type-commentMessages {
+  font-family: 'Roboto', sans-serif;
+  font-size: 12px;
+  color: #65676b;
+  font-weight: 500;
+}
+
+.comment-new-badge-commentMessages {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #0084ff;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 10;
+  transition: all 0.2s ease;
+  animation: slideUp 0.3s ease;
+  font-family: 'Roboto', sans-serif;
+}
+
+.comment-new-badge-commentMessages:hover {
+  background-color: #0073e6;
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.comment-messages-viewer .viewer-canvas {
+  background-color: rgba(0, 0, 0, 0.9);
+}
+
+.comment-messages-viewer .viewer-toolbar {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.comment-messages-viewer .viewer-button {
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+}
+
+.comment-messages-viewer .viewer-button:hover {
+  background-color: rgba(255, 255, 255, 1);
+}
+

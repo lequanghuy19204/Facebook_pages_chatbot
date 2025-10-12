@@ -5,6 +5,7 @@ import ApiService, { FacebookMessage, FacebookConversation } from '@/services/ap
 import socketService from '@/services/socket';
 import ChatHeader from './ChatHeader';
 import ChatMessages from './ChatMessages';
+import CommentMessages from './CommentMessages';
 import ChatInput from './ChatInput';
 import '@/styles/chat/ChatArea.css';
 
@@ -450,6 +451,8 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
     );
   }
 
+  const isCommentConversation = conversation?.source === 'comment';
+
   return (
     <div className="chat-area-container">
       <ChatHeader 
@@ -460,17 +463,31 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
         onToggleRightPanel={onToggleRightPanel}
       />
       
-      <ChatMessages 
-        messages={messages}
-        conversation={conversation}
-        messagesContainerRef={messagesContainerRef}
-        messagesEndRef={messagesEndRef}
-        onScroll={handleScroll}
-        loadingMore={loadingMore}
-        hasMore={hasMore}
-        showNewMessageBadge={showNewMessageBadge}
-        onScrollToBottom={handleScrollToBottom}
-      />
+      {isCommentConversation ? (
+        <CommentMessages 
+          messages={messages}
+          conversation={conversation}
+          messagesContainerRef={messagesContainerRef}
+          messagesEndRef={messagesEndRef}
+          onScroll={handleScroll}
+          loadingMore={loadingMore}
+          hasMore={hasMore}
+          showNewMessageBadge={showNewMessageBadge}
+          onScrollToBottom={handleScrollToBottom}
+        />
+      ) : (
+        <ChatMessages 
+          messages={messages}
+          conversation={conversation}
+          messagesContainerRef={messagesContainerRef}
+          messagesEndRef={messagesEndRef}
+          onScroll={handleScroll}
+          loadingMore={loadingMore}
+          hasMore={hasMore}
+          showNewMessageBadge={showNewMessageBadge}
+          onScrollToBottom={handleScrollToBottom}
+        />
+      )}
       
       <ChatInput 
         conversation={conversation}

@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FacebookConversation } from '@/services/api';
+import Viewer from 'viewerjs';
+import 'viewerjs/dist/viewer.css';
 import '@/styles/chat/PostDisplay.css';
 
 interface PostDisplayProps {
@@ -10,15 +12,65 @@ interface PostDisplayProps {
 
 const PostDisplay = React.memo(({ conversation }: PostDisplayProps) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const viewerRef = useRef<Viewer | null>(null);
 
   if (!conversation || conversation.source !== 'comment') {
     return null;
   }
 
-  // Ưu tiên dùng post_photos_minio, fallback về post_photos
   const photos = conversation.post_photos_minio || conversation.post_photos;
   const hasPhotos = photos && photos.length > 0;
   const hasMultiplePhotos = hasPhotos && photos!.length > 1;
+
+  useEffect(() => {
+    if (viewerRef.current) {
+      viewerRef.current.destroy();
+      viewerRef.current = null;
+    }
+
+    if (hasPhotos) {
+      const timer = setTimeout(() => {
+        const galleryElement = document.querySelector('.post-display-image-gallery-postDisplay');
+        if (galleryElement) {
+          viewerRef.current = new Viewer(galleryElement as HTMLElement, {
+            inline: false,
+            title: false,
+            toolbar: {
+              zoomIn: true,
+              zoomOut: true,
+              oneToOne: true,
+              reset: true,
+              prev: true,
+              play: false,
+              next: true,
+              rotateLeft: true,
+              rotateRight: true,
+              flipHorizontal: true,
+              flipVertical: true,
+            },
+            navbar: true,
+            button: true,
+            url: 'data-original',
+            keyboard: true,
+            backdrop: true,
+            zoomRatio: 0.2,
+            minZoomRatio: 0.1,
+            maxZoomRatio: 10,
+            zIndex: 2000,
+            className: 'post-display-viewer-postDisplay'
+          });
+        }
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+        if (viewerRef.current) {
+          viewerRef.current.destroy();
+          viewerRef.current = null;
+        }
+      };
+    }
+  }, [conversation, hasPhotos]);
 
   const handlePrevImage = () => {
     if (photos) {
@@ -55,6 +107,10 @@ const PostDisplay = React.memo(({ conversation }: PostDisplayProps) => {
     });
   };
 
+  const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
+    e.stopPropagation();
+  };
+
   return (
     <div className="post-display-container">
       <div className="post-display-header">
@@ -82,12 +138,15 @@ const PostDisplay = React.memo(({ conversation }: PostDisplayProps) => {
 
       {/* Post Images */}
       {hasPhotos && (
-        <div className="post-display-images">
+        <div className="post-display-images post-display-image-gallery-postDisplay">
           <div className="post-display-image-container">
             <img 
               src={getCurrentPhotoUrl()} 
+              data-original={getCurrentPhotoUrl()}
               alt={`Post image ${currentImageIndex + 1}`}
               className="post-display-image"
+              onClick={handleImageClick}
+              style={{ cursor: 'pointer' }}
             />
             
             {hasMultiplePhotos && (

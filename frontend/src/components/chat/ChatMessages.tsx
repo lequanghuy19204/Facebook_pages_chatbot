@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef } from 'react';
 import { FacebookMessage, FacebookConversation } from '@/services/api';
-import PostDisplay from './PostDisplay';
 import Viewer from 'viewerjs';
 import 'viewerjs/dist/viewer.css';
 import '@/styles/chat/ChatArea.css';
@@ -134,10 +133,6 @@ const ChatMessages = React.memo(({
       ref={messagesContainerRef}
       onScroll={onScroll}
     >
-      {conversation && conversation.source === 'comment' && (
-        <PostDisplay conversation={conversation} />
-      )}
-      
       {messages.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>
           Chưa có tin nhắn nào
