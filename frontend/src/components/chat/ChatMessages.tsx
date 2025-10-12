@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { FacebookMessage, FacebookConversation } from '@/services/api';
 import PostDisplay from './PostDisplay';
+import Viewer from 'viewerjs';
+import 'viewerjs/dist/viewer.css';
 import '@/styles/chat/ChatArea.css';
 
 interface ChatMessagesProps {
@@ -28,6 +30,8 @@ const ChatMessages = React.memo(({
   showNewMessageBadge,
   onScrollToBottom
 }: ChatMessagesProps) => {
+  const viewerRef = useRef<Viewer | null>(null);
+
   const formatTime = (date?: Date | string) => {
     if (!date) return '';
     const d = new Date(date);
@@ -72,6 +76,58 @@ const ChatMessages = React.memo(({
 
   const messageGroups = groupMessagesByDate(messages);
 
+  useEffect(() => {
+    if (viewerRef.current) {
+      viewerRef.current.destroy();
+      viewerRef.current = null;
+    }
+
+    const timer = setTimeout(() => {
+      const galleryElement = document.querySelector('.chat-messages-image-gallery');
+      if (galleryElement) {
+        viewerRef.current = new Viewer(galleryElement as HTMLElement, {
+          inline: false,
+          title: false,
+          toolbar: {
+            zoomIn: true,
+            zoomOut: true,
+            oneToOne: true,
+            reset: true,
+            prev: true,
+            play: false,
+            next: true,
+            rotateLeft: true,
+            rotateRight: true,
+            flipHorizontal: true,
+            flipVertical: true,
+          },
+          navbar: true,
+          button: true,
+          url: 'data-original',
+          keyboard: true,
+          backdrop: true,
+          zoomRatio: 0.2,
+          minZoomRatio: 0.1,
+          maxZoomRatio: 10,
+          zIndex: 2000,
+          className: 'chat-messages-viewer'
+        });
+      }
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      if (viewerRef.current) {
+        viewerRef.current.destroy();
+        viewerRef.current = null;
+      }
+    };
+  }, [messages]);
+
+  const handleImageClick = (e: React.MouseEvent<HTMLImageElement>) => {
+    e.stopPropagation();
+  };
+
   return (
     <div 
       className="chat-area-messages" 
@@ -87,7 +143,7 @@ const ChatMessages = React.memo(({
           Chưa có tin nhắn nào
         </div>
       ) : (
-        <>
+        <div className="chat-messages-image-gallery">
           {Object.keys(messageGroups).map(dateKey => (
             <React.Fragment key={dateKey}>
               <div className="chat-area-messages-date-badge">
@@ -124,7 +180,13 @@ const ChatMessages = React.memo(({
                               {message.attachments.map((att, idx) => (
                                 <div key={idx} className="chat-area-image-item-received">
                                   {att.type === 'image' && (
-                                    <img src={att.minio_url || att.facebook_url} alt="attachment" />
+                                    <img 
+                                      src={att.minio_url || att.facebook_url} 
+                                      data-original={att.minio_url || att.facebook_url}
+                                      alt="attachment"
+                                      onClick={handleImageClick}
+                                      style={{ cursor: 'pointer' }}
+                                    />
                                   )}
                                   {att.type === 'video' && (
                                     <video src={att.minio_url || att.facebook_url} controls style={{ width: '100%', borderRadius: '8px' }} />
@@ -193,12 +255,13 @@ const ChatMessages = React.memo(({
                             {message.attachments && message.attachments.map((att, idx) => (
                               <div key={idx} className="chat-area-image-item">
                                 {att.type === 'image' && (
-                                  <>
-                                    <img src={att.minio_url || att.facebook_url} alt="attachment" />
-                                    <button className="chat-area-image-download">
-                                      <img src="/assets/4cf588a1-b66c-4acb-ac99-6fe6db0ec42c.png" alt="download" />
-                                    </button>
-                                  </>
+                                  <img 
+                                    src={att.minio_url || att.facebook_url} 
+                                    data-original={att.minio_url || att.facebook_url}
+                                    alt="attachment"
+                                    onClick={handleImageClick}
+                                    style={{ cursor: 'pointer' }}
+                                  />
                                 )}
                                 {att.type === 'video' && (
                                   <video src={att.minio_url || att.facebook_url} controls style={{ width: '100%', borderRadius: '8px' }} />
@@ -217,7 +280,7 @@ const ChatMessages = React.memo(({
               })}
             </React.Fragment>
           ))}
-        </>
+        </div>
       )}
       
       <div ref={messagesEndRef} />

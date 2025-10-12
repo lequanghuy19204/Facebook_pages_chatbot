@@ -282,7 +282,7 @@
 /* Nếu chỉ có 1 ảnh, hiển thị với kích thước tự nhiên */
 .chat-area-images-grid:has(.chat-area-image-item:only-child) {
   grid-template-columns: 1fr;
-  max-width: 300px;
+  max-width: 200px;
 }
 
 /* Nếu có 2 ảnh, mỗi ảnh chiếm 50% */
@@ -330,31 +330,10 @@
   transform: scale(1.05);
 }
 
-.chat-area-image-download {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background-color: rgba(29, 41, 57, 0.5);
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.chat-area-image-item:hover .chat-area-image-download {
+.chat-area-image-item:hover {
   opacity: 1;
 }
 
-.chat-area-image-download img {
-  width: 15px;
-  height: 15px;
-}
 
 .chat-area-image-caption {
   padding: 5.42px 10px;
@@ -381,7 +360,7 @@
 /* Nếu chỉ có 1 ảnh, hiển thị với kích thước tự nhiên */
 .chat-area-images-grid-received:has(.chat-area-image-item-received:only-child) {
   grid-template-columns: 1fr;
-  max-width: 300px;
+  max-width: 200px;
 }
 
 /* Nếu có 2 ảnh, mỗi ảnh chiếm 50% */
