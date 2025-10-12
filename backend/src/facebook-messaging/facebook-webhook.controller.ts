@@ -480,30 +480,6 @@ export class FacebookWebhookController {
       const message = commentData.message;
       const createdTime = new Date(commentData.created_time * 1000);
       
-      // Xử lý ảnh trong comment (trường 'photo') và upload vào MinIO
-      const commentPhoto = commentData.photo;
-      let attachments: any[] | undefined = undefined;
-      
-      if (commentPhoto) {
-        const page = await this.messagingService.findPageByFacebookId(pageId);
-        if (page) {
-          const folder = `attachments/${page.company_id}`;
-          const uploadedFiles = await this.minioService.downloadAndUploadMultipleFromUrls([commentPhoto], folder);
-          
-          attachments = [{
-            type: 'image',
-            facebook_url: commentPhoto,
-            minio_url: uploadedFiles[0]?.publicUrl,
-            minio_key: uploadedFiles[0]?.key,
-            filename: 'comment_image.jpg'
-          }];
-          this.logger.log(`[processComment] Comment photo uploaded to MinIO: ${uploadedFiles[0]?.key}`);
-        }
-      }
-      
-      // Lấy thông tin bài đăng từ webhook
-      const postInfo = commentData.post;
-
       this.logger.log(`[processComment] New comment from ${fromUser.name} (${fromUser.id})`);
       this.logger.log(`[processComment] Post: ${postId}, Comment: ${commentId}`);
       this.logger.log(`[processComment] Message: ${message}`);
@@ -515,7 +491,34 @@ export class FacebookWebhookController {
         return;
       }
 
-      // Tìm hoặc tạo customer từ comment author
+      // KIỂM TRA: Nếu comment từ chính page (page tự reply), skip vì đã được lưu khi gửi từ replyToComment()
+      if (fromUser.id === pageId) {
+        this.logger.log(`[processComment] ⏭️  SKIPPING page self-reply - already saved when sending from replyToComment()`);
+        return;
+      }
+      
+      // Xử lý ảnh trong comment (trường 'photo') và upload vào MinIO
+      const commentPhoto = commentData.photo;
+      let attachments: any[] | undefined = undefined;
+      
+      if (commentPhoto) {
+        const folder = `attachments/${page.company_id}`;
+        const uploadedFiles = await this.minioService.downloadAndUploadMultipleFromUrls([commentPhoto], folder);
+        
+        attachments = [{
+          type: 'image',
+          facebook_url: commentPhoto,
+          minio_url: uploadedFiles[0]?.publicUrl,
+          minio_key: uploadedFiles[0]?.key,
+          filename: 'comment_image.jpg'
+        }];
+        this.logger.log(`[processComment] Comment photo uploaded to MinIO: ${uploadedFiles[0]?.key}`);
+      }
+      
+      // Lấy thông tin bài đăng từ webhook
+      const postInfo = commentData.post;
+
+      // Tìm hoặc tạo customer từ comment author (CHỈ với customer thực, không phải page)
       const customer = await this.messagingService.findOrCreateCustomer(
         page.company_id,
         pageId,
@@ -556,8 +559,8 @@ export class FacebookWebhookController {
         post_id: postId
       });
 
-      // Tạo/cập nhật conversation cho comment - GỘP VÀO CONVERSATION CŨ NẾu CÙNG CUSTOMER
-      const threadId = `comment_${pageId}_${customer.customer_id}`; // Thread theo customer, không theo comment riêng
+      // Tạo/cập nhật conversation cho comment - MỖI BÀI ĐĂNG MỘT CONVERSATION
+      const threadId = `comment_${postId}_${customer.customer_id}`; // Thread theo post_id + customer_id
       const conversation = await this.messagingService.findOrCreateConversation(
         page.company_id,
         pageId,
@@ -570,6 +573,15 @@ export class FacebookWebhookController {
       );
       
       this.logger.log(`[processComment] Using conversation: ${conversation.conversation_id} for customer: ${customer.customer_id}`);
+
+      let parentMessageId: string | undefined = undefined;
+      if (parentId) {
+        const parentMessage = await this.messagingService.findMessageByFacebookId(parentId);
+        if (parentMessage) {
+          parentMessageId = parentMessage.message_id;
+          this.logger.log(`[processComment] Found parent message: ${parentMessageId}`);
+        }
+      }
 
       // Tạo message record cho comment
       await this.messagingService.createMessage(
@@ -586,6 +598,7 @@ export class FacebookWebhookController {
           senderId: customer.customer_id,
           senderName: fromUser.name,
           sentAt: createdTime,
+          parentMessageId: parentMessageId,
         },
       );
 

@@ -23,6 +23,9 @@ export class FacebookMessage {
   @Prop({ index: true })
   facebook_message_id?: string; // Message ID từ Facebook (null nếu gửi từ hệ thống)
 
+  @Prop()
+  parent_message_id?: string; // ID tin nhắn cha (nếu là reply)
+
   // MESSAGE CONTENT
   @Prop({ required: true, default: 'text' })
   message_type: 'text' | 'image' | 'video' | 'file' | 'comment' | 'quick_reply' | 'postback';

@@ -122,6 +122,128 @@ const CommentMessages = React.memo(({
     e.stopPropagation();
   };
 
+  const buildCommentTree = (messages: FacebookMessage[]) => {
+    const rootComments: FacebookMessage[] = [];
+    const childrenMap = new Map<string, FacebookMessage[]>();
+
+    messages.forEach(msg => {
+      if (!msg.parent_message_id) {
+        rootComments.push(msg);
+      } else {
+        const children = childrenMap.get(msg.parent_message_id) || [];
+        children.push(msg);
+        childrenMap.set(msg.parent_message_id, children);
+      }
+    });
+
+    return { rootComments, childrenMap };
+  };
+
+  const renderComment = (message: FacebookMessage, childrenMap: Map<string, FacebookMessage[]>, level: number = 0): React.ReactNode => {
+    const isCustomer = message.sender_type === 'customer';
+    const isChatbot = message.sender_type === 'chatbot';
+    const isStaff = message.sender_type === 'staff';
+    const hasAttachment = message.attachments && message.attachments.length > 0;
+    const children = childrenMap.get(message.message_id) || [];
+
+    return (
+      <div key={message.message_id} className={`comment-item-commentMessages ${level > 0 ? 'comment-reply' : ''}`} style={{ marginLeft: level > 0 ? '40px' : '0' }}>
+        <div className="comment-header-commentMessages">
+          <img 
+            src={isCustomer ? getCustomerAvatar() : getPageAvatar()} 
+            alt="avatar" 
+            className="comment-avatar-commentMessages"
+            onError={(e) => {
+              const img = e.target as HTMLImageElement;
+              img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(isCustomer ? getCustomerName() : conversation?.page_name || 'Page')}&background=random&size=200`;
+            }}
+          />
+          
+          <div className="comment-content-wrapper-commentMessages">
+            <div className="comment-bubble-commentMessages">
+              <div className="comment-author-commentMessages">
+                {isCustomer ? (
+                  getCustomerName()
+                ) : (
+                  <>
+                    <span>{conversation?.page_name || 'Page'}</span>
+                    {isChatbot && (
+                      <span className="comment-staff-label">Chatbot</span>
+                    )}
+                    {isStaff && message.sender_name && (
+                      <span className="comment-staff-label">{message.sender_name}</span>
+                    )}
+                  </>
+                )}
+              </div>
+              
+              {message.text && (
+                <div className="comment-text-commentMessages">
+                  {message.text}
+                </div>
+              )}
+              
+              {hasAttachment && (
+                <div className="comment-attachments-commentMessages">
+                  {message.attachments!.map((att, idx) => (
+                    <div key={idx} className="comment-attachment-item-commentMessages">
+                      {att.type === 'image' && (
+                        <img 
+                          src={att.minio_url || att.facebook_url} 
+                          data-original={att.minio_url || att.facebook_url}
+                          alt="attachment"
+                          onClick={handleImageClick}
+                          className="comment-attachment-image-commentMessages"
+                        />
+                      )}
+                      {att.type === 'video' && (
+                        <video 
+                          src={att.minio_url || att.facebook_url} 
+                          controls 
+                          className="comment-attachment-video-commentMessages"
+                        />
+                      )}
+                      {att.type === 'file' && (
+                        <a 
+                          href={att.minio_url || att.facebook_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="comment-attachment-file-commentMessages"
+                        >
+                          📎 {att.filename}
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            <div className="comment-meta-commentMessages">
+              <span className="comment-time-commentMessages">{formatTime(message.sent_at)}</span>
+              {!isCustomer && (
+                <>
+                  <span className="comment-meta-dot-commentMessages">•</span>
+                  <span className="comment-sender-type-commentMessages">
+                    {isChatbot ? 'Trả lời tự động' : 'Phản hồi'}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {children.length > 0 && (
+          <div className="comment-replies-commentMessages">
+            {children.map(child => renderComment(child, childrenMap, level + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const { rootComments, childrenMap } = buildCommentTree(messages);
+
   return (
     <div 
       className="comment-messages-container" 
@@ -136,88 +258,7 @@ const CommentMessages = React.memo(({
         </div>
       ) : (
         <div className="comment-messages-thread comment-messages-image-gallery">
-          {messages.map((message) => {
-            const isCustomer = message.sender_type === 'customer';
-            const isChatbot = message.sender_type === 'chatbot';
-            const hasAttachment = message.attachments && message.attachments.length > 0;
-            
-            return (
-              <div key={message.message_id} className="comment-item-commentMessages">
-                <div className="comment-header-commentMessages">
-                  <img 
-                    src={isCustomer ? getCustomerAvatar() : getPageAvatar()} 
-                    alt="avatar" 
-                    className="comment-avatar-commentMessages"
-                    onError={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(isCustomer ? getCustomerName() : conversation?.page_name || 'Page')}&background=random&size=200`;
-                    }}
-                  />
-                  
-                  <div className="comment-content-wrapper-commentMessages">
-                    <div className="comment-bubble-commentMessages">
-                      <div className="comment-author-commentMessages">
-                        {isCustomer ? getCustomerName() : (isChatbot ? '🤖 Chatbot' : (message.sender_name || conversation?.page_name || 'Page'))}
-                      </div>
-                      
-                      {message.text && (
-                        <div className="comment-text-commentMessages">
-                          {message.text}
-                        </div>
-                      )}
-                      
-                      {hasAttachment && (
-                        <div className="comment-attachments-commentMessages">
-                          {message.attachments!.map((att, idx) => (
-                            <div key={idx} className="comment-attachment-item-commentMessages">
-                              {att.type === 'image' && (
-                                <img 
-                                  src={att.minio_url || att.facebook_url} 
-                                  data-original={att.minio_url || att.facebook_url}
-                                  alt="attachment"
-                                  onClick={handleImageClick}
-                                  className="comment-attachment-image-commentMessages"
-                                />
-                              )}
-                              {att.type === 'video' && (
-                                <video 
-                                  src={att.minio_url || att.facebook_url} 
-                                  controls 
-                                  className="comment-attachment-video-commentMessages"
-                                />
-                              )}
-                              {att.type === 'file' && (
-                                <a 
-                                  href={att.minio_url || att.facebook_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="comment-attachment-file-commentMessages"
-                                >
-                                  📎 {att.filename}
-                                </a>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="comment-meta-commentMessages">
-                      <span className="comment-time-commentMessages">{formatTime(message.sent_at)}</span>
-                      {!isCustomer && (
-                        <>
-                          <span className="comment-meta-dot-commentMessages">•</span>
-                          <span className="comment-sender-type-commentMessages">
-                            {isChatbot ? 'Trả lời tự động' : 'Phản hồi'}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {rootComments.map(message => renderComment(message, childrenMap, 0))}
         </div>
       )}
       

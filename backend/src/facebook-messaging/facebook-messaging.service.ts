@@ -229,11 +229,12 @@ export class FacebookMessagingService {
           source: 'messenger',
           status: 'open',
         }).sort({ created_at: -1 });
-      } else if (source === 'comment') {
-        // Comment: Gộp vào conversation comment cũ của cùng customer
+      } else if (source === 'comment' && postId) {
+        // Comment: Tìm conversation theo customer_id + post_id (MỖI BÀI ĐĂNG MỘT CONVERSATION)
         conversation = await this.conversationModel.findOne({
           company_id: companyId,
           customer_id: customerId,
+          post_id: postId,
           source: 'comment',
           status: 'open',
         }).sort({ created_at: -1 });
@@ -518,6 +519,7 @@ export class FacebookMessagingService {
       senderId: string;
       senderName?: string;
       sentAt?: Date;
+      parentMessageId?: string;
     },
   ): Promise<FacebookMessageDocument> {
     const messageId = this.generateMessageId();
@@ -529,6 +531,7 @@ export class FacebookMessagingService {
       customer_id: customerId,
       conversation_id: conversationId,
       facebook_message_id: messageData.facebookMessageId,
+      parent_message_id: messageData.parentMessageId,
       message_type: messageData.messageType,
       text: messageData.text,
       attachments: messageData.attachments,
@@ -841,6 +844,204 @@ export class FacebookMessagingService {
 
     // Cập nhật conversation: chuyển về human handler, không cần attention
     await this.updateConversation(conversationId, companyId, {
+      currentHandler: 'human',
+      needsAttention: false,
+      assignedTo: userId,
+    });
+
+    return message;
+  }
+
+  async replyToComment(
+    conversationId: string,
+    companyId: string,
+    userId: string,
+    userName: string,
+    messageData: ReplyMessageDto,
+  ): Promise<FacebookMessageDocument> {
+    const conversation = await this.getConversation(conversationId, companyId);
+    
+    if (conversation.source !== 'comment') {
+      throw new Error('This conversation is not a comment conversation');
+    }
+
+    if (!conversation.comment_id) {
+      throw new Error('Comment ID not found in conversation');
+    }
+
+    const page = await this.pageModel.findOne({ facebook_page_id: conversation.facebook_page_id });
+    if (!page || !page.access_token) {
+      throw new Error('Page access token not found');
+    }
+
+    let dbAttachments: any[] | undefined = undefined;
+    if (messageData.attachments && messageData.attachments.length > 0) {
+      dbAttachments = messageData.attachments.map(att => ({
+        type: att.type,
+        facebook_url: att.facebook_url,
+        minio_url: att.minio_url,
+        minio_key: att.minio_key,
+        filename: att.filename,
+      }));
+    }
+
+    const apiVersion = this.configService.get('FACEBOOK_API_VERSION') || 'v23.0';
+    const url = `https://graph.facebook.com/${apiVersion}/${conversation.comment_id}/comments`;
+
+    let commentText = messageData.text || '';
+    if (dbAttachments && dbAttachments.length > 0) {
+      const imageUrls = dbAttachments
+        .filter(att => att.type === 'image')
+        .map(att => att.minio_url || att.facebook_url)
+        .filter(url => url);
+      
+      if (imageUrls.length > 0) {
+        commentText += '\n' + imageUrls.join('\n');
+      }
+    }
+
+    const response = await axios.post(url, {
+      message: commentText,
+    }, {
+      params: { access_token: page.access_token },
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    this.logger.log(`Comment reply sent: ${response.data.id}`);
+
+    const lastMessage = await this.messageModel.findOne({
+      conversation_id: conversationId,
+      company_id: companyId,
+    }).sort({ sent_at: -1 });
+
+    let messageType = messageData.messageType || 'comment';
+    if (dbAttachments && dbAttachments.length > 0) {
+      const firstAttachment = dbAttachments[0];
+      if (firstAttachment.type === 'image') {
+        messageType = 'image';
+      } else if (firstAttachment.type === 'video') {
+        messageType = 'video';
+      } else {
+        messageType = 'file';
+      }
+    }
+
+    const message = await this.createMessage(
+      companyId,
+      conversation.facebook_page_id,
+      conversation.customer_id,
+      conversationId,
+      {
+        facebookMessageId: response.data.id,
+        messageType: messageType,
+        text: messageData.text || '',
+        attachments: dbAttachments,
+        senderType: 'staff',
+        senderId: userId,
+        senderName: userName,
+        sentAt: new Date(),
+        parentMessageId: lastMessage?.message_id,
+      },
+    );
+
+    await this.updateConversation(conversationId, companyId, {
+      currentHandler: 'human',
+      needsAttention: false,
+      assignedTo: userId,
+    });
+
+    return message;
+  }
+
+  async sendPrivateMessage(
+    conversationId: string,
+    companyId: string,
+    userId: string,
+    userName: string,
+    messageData: ReplyMessageDto,
+  ): Promise<FacebookMessageDocument> {
+    const conversation = await this.getConversation(conversationId, companyId);
+    const customer = await this.customerModel.findOne({ customer_id: conversation.customer_id });
+    
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    let dbAttachments: any[] | undefined = undefined;
+    if (messageData.attachments && messageData.attachments.length > 0) {
+      dbAttachments = messageData.attachments.map(att => ({
+        type: att.type,
+        facebook_url: att.facebook_url,
+        minio_url: att.minio_url,
+        minio_key: att.minio_key,
+        filename: att.filename,
+      }));
+    }
+
+    const fbAttachments = dbAttachments?.map(att => ({
+      type: att.type,
+      minio_url: att.minio_url,
+      filename: att.filename,
+    }));
+    
+    const fbResponse = await this.sendMessageToFacebook(
+      conversation.facebook_page_id,
+      customer.facebook_user_id,
+      { text: messageData.text || '', attachments: fbAttachments },
+    );
+
+    let messageType = messageData.messageType || 'text';
+    if (dbAttachments && dbAttachments.length > 0) {
+      const firstAttachment = dbAttachments[0];
+      if (firstAttachment.type === 'image') {
+        messageType = 'image';
+      } else if (firstAttachment.type === 'video') {
+        messageType = 'video';
+      } else {
+        messageType = 'file';
+      }
+    }
+
+    const threadId = `messenger_${conversation.facebook_page_id}_${customer.facebook_user_id}`;
+    let messengerConversation: FacebookConversationDocument | null = await this.conversationModel.findOne({
+      company_id: companyId,
+      customer_id: conversation.customer_id,
+      source: 'messenger',
+      status: 'open',
+    }).sort({ created_at: -1 });
+
+    if (!messengerConversation) {
+      messengerConversation = await this.findOrCreateConversation(
+        companyId,
+        conversation.facebook_page_id,
+        conversation.customer_id,
+        threadId,
+        'messenger',
+      );
+    }
+
+    if (!messengerConversation) {
+      throw new Error('Failed to create messenger conversation');
+    }
+
+    const message = await this.createMessage(
+      companyId,
+      conversation.facebook_page_id,
+      conversation.customer_id,
+      messengerConversation.conversation_id,
+      {
+        facebookMessageId: fbResponse.message_id,
+        messageType: messageType,
+        text: messageData.text || '',
+        attachments: dbAttachments,
+        senderType: 'staff',
+        senderId: userId,
+        senderName: userName,
+        sentAt: new Date(),
+      },
+    );
+
+    await this.updateConversation(messengerConversation.conversation_id, companyId, {
       currentHandler: 'human',
       needsAttention: false,
       assignedTo: userId,

@@ -7,6 +7,7 @@ import ChatHeader from './ChatHeader';
 import ChatMessages from './ChatMessages';
 import CommentMessages from './CommentMessages';
 import ChatInput from './ChatInput';
+import CommentInput from './CommentInput';
 import '@/styles/chat/ChatArea.css';
 
 interface ChatAreaProps {
@@ -338,6 +339,106 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
     }
   };
 
+  const handleReplyComment = async (attachedFiles?: any[]) => {
+    if ((!inputMessage.trim() && !attachedFiles?.length) || !conversationId || sending) return;
+
+    try {
+      setSending(true);
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setError('Vui lòng đăng nhập');
+        return;
+      }
+
+      let attachments: any[] = [];
+
+      if (attachedFiles && attachedFiles.length > 0) {
+        const uploadPromises = attachedFiles.map(async (fileData) => {
+          try {
+            const uploadResult = await ApiService.messaging.uploadMessageFile(token, fileData.file);
+            return {
+              type: fileData.type,
+              facebook_url: uploadResult.minio_url || '',
+              minio_url: uploadResult.minio_url,
+              minio_key: uploadResult.minio_key,
+              filename: fileData.file.name,
+            };
+          } catch (uploadErr) {
+            console.error('Failed to upload file:', fileData.file.name, uploadErr);
+            throw new Error(`Không thể tải lên file: ${fileData.file.name}`);
+          }
+        });
+
+        attachments = await Promise.all(uploadPromises);
+      }
+
+      await ApiService.messaging.replyToComment(token, conversationId, {
+        text: inputMessage || '',
+        messageType: attachments.length > 0 ? 'file' : 'text',
+        attachments: attachments.length > 0 ? attachments : undefined,
+      });
+
+      setInputMessage('');
+      
+      setTimeout(() => scrollToBottom('auto'), 50);
+    } catch (err: any) {
+      console.error('Failed to reply comment:', err);
+      setError(err.message || 'Failed to reply comment');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleSendPrivateMessage = async (attachedFiles?: any[]) => {
+    if ((!inputMessage.trim() && !attachedFiles?.length) || !conversationId || sending) return;
+
+    try {
+      setSending(true);
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setError('Vui lòng đăng nhập');
+        return;
+      }
+
+      let attachments: any[] = [];
+
+      if (attachedFiles && attachedFiles.length > 0) {
+        const uploadPromises = attachedFiles.map(async (fileData) => {
+          try {
+            const uploadResult = await ApiService.messaging.uploadMessageFile(token, fileData.file);
+            return {
+              type: fileData.type,
+              facebook_url: uploadResult.minio_url || '',
+              minio_url: uploadResult.minio_url,
+              minio_key: uploadResult.minio_key,
+              filename: fileData.file.name,
+            };
+          } catch (uploadErr) {
+            console.error('Failed to upload file:', fileData.file.name, uploadErr);
+            throw new Error(`Không thể tải lên file: ${fileData.file.name}`);
+          }
+        });
+
+        attachments = await Promise.all(uploadPromises);
+      }
+
+      await ApiService.messaging.sendPrivateMessage(token, conversationId, {
+        text: inputMessage || '',
+        messageType: attachments.length > 0 ? 'file' : 'text',
+        attachments: attachments.length > 0 ? attachments : undefined,
+      });
+
+      setInputMessage('');
+      
+      setTimeout(() => scrollToBottom('auto'), 50);
+    } catch (err: any) {
+      console.error('Failed to send private message:', err);
+      setError(err.message || 'Failed to send private message');
+    } finally {
+      setSending(false);
+    }
+  };
+
   const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -489,14 +590,26 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
         />
       )}
       
-      <ChatInput 
-        conversation={conversation}
-        inputMessage={inputMessage}
-        sending={sending}
-        onInputChange={handleInputChange}
-        onSendMessage={handleSendMessage}
-        onKeyPress={handleKeyPress}
-      />
+      {isCommentConversation ? (
+        <CommentInput 
+          conversation={conversation}
+          inputMessage={inputMessage}
+          sending={sending}
+          onInputChange={handleInputChange}
+          onReplyComment={handleReplyComment}
+          onSendPrivateMessage={handleSendPrivateMessage}
+          onKeyPress={handleKeyPress}
+        />
+      ) : (
+        <ChatInput 
+          conversation={conversation}
+          inputMessage={inputMessage}
+          sending={sending}
+          onInputChange={handleInputChange}
+          onSendMessage={handleSendMessage}
+          onKeyPress={handleKeyPress}
+        />
+      )}
     </div>
   );
 }

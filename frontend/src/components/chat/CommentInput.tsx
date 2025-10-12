@@ -3,16 +3,17 @@
 import React, { useRef, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { FacebookConversation } from '@/services/api';
-import '@/styles/chat/ChatArea.css';
+import '@/styles/chat/CommentInput.css';
 
 const Picker = dynamic(() => import('@emoji-mart/react'), { ssr: false });
 
-interface ChatInputProps {
+interface CommentInputProps {
   conversation: FacebookConversation | null;
   inputMessage: string;
   sending: boolean;
   onInputChange: (value: string) => void;
-  onSendMessage: (attachments?: UploadedFile[]) => void;
+  onReplyComment: (attachments?: UploadedFile[]) => void;
+  onSendPrivateMessage: (attachments?: UploadedFile[]) => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
 }
 
@@ -24,14 +25,15 @@ interface UploadedFile {
   cloudflare_key?: string;
 }
 
-const ChatInputChatInput = React.memo(({ 
+const CommentInputCommentInput = React.memo(({ 
   conversation, 
   inputMessage, 
   sending, 
   onInputChange, 
-  onSendMessage,
+  onReplyComment,
+  onSendPrivateMessage,
   onKeyPress 
-}: ChatInputProps) => {
+}: CommentInputProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -72,14 +74,13 @@ const ChatInputChatInput = React.memo(({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
-    const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+    const MAX_FILE_SIZE = 25 * 1024 * 1024;
     const newFiles: UploadedFile[] = [];
     const errors: string[] = [];
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       
-      // Kiểm tra kích thước file
       if (file.size > MAX_FILE_SIZE) {
         errors.push(`${file.name}: Vượt quá 25MB (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
         continue;
@@ -135,11 +136,23 @@ const ChatInputChatInput = React.memo(({
     fileInputRef.current?.click();
   };
 
-  const handleSendClick = async () => {
+  const handleReplyCommentClick = async () => {
     if (sending || uploading) return;
     if (!inputMessage.trim() && selectedFiles.length === 0) return;
     
-    onSendMessage(selectedFiles.length > 0 ? selectedFiles : undefined);
+    onReplyComment(selectedFiles.length > 0 ? selectedFiles : undefined);
+    setSelectedFiles([]);
+    
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 100);
+  };
+
+  const handleSendPrivateMessageClick = async () => {
+    if (sending || uploading) return;
+    if (!inputMessage.trim() && selectedFiles.length === 0) return;
+    
+    onSendPrivateMessage(selectedFiles.length > 0 ? selectedFiles : undefined);
     setSelectedFiles([]);
     
     setTimeout(() => {
@@ -150,14 +163,13 @@ const ChatInputChatInput = React.memo(({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) {
       e.preventDefault();
-      handleSendClick();
+      handleReplyCommentClick();
     }
   };
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onInputChange(e.target.value);
     
-    // Auto resize textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
@@ -178,13 +190,13 @@ const ChatInputChatInput = React.memo(({
   return (
     <>
       {conversation?.tags && conversation.tags.length > 0 && (
-        <div className="chat-area-tags">
-          <div className="chat-area-tags-scroll">
-            <div className="chat-area-tag-row">
+        <div className="comment-input-tags">
+          <div className="comment-input-tags-scroll">
+            <div className="comment-input-tag-row">
               {conversation.tags.map((tag, index) => (
                 <span 
                   key={index} 
-                  className="chat-area-tag-item" 
+                  className="comment-input-tag-item" 
                   style={{ backgroundColor: tagColors[index] }}
                 >
                   {tag}
@@ -195,30 +207,26 @@ const ChatInputChatInput = React.memo(({
         </div>
       )}
 
-      <div className="chat-area-input">
-        <div className="chat-area-input-container">
-          {/* Row 1: Page info bên trái + Action buttons bên phải */}
-          <div className="chat-area-input-row">
-            {/* Page info */}
-            <div className="chat-area-input-page-info">
+      <div className="comment-input-area">
+        <div className="comment-input-container">
+          <div className="comment-input-row">
+            <div className="comment-input-page-info">
               <img 
                 src={getPageAvatar()} 
                 alt="page avatar" 
-                className="chat-area-input-page-avatar"
+                className="comment-input-page-avatar"
                 onError={(e) => {
                   const img = e.target as HTMLImageElement;
                   img.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(getPageName())}&background=random&size=200`;
                 }}
               />
-              <span className="chat-area-input-page-name">{getPageName()}</span>
+              <span className="comment-input-page-name">{getPageName()}</span>
             </div>
 
-            {/* Action buttons */}
-            <div className="chat-area-input-actions">
-              {/* Emoji picker */}
+            <div className="comment-input-actions">
               <div style={{ position: 'relative' }}>
                 <button 
-                  className="chat-area-input-action-button"
+                  className="comment-input-action-button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   title="Chọn emoji"
                   type="button"
@@ -233,7 +241,7 @@ const ChatInputChatInput = React.memo(({
                 </button>
                 
                 {showEmojiPicker && emojiData && (
-                  <div className="emoji-picker-container">
+                  <div className="comment-emoji-picker-container">
                     <Picker 
                       data={emojiData}
                       onEmojiSelect={handleEmojiSelect}
@@ -246,7 +254,6 @@ const ChatInputChatInput = React.memo(({
                 )}
               </div>
 
-              {/* Image upload */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -256,7 +263,7 @@ const ChatInputChatInput = React.memo(({
                 onChange={handleFileSelect}
               />
               <button 
-                className="chat-area-input-action-button"
+                className="comment-input-action-button"
                 onClick={handleImageClick}
                 title="Chọn ảnh"
                 disabled={uploading}
@@ -269,50 +276,40 @@ const ChatInputChatInput = React.memo(({
                 </svg>
               </button>
 
-              {/* Send button */}
               <button 
-                className="chat-area-input-send-button"
-                onClick={handleSendClick}
-                title="Gửi tin nhắn"
+                className="comment-input-reply-button"
+                onClick={handleReplyCommentClick}
+                title="Trả lời bình luận công khai"
                 disabled={sending || uploading || (!inputMessage.trim() && selectedFiles.length === 0)}
                 type="button"
               >
-                {uploading ? (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" opacity="0.25"/>
-                    <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round">
-                      <animateTransform
-                        attributeName="transform"
-                        type="rotate"
-                        from="0 12 12"
-                        to="360 12 12"
-                        dur="1s"
-                        repeatCount="indefinite"
-                      />
-                    </path>
-                  </svg>
-                ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                  </svg>
-                )}
+                💬 Trả lời
+              </button>
+
+              <button 
+                className="comment-input-send-button"
+                onClick={handleSendPrivateMessageClick}
+                title="Gửi tin nhắn riêng tư"
+                disabled={sending || uploading || (!inputMessage.trim() && selectedFiles.length === 0)}
+                type="button"
+              >
+                ✉️ Nhắn tin
               </button>
             </div>
           </div>
 
-          {/* Row 2: File Preview */}
           {selectedFiles.length > 0 && (
-            <div className="chat-area-input-file-preview">
+            <div className="comment-input-file-preview">
               {selectedFiles.map((file, index) => (
-                <div key={index} className="chat-area-file-preview-item">
+                <div key={index} className="comment-file-preview-item">
                   {file.type === 'image' && (
-                    <img src={file.preview} alt="preview" className="chat-area-file-preview-image" />
+                    <img src={file.preview} alt="preview" className="comment-file-preview-image" />
                   )}
                   {file.type === 'video' && (
-                    <video src={file.preview} className="chat-area-file-preview-video" controls />
+                    <video src={file.preview} className="comment-file-preview-video" controls />
                   )}
                   {file.type === 'file' && (
-                    <div className="chat-area-file-preview-file">
+                    <div className="comment-file-preview-file">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
                         <polyline points="13 2 13 9 20 9"/>
@@ -321,7 +318,7 @@ const ChatInputChatInput = React.memo(({
                     </div>
                   )}
                   <button
-                    className="chat-area-file-preview-remove"
+                    className="comment-file-preview-remove"
                     onClick={() => handleRemoveFile(index)}
                     type="button"
                     disabled={sending || uploading}
@@ -336,12 +333,11 @@ const ChatInputChatInput = React.memo(({
             </div>
           )}
 
-          {/* Row 3: Textarea input */}
-          <div className="chat-area-input-textarea-container">
+          <div className="comment-input-textarea-container">
             <textarea
               ref={textareaRef}
-              className="chat-area-message-textarea"
-              placeholder="Nhập tin nhắn..."
+              className="comment-message-textarea"
+              placeholder="Nhập bình luận hoặc tin nhắn..."
               value={inputMessage}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
@@ -355,7 +351,7 @@ const ChatInputChatInput = React.memo(({
   );
 });
 
-ChatInputChatInput.displayName = 'ChatInputChatInput';
+CommentInputCommentInput.displayName = 'CommentInputCommentInput';
 
-export default ChatInputChatInput;
+export default CommentInputCommentInput;
 

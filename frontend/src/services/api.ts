@@ -400,6 +400,7 @@ export interface FacebookMessage {
   customer_id: string;
   conversation_id: string;
   facebook_message_id?: string;
+  parent_message_id?: string;
   
   message_type: 'text' | 'image' | 'file' | 'comment' | 'quick_reply' | 'postback';
   text: string;
@@ -1707,6 +1708,76 @@ const ApiService = {
         return data.data;
       } catch (error) {
         console.error('Reply to conversation error:', error);
+        throw error;
+      }
+    },
+
+    // Reply to comment (public)
+    replyToComment: async (
+      token: string,
+      conversationId: string,
+      messageData: {
+        text: string;
+        messageType?: string;
+        attachments?: any[];
+      }
+    ): Promise<any> => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}/reply-comment`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messageData),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to reply comment');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Reply to comment error:', error);
+        throw error;
+      }
+    },
+
+    // Send private message from comment
+    sendPrivateMessage: async (
+      token: string,
+      conversationId: string,
+      messageData: {
+        text: string;
+        messageType?: string;
+        attachments?: any[];
+      }
+    ): Promise<any> => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/conversations/${conversationId}/send-private-message`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(messageData),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to send private message');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Send private message error:', error);
         throw error;
       }
     },

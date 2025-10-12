@@ -308,6 +308,72 @@ export class FacebookMessagingController {
     }
   }
 
+  @Post('conversations/:conversationId/reply-comment')
+  async replyToComment(
+    @Request() req,
+    @Param('conversationId') conversationId: string,
+    @Body() messageData: ReplyMessageDto,
+  ) {
+    try {
+      const companyId = req.user.company_id;
+      const userId = req.user.user_id;
+      const userName = req.user.full_name || req.user.name || req.user.email;
+      
+      const message = await this.messagingService.replyToComment(
+        conversationId,
+        companyId,
+        userId,
+        userName,
+        messageData,
+      );
+      
+      return {
+        success: true,
+        data: message,
+        message: 'Comment reply sent successfully',
+      };
+    } catch (error) {
+      this.logger.error('Failed to reply to comment:', error);
+      throw new HttpException(
+        error.message || 'Failed to send comment reply',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('conversations/:conversationId/send-private-message')
+  async sendPrivateMessage(
+    @Request() req,
+    @Param('conversationId') conversationId: string,
+    @Body() messageData: ReplyMessageDto,
+  ) {
+    try {
+      const companyId = req.user.company_id;
+      const userId = req.user.user_id;
+      const userName = req.user.full_name || req.user.name || req.user.email;
+      
+      const message = await this.messagingService.sendPrivateMessage(
+        conversationId,
+        companyId,
+        userId,
+        userName,
+        messageData,
+      );
+      
+      return {
+        success: true,
+        data: message,
+        message: 'Private message sent successfully',
+      };
+    } catch (error) {
+      this.logger.error('Failed to send private message:', error);
+      throw new HttpException(
+        error.message || 'Failed to send private message',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   // ===== CONVERSATION ACTIONS =====
 
   @Post('conversations/:conversationId/assign')
