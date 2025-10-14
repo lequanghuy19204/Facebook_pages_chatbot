@@ -145,16 +145,6 @@ export default function ConversationTags({ conversation, onTagsUpdate }: Convers
     }
   }, [conversation?.conversation_id, conversation?.tags, onTagsUpdate]);
 
-  const chunkTags = (tags: TagWithState[], size: number): TagWithState[][] => {
-    const chunks: TagWithState[][] = [];
-    for (let i = 0; i < tags.length; i += size) {
-      chunks.push(tags.slice(i, i + size));
-    }
-    return chunks;
-  };
-
-  const tagRows = chunkTags(allTags, 8);
-
   if (!conversation || allTags.length === 0) {
     return null;
   }
@@ -162,21 +152,19 @@ export default function ConversationTags({ conversation, onTagsUpdate }: Convers
   return (
     <div className="conversation-tags-wrapper-ConversationTags">
       <div className="conversation-tags-container-ConversationTags">
-        {tagRows.map((rowTags, rowIndex) => (
-          <div key={rowIndex} className="conversation-tags-row-ConversationTags">
-            {rowTags.map((tag) => (
-              <div
-                key={tag.tag_id}
-                className={`conversation-tag-item-ConversationTags ${tag.active ? 'active' : ''}`}
-                style={{ backgroundColor: tag.tag_color }}
-                onClick={() => handleTagClick(tag)}
-                title={tag.tag_name}
-              >
-                <span className="tag-text-ConversationTags">{tag.tag_name}</span>
-              </div>
-            ))}
-          </div>
-        ))}
+        <div className="conversation-tags-row-ConversationTags">
+          {allTags.map((tag) => (
+            <div
+              key={tag.tag_id}
+              className={`conversation-tag-item-ConversationTags ${tag.active ? 'active' : ''}`}
+              style={{ backgroundColor: tag.tag_color }}
+              onClick={() => handleTagClick(tag)}
+              title={tag.tag_name}
+            >
+              <span className="tag-text-ConversationTags">{tag.tag_name}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
