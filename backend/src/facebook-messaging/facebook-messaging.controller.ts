@@ -308,6 +308,9 @@ export class FacebookMessagingController {
       const userId = req.user.user_id;
       const userName = req.user.full_name || req.user.name || req.user.email;
       
+      this.logger.log(`📨 Reply request body:`, JSON.stringify(messageData, null, 2));
+      this.logger.log(`📨 Text: "${messageData.text}", Type: ${messageData.messageType}, Attachments: ${messageData.attachments?.length || 0}`);
+      
       const message = await this.messagingService.replyToConversation(
         conversationId,
         companyId,
@@ -323,6 +326,7 @@ export class FacebookMessagingController {
       };
     } catch (error) {
       this.logger.error('Failed to reply to conversation:', error);
+      this.logger.error('Error stack:', error.stack);
       throw new HttpException(
         error.message || 'Failed to send message',
         error.status || HttpStatus.INTERNAL_SERVER_ERROR,

@@ -8,6 +8,7 @@ import ChatMessages from './ChatMessages';
 import CommentMessages from './CommentMessages';
 import ChatInput from './ChatInput';
 import CommentInput from './CommentInput';
+import { toast } from 'react-toastify';
 import '@/styles/chat/ChatArea.css';
 
 interface ChatAreaProps {
@@ -290,7 +291,17 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
   }, [conversationId, isNearBottom, isInitialLoad]);
 
   const handleSendMessage = async (attachedFiles?: any[]) => {
-    if ((!inputMessage.trim() && !attachedFiles?.length) || !conversationId || sending) return;
+    const trimmedMessage = inputMessage.trim();
+    
+    if (!trimmedMessage && !attachedFiles?.length) {
+      console.log('❌ Cannot send empty message');
+      return;
+    }
+    
+    if (!conversationId || sending) {
+      console.log('❌ No conversation or already sending');
+      return;
+    }
 
     try {
       setSending(true);
@@ -322,25 +333,47 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
         attachments = await Promise.all(uploadPromises);
       }
 
-      await ApiService.messaging.replyToConversation(token, conversationId, {
-        text: inputMessage || '',
+      const payload: any = {
         messageType: attachments.length > 0 ? 'file' : 'text',
-        attachments: attachments.length > 0 ? attachments : undefined,
-      });
+      };
+      
+      if (trimmedMessage) {
+        payload.text = trimmedMessage;
+      }
+      
+      if (attachments.length > 0) {
+        payload.attachments = attachments;
+      }
+
+      console.log('📤 Sending message payload:', payload);
+
+      await ApiService.messaging.replyToConversation(token, conversationId, payload);
 
       setInputMessage('');
       
       setTimeout(() => scrollToBottom('auto'), 50);
     } catch (err: any) {
       console.error('Failed to send message:', err);
-      setError(err.message || 'Failed to send message');
+      
+      // Hiển thị error message rõ ràng
+      const errorMessage = err.message || 'Failed to send message';
+      
+      // Check for specific error patterns
+      if (errorMessage.includes('24 giờ') || errorMessage.includes('24h')) {
+        toast.warning(errorMessage, { autoClose: 5000 });
+      } else {
+        toast.error(`Lỗi gửi tin nhắn: ${errorMessage}`, { autoClose: 4000 });
+      }
     } finally {
       setSending(false);
     }
   };
 
   const handleReplyComment = async (attachedFiles?: any[]) => {
-    if ((!inputMessage.trim() && !attachedFiles?.length) || !conversationId || sending) return;
+    const trimmedMessage = inputMessage.trim();
+    
+    if (!trimmedMessage && !attachedFiles?.length) return;
+    if (!conversationId || sending) return;
 
     try {
       setSending(true);
@@ -372,25 +405,44 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
         attachments = await Promise.all(uploadPromises);
       }
 
-      await ApiService.messaging.replyToComment(token, conversationId, {
-        text: inputMessage || '',
+      const payload: any = {
         messageType: attachments.length > 0 ? 'file' : 'text',
-        attachments: attachments.length > 0 ? attachments : undefined,
-      });
+      };
+      
+      if (trimmedMessage) {
+        payload.text = trimmedMessage;
+      }
+      
+      if (attachments.length > 0) {
+        payload.attachments = attachments;
+      }
+
+      await ApiService.messaging.replyToComment(token, conversationId, payload);
 
       setInputMessage('');
       
       setTimeout(() => scrollToBottom('auto'), 50);
     } catch (err: any) {
       console.error('Failed to reply comment:', err);
-      setError(err.message || 'Failed to reply comment');
+      
+      // Hiển thị error message rõ ràng
+      const errorMessage = err.message || 'Failed to reply comment';
+      
+      if (errorMessage.includes('24 giờ') || errorMessage.includes('24h')) {
+        toast.warning(errorMessage, { autoClose: 5000 });
+      } else {
+        toast.error(`Lỗi trả lời bình luận: ${errorMessage}`, { autoClose: 4000 });
+      }
     } finally {
       setSending(false);
     }
   };
 
   const handleSendPrivateMessage = async (attachedFiles?: any[]) => {
-    if ((!inputMessage.trim() && !attachedFiles?.length) || !conversationId || sending) return;
+    const trimmedMessage = inputMessage.trim();
+    
+    if (!trimmedMessage && !attachedFiles?.length) return;
+    if (!conversationId || sending) return;
 
     try {
       setSending(true);
@@ -422,18 +474,34 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
         attachments = await Promise.all(uploadPromises);
       }
 
-      await ApiService.messaging.sendPrivateMessage(token, conversationId, {
-        text: inputMessage || '',
+      const payload: any = {
         messageType: attachments.length > 0 ? 'file' : 'text',
-        attachments: attachments.length > 0 ? attachments : undefined,
-      });
+      };
+      
+      if (trimmedMessage) {
+        payload.text = trimmedMessage;
+      }
+      
+      if (attachments.length > 0) {
+        payload.attachments = attachments;
+      }
+
+      await ApiService.messaging.sendPrivateMessage(token, conversationId, payload);
 
       setInputMessage('');
       
       setTimeout(() => scrollToBottom('auto'), 50);
     } catch (err: any) {
       console.error('Failed to send private message:', err);
-      setError(err.message || 'Failed to send private message');
+      
+      // Hiển thị error message rõ ràng
+      const errorMessage = err.message || 'Failed to send private message';
+      
+      if (errorMessage.includes('24 giờ') || errorMessage.includes('24h')) {
+        toast.warning(errorMessage, { autoClose: 5000 });
+      } else {
+        toast.error(`Lỗi gửi tin nhắn riêng: ${errorMessage}`, { autoClose: 4000 });
+      }
     } finally {
       setSending(false);
     }

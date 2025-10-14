@@ -766,6 +766,12 @@ export class FacebookMessagingService {
       }
     } catch (error) {
       this.logger.error('Failed to send message to Facebook:', error.response?.data || error.message);
+      
+      // Check for 24-hour window error
+      if (error.response?.data?.error?.error_subcode === 2018278) {
+        throw new Error('❌ Không thể gửi tin nhắn: Đã quá 24 giờ kể từ lần cuối khách hàng nhắn tin. Vui lòng đợi khách hàng nhắn tin lại.');
+      }
+      
       throw error;
     }
   }

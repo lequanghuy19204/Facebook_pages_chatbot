@@ -3,6 +3,7 @@
 import React, { useRef, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { FacebookConversation } from '@/services/api';
+import { toast } from 'react-toastify';
 import '@/styles/chat/ChatArea.css';
 
 const Picker = dynamic(() => import('@emoji-mart/react'), { ssr: false });
@@ -100,7 +101,7 @@ const ChatInputChatInput = React.memo(({
     }
     
     if (errors.length > 0) {
-      alert(`Một số file không thể tải lên:\n${errors.join('\n')}`);
+      toast.error(`Một số file không thể tải lên:\n${errors.join('\n')}`, { autoClose: 4000 });
     }
     
     setSelectedFiles(prev => [...prev, ...newFiles]);

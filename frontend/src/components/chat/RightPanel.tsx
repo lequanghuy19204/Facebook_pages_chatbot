@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import '@/styles/chat/RightPanel.css';
 import api from '@/services/api';
+import { toast } from 'react-toastify';
 
 interface RightPanelProps {
   conversationId: string | null;
@@ -50,7 +51,7 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
     
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       if (!token) {
         throw new Error('No authentication token');
       }
@@ -70,7 +71,7 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    alert(`Đã copy ${label}`);
+    toast.success(`Đã copy ${label}`, { autoClose: 2000 });
   };
 
   const handleEdit = () => {
@@ -87,7 +88,7 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
     if (!customer) return;
     
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       if (!token) {
         throw new Error('No authentication token');
       }
@@ -95,10 +96,10 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
       await api.messaging.updateCustomer(token, customer.customer_id, editedCustomer);
       setCustomer({ ...customer, ...editedCustomer });
       setEditMode(false);
-      alert('Đã cập nhật thông tin khách hàng');
+      toast.success('Đã cập nhật thông tin khách hàng');
     } catch (error) {
       console.error('Failed to update customer:', error);
-      alert('Lỗi khi cập nhật thông tin');
+      toast.error('Lỗi khi cập nhật thông tin');
     }
   };
 
