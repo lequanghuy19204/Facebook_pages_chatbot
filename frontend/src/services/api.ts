@@ -1925,6 +1925,59 @@ const ApiService = {
         throw error;
       }
     },
+
+    // Get single customer
+    getCustomer: async (token: string, customerId: string): Promise<any> => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/customers/${customerId}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to get customer');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Get customer error:', error);
+        throw error;
+      }
+    },
+
+    // Update customer
+    updateCustomer: async (token: string, customerId: string, updateData: any): Promise<any> => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/facebook-messaging/customers/${customerId}`,
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updateData),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to update customer');
+        }
+
+        const data = await response.json();
+        return data.data;
+      } catch (error) {
+        console.error('Update customer error:', error);
+        throw error;
+      }
+    },
   },
 
   // ===== TAGS API =====

@@ -51,6 +51,28 @@ export class FacebookMessagingController {
     }
   }
 
+  @Get('customers/:customerId')
+  async getCustomer(
+    @Request() req,
+    @Param('customerId') customerId: string,
+  ) {
+    try {
+      const companyId = req.user.company_id;
+      const customer = await this.messagingService.getCustomer(customerId, companyId);
+      
+      return {
+        success: true,
+        data: customer,
+      };
+    } catch (error) {
+      this.logger.error('Failed to get customer:', error);
+      throw new HttpException(
+        error.message || 'Failed to get customer',
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Put('customers/:customerId')
   async updateCustomer(
     @Request() req,

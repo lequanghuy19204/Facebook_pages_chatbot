@@ -190,6 +190,19 @@ export class FacebookMessagingService {
       .limit(50);
   }
 
+  async getCustomer(customerId: string, companyId: string): Promise<FacebookCustomerDocument> {
+    const customer = await this.customerModel.findOne({
+      customer_id: customerId,
+      company_id: companyId,
+    });
+
+    if (!customer) {
+      throw new NotFoundException('Customer not found');
+    }
+
+    return customer;
+  }
+
   // ===== CONVERSATION MANAGEMENT =====
 
   async findOrCreateConversation(
