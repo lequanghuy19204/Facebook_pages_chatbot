@@ -325,7 +325,7 @@
 
 .chat-list-tag {
   height: 16px;
-  padding: 2px 6.7px;
+  padding: 2px 6px;
   border-radius: 8px;
   font-family: 'Roboto', sans-serif;
   font-size: 10px;
@@ -348,6 +348,24 @@
 
 .chat-list-tag-2 {
   background-color: rgba(75, 89, 94, 1);
+}
+
+.chat-list-tag-more {
+  height: 16px;
+  padding: 2px 6.7px;
+  border-radius: 8px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+  color: rgba(80, 109, 173, 1);
+  background-color: rgba(234, 236, 240, 1);
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .chat-list-icons-group {

@@ -8,6 +8,7 @@ import ChatMessages from './ChatMessages';
 import CommentMessages from './CommentMessages';
 import ChatInput from './ChatInput';
 import CommentInput from './CommentInput';
+import ConversationTags from './ConversationTags';
 import { toast } from 'react-toastify';
 import '@/styles/chat/ChatArea.css';
 
@@ -283,10 +284,18 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
       }
     };
 
+    const handleConversationUpdated = (data: any) => {
+      if (data.conversation_id === conversationId) {
+        setConversation(prev => prev ? { ...prev, ...data } : data);
+      }
+    };
+
     socketService.onNewMessage(handleNewMessage);
+    socketService.onConversationUpdated(handleConversationUpdated);
 
     return () => {
       socketService.off('new_message', handleNewMessage);
+      socketService.off('conversation_updated', handleConversationUpdated);
     };
   }, [conversationId, isNearBottom, isInitialLoad]);
 
@@ -587,6 +596,10 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
     }
   };
 
+  const handleTagsUpdate = (tags: string[]) => {
+    setConversation(prev => prev ? { ...prev, tags } : null);
+  };
+
   const handleScrollToBottom = () => {
     setShowNewMessageBadge(false);
     scrollToBottom('auto');
@@ -657,6 +670,11 @@ export default function ChatArea({ conversationId, onToggleRightPanel, showRight
           onScrollToBottom={handleScrollToBottom}
         />
       )}
+      
+      <ConversationTags 
+        conversation={conversation}
+        onTagsUpdate={handleTagsUpdate}
+      />
       
       {isCommentConversation ? (
         <CommentInput 

@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import '@/styles/chat/ChatList.css';
-import ApiService, { FacebookConversation } from '@/services/api';
+import ApiService, { FacebookConversation, FacebookTag } from '@/services/api';
 import socketService from '@/services/socket';
 
 interface ChatListProps {
@@ -18,6 +18,35 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<'all' | 'messenger' | 'comment'>('all');
+  const [tagsMap, setTagsMap] = useState<Map<string, FacebookTag>>(new Map());
+
+  // Load tags from cache for all pages
+  const loadAllTagsFromCache = () => {
+    if (typeof window === 'undefined') return;
+    
+    const newTagsMap = new Map<string, FacebookTag>();
+    const cacheKeys = Object.keys(localStorage).filter(key => key.startsWith('conversation_tags_cache_'));
+    
+    cacheKeys.forEach(cacheKey => {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          const CACHE_DURATION = 5 * 60 * 1000; // 5 phút
+          
+          if (Date.now() - timestamp < CACHE_DURATION) {
+            (data as FacebookTag[]).forEach(tag => {
+              newTagsMap.set(tag.tag_id, tag);
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading tags from cache:', error);
+      }
+    });
+    
+    setTagsMap(newTagsMap);
+  };
 
   // Fetch conversations from API
   const fetchConversations = async () => {
@@ -76,6 +105,9 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
       });
       
       setConversations(sortedConversations);
+      
+      // Load tags after fetching conversations
+      loadAllTagsFromCache();
     } catch (err: any) {
       console.error('Failed to fetch conversations:', err);
       setError(err.message || 'Failed to load conversations');
@@ -83,6 +115,11 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
       setLoading(false);
     }
   };
+
+  // Load tags on mount
+  useEffect(() => {
+    loadAllTagsFromCache();
+  }, []);
 
   // Initial load - reload khi user.merged_pages_filter thay đổi
   useEffect(() => {
@@ -359,11 +396,24 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
                     <div className="chat-list-tags-container">
                       {conversation.tags && conversation.tags.length > 0 && (
                         <>
-                          {conversation.tags.map((tag, index) => (
-                            <span key={index} className={`chat-list-tag chat-list-tag-${index % 3}`}>
-                              {tag}
+                          {conversation.tags.slice(0, 3).map((tagId, index) => {
+                            const tag = tagsMap.get(tagId);
+                            if (!tag) return null;
+                            return (
+                              <span 
+                                key={tagId} 
+                                className={`chat-list-tag chat-list-tag-${index % 3}`}
+                                style={{ backgroundColor: tag.tag_color }}
+                              >
+                                {tag.tag_name}
+                              </span>
+                            );
+                          })}
+                          {conversation.tags.length > 3 && (
+                            <span className="chat-list-tag-more">
+                              +{conversation.tags.length - 3}
                             </span>
-                          ))}
+                          )}
                         </>
                       )}
                     </div>

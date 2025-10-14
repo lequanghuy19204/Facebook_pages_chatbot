@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { FacebookConversation } from '@/services/api';
 import { toast } from 'react-toastify';
@@ -41,15 +41,6 @@ const CommentInputCommentInput = React.memo(({
   const [emojiData, setEmojiData] = useState<any>(null);
   const [selectedFiles, setSelectedFiles] = useState<UploadedFile[]>([]);
   const [uploading, setUploading] = useState(false);
-
-  const tagColors = useMemo(() => {
-    if (!conversation?.tags) return [];
-    return conversation.tags.map((tag) => {
-      const hash = Array.from(tag).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      const hue = hash % 360;
-      return `hsla(${hue}, 60%, 70%, 0.4)`;
-    });
-  }, [conversation?.tags]);
 
   React.useEffect(() => {
     const loadEmojiData = async () => {
@@ -190,24 +181,6 @@ const CommentInputCommentInput = React.memo(({
 
   return (
     <>
-      {conversation?.tags && conversation.tags.length > 0 && (
-        <div className="comment-input-tags">
-          <div className="comment-input-tags-scroll">
-            <div className="comment-input-tag-row">
-              {conversation.tags.map((tag, index) => (
-                <span 
-                  key={index} 
-                  className="comment-input-tag-item" 
-                  style={{ backgroundColor: tagColors[index] }}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="comment-input-area">
         <div className="comment-input-container">
           <div className="comment-input-row">

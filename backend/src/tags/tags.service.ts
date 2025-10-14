@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { FacebookTag, FacebookTagDocument } from '../schemas/facebook-tag.schema';
@@ -6,6 +6,7 @@ import { FacebookConversation, FacebookConversationDocument } from '../schemas/f
 import { FacebookCustomer, FacebookCustomerDocument } from '../schemas/facebook-customer.schema';
 import { FacebookPage, FacebookPageDocument } from '../schemas/facebook-page.schema';
 import { CreateTagDto, UpdateTagDto, QueryTagsDto } from '../dto/tag.dto';
+import { MessagingGateway } from '../websocket/messaging.gateway';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
@@ -15,6 +16,7 @@ export class TagsService {
     @InjectModel(FacebookConversation.name) private conversationModel: Model<FacebookConversationDocument>,
     @InjectModel(FacebookCustomer.name) private customerModel: Model<FacebookCustomerDocument>,
     @InjectModel(FacebookPage.name) private pageModel: Model<FacebookPageDocument>,
+    @Inject(forwardRef(() => MessagingGateway)) private messagingGateway: MessagingGateway,
   ) {}
 
   // ==================== CRUD OPERATIONS ====================
@@ -258,6 +260,12 @@ export class TagsService {
       );
     }
 
+    // Broadcast tags update via WebSocket
+    this.messagingGateway.emitConversationUpdate(companyId, {
+      conversation_id: conversationId,
+      tags: tagIds,
+    });
+
     return conversation;
   }
 
@@ -287,6 +295,12 @@ export class TagsService {
       { tag_id: tagId },
       { $inc: { usage_count: -1 } }
     );
+
+    // Broadcast tags update via WebSocket
+    this.messagingGateway.emitConversationUpdate(companyId, {
+      conversation_id: conversationId,
+      tags: conversation.tags,
+    });
 
     return conversation;
   }

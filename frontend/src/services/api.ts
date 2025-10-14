@@ -2133,6 +2133,61 @@ const ApiService = {
         throw error;
       }
     },
+
+    // Assign tags to conversation
+    assignTagsToConversation: async (
+      token: string,
+      conversationId: string,
+      tagIds: string[]
+    ): Promise<{ success: boolean; data: any }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tags/conversations/${conversationId}/tags`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ tag_ids: tagIds }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to assign tags');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Assign tags error:', error);
+        throw error;
+      }
+    },
+
+    // Remove tag from conversation
+    removeTagFromConversation: async (
+      token: string,
+      conversationId: string,
+      tagId: string
+    ): Promise<{ success: boolean; message: string }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/tags/conversations/${conversationId}/tags/${tagId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to remove tag');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Remove tag error:', error);
+        throw error;
+      }
+    },
   },
 };
 export default ApiService;

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TagsController } from './tags.controller';
 import { TagsService } from './tags.service';
@@ -7,6 +7,7 @@ import { FacebookConversation, FacebookConversationSchema } from '../schemas/fac
 import { FacebookCustomer, FacebookCustomerSchema } from '../schemas/facebook-customer.schema';
 import { FacebookPage, FacebookPageSchema } from '../schemas/facebook-page.schema';
 import { AuthModule } from '../auth/auth.module';
+import { WebsocketModule } from '../websocket/websocket.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuthModule } from '../auth/auth.module';
       { name: FacebookPage.name, schema: FacebookPageSchema },
     ]),
     AuthModule,
+    forwardRef(() => WebsocketModule),
   ],
   controllers: [TagsController],
   providers: [TagsService],
