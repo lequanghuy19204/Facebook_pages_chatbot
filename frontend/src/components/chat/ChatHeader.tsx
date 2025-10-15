@@ -96,7 +96,7 @@ const ChatHeader = React.memo(({
           title={conversation?.current_handler === 'chatbot' ? 'Chuyển sang xử lý thủ công' : 'Chuyển về chatbot'}
         >
           {conversation?.current_handler === 'chatbot' ? (
-            <img src="/chatbot.svg" alt="toggle-handler" className='chat-area-icon-button-img'/>
+            <img src="/chat-bot.svg" alt="toggle-handler" className='chat-area-icon-button-img'/>
           ) : (
             <img src="/human.svg" alt="toggle-handler" className='chat-area-icon-button-img'/>
           )}

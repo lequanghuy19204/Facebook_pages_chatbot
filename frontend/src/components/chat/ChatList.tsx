@@ -20,6 +20,44 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
   const [filterSource, setFilterSource] = useState<'all' | 'messenger' | 'comment'>('all');
   const [tagsMap, setTagsMap] = useState<Map<string, FacebookTag>>(new Map());
 
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 phút
+
+  // Get cache key for a page
+  const getCacheKey = (pageId: string) => {
+    return `conversation_tags_cache_${pageId}`;
+  };
+
+  // Load tags from cache for a specific page
+  const loadTagsFromCache = (pageId: string): FacebookTag[] | null => {
+    if (typeof window === 'undefined') return null;
+    
+    const cacheKey = getCacheKey(pageId);
+    const cached = localStorage.getItem(cacheKey);
+    if (!cached) return null;
+    
+    try {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return data;
+      }
+      localStorage.removeItem(cacheKey);
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Save tags to cache for a specific page
+  const saveTagsToCache = (pageId: string, tags: FacebookTag[]) => {
+    if (typeof window === 'undefined') return;
+    
+    const cacheKey = getCacheKey(pageId);
+    localStorage.setItem(cacheKey, JSON.stringify({
+      data: tags,
+      timestamp: Date.now(),
+    }));
+  };
+
   // Load tags from cache for all pages
   const loadAllTagsFromCache = () => {
     if (typeof window === 'undefined') return;
@@ -32,7 +70,6 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
           const { data, timestamp } = JSON.parse(cached);
-          const CACHE_DURATION = 5 * 60 * 1000; // 5 phút
           
           if (Date.now() - timestamp < CACHE_DURATION) {
             (data as FacebookTag[]).forEach(tag => {
@@ -46,6 +83,43 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
     });
     
     setTagsMap(newTagsMap);
+  };
+
+  // Fetch and cache tags for all unique pages in conversations
+  const fetchAndCacheTagsForAllPages = async (conversations: FacebookConversation[]) => {
+    if (typeof window === 'undefined') return;
+    
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+
+    // Get unique page IDs from conversations
+    const uniquePageIds = [...new Set(conversations.map(c => c.facebook_page_id).filter(Boolean))];
+    
+    console.log(`📥 Fetching tags for ${uniquePageIds.length} pages...`);
+
+    // Fetch tags for each page that doesn't have valid cache
+    const fetchPromises = uniquePageIds.map(async (pageId) => {
+      const cachedTags = loadTagsFromCache(pageId);
+      if (cachedTags) {
+        console.log(`✅ Page ${pageId}: Loaded ${cachedTags.length} tags from cache`);
+        return;
+      }
+
+      try {
+        console.log(`📥 Fetching tags for page ${pageId}...`);
+        const response = await ApiService.tags.getTags(token, { facebook_page_id: pageId });
+        const tags = response.data || [];
+        console.log(`✅ Page ${pageId}: Fetched ${tags.length} tags`);
+        saveTagsToCache(pageId, tags);
+      } catch (error) {
+        console.error(`❌ Failed to fetch tags for page ${pageId}:`, error);
+      }
+    });
+
+    await Promise.all(fetchPromises);
+    
+    // Reload all tags from cache to update tagsMap
+    loadAllTagsFromCache();
   };
 
   // Fetch conversations from API
@@ -106,8 +180,8 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
       
       setConversations(sortedConversations);
       
-      // Load tags after fetching conversations
-      loadAllTagsFromCache();
+      // Fetch and cache tags for all pages in conversations
+      await fetchAndCacheTagsForAllPages(sortedConversations);
     } catch (err: any) {
       console.error('Failed to fetch conversations:', err);
       setError(err.message || 'Failed to load conversations');
@@ -115,11 +189,6 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
       setLoading(false);
     }
   };
-
-  // Load tags on mount
-  useEffect(() => {
-    loadAllTagsFromCache();
-  }, []);
 
   // Initial load - reload khi user.merged_pages_filter thay đổi
   useEffect(() => {
@@ -249,6 +318,14 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
     // Listen for new conversations
     const handleNewConversation = (data: any) => {
       setConversations(prev => [data, ...prev]);
+      
+      // Fetch tags for the new conversation's page if not cached
+      if (data.facebook_page_id) {
+        const cachedTags = loadTagsFromCache(data.facebook_page_id);
+        if (!cachedTags) {
+          fetchAndCacheTagsForAllPages([data]);
+        }
+      }
     };
 
     socketService.onNewMessage(handleNewMessage);

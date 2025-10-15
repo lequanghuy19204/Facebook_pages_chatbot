@@ -64,27 +64,27 @@ export default function ConversationTags({ conversation, onTagsUpdate }: Convers
 
   const fetchTags = useCallback(async (pageId: string) => {
     if (typeof window === 'undefined') return;
-    
-    const token = localStorage.getItem('auth_token');
-    if (!token) return;
 
     const cachedTags = loadTagsFromCache(pageId);
     if (cachedTags) {
-      console.log(`✅ Loaded ${cachedTags.length} tags from cache for page ${pageId}`);
+      console.log(`✅ ConversationTags: Loaded ${cachedTags.length} tags from cache for page ${pageId}`);
       updateTagsWithConversation(cachedTags);
       return;
     }
 
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+
     try {
       setLoading(true);
-      console.log(`📥 Fetching tags for page ${pageId}...`);
+      console.log(`📥 ConversationTags: Fetching tags for page ${pageId}...`);
       const response = await ApiService.tags.getTags(token, { facebook_page_id: pageId });
       const tags = response.data || [];
-      console.log(`✅ Fetched ${tags.length} tags for page ${pageId}`);
+      console.log(`✅ ConversationTags: Fetched ${tags.length} tags for page ${pageId}`);
       saveTagsToCache(pageId, tags);
       updateTagsWithConversation(tags);
     } catch (error) {
-      console.error('Failed to fetch tags:', error);
+      console.error('ConversationTags: Failed to fetch tags:', error);
     } finally {
       setLoading(false);
     }
