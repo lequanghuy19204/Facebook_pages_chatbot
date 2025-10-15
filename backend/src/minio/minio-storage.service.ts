@@ -341,7 +341,7 @@ export class MinioStorageService {
   async downloadAndUploadMultipleFromUrls(
     urls: string[],
     folder: string
-  ): Promise<MinioStorageUploadResult[]> {
+  ): Promise<(MinioStorageUploadResult | null)[]> {
     if (!urls || urls.length === 0) {
       return [];
     }
@@ -354,19 +354,20 @@ export class MinioStorageService {
 
     const results = await Promise.allSettled(uploadPromises);
 
-    const successfulUploads: MinioStorageUploadResult[] = [];
-    
-    results.forEach((result, index) => {
+    // GIỮ NGUYÊN INDEX - Trả về null cho files thất bại
+    const uploadsWithIndex: (MinioStorageUploadResult | null)[] = results.map((result, index) => {
       if (result.status === 'fulfilled' && result.value) {
-        successfulUploads.push(result.value);
+        return result.value;
       } else {
-        this.logger.warn(`Failed to upload file from URL: ${urls[index]}`);
+        this.logger.warn(`Failed to upload file ${index} from URL: ${urls[index].substring(0, 100)}`);
+        return null;
       }
     });
 
-    this.logger.log(`Successfully uploaded ${successfulUploads.length}/${urls.length} files`);
+    const successCount = uploadsWithIndex.filter(r => r !== null).length;
+    this.logger.log(`Successfully uploaded ${successCount}/${urls.length} files`);
 
-    return successfulUploads;
+    return uploadsWithIndex;
   }
 }
 

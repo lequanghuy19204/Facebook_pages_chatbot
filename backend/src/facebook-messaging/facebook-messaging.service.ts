@@ -471,6 +471,13 @@ export class FacebookMessagingService {
     return conversation;
   }
 
+  async findConversationByThreadId(threadId: string): Promise<FacebookConversationDocument | null> {
+    return await this.conversationModel.findOne({
+      facebook_thread_id: threadId,
+      status: 'open',
+    }).sort({ created_at: -1 });
+  }
+
   async assignConversation(conversationId: string, companyId: string, assignedTo: string): Promise<FacebookConversationDocument> {
     return await this.updateConversation(conversationId, companyId, {
       assignedTo,

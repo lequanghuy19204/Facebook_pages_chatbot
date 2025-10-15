@@ -237,7 +237,31 @@ export class FacebookWebhookController {
         return;
       }
 
-      // Tìm hoặc tạo customer (luôn dùng customer ID thực, không phải page ID)
+      // CHỈ xử lý events có nội dung thực (message/postback)
+      // KHÔNG tạo conversation cho delivery/read confirmations
+      if (!event.message && !event.postback) {
+        this.logger.log(`[processMessagingEvent] ℹ️  Skipping non-content event (delivery/read confirmation) - no conversation needed`);
+        
+        // Nếu cần xử lý delivery/read, TÌM conversation hiện có (không tạo mới)
+        if (event.delivery || event.read) {
+          const threadId = `messenger_${facebookPageId}_${facebookUserId}`;
+          const existingConversation = await this.messagingService.findConversationByThreadId(threadId);
+          
+          if (existingConversation) {
+            if (event.delivery) {
+              await this.processDelivery(existingConversation, event.delivery);
+            }
+            if (event.read) {
+              await this.processRead(existingConversation, event.read);
+            }
+          } else {
+            this.logger.log(`[processMessagingEvent] No existing conversation found for delivery/read confirmation`);
+          }
+        }
+        return;
+      }
+
+      // Tìm hoặc tạo customer (CHỈ khi có message/postback thật)
       const customer = await this.messagingService.findOrCreateCustomer(
         page.company_id,
         facebookPageId,
@@ -266,16 +290,6 @@ export class FacebookWebhookController {
       if (event.postback) {
         await this.processPostback(page, customer, conversation, event.postback, timestamp);
       }
-
-      // Process delivery confirmation
-      if (event.delivery) {
-        await this.processDelivery(conversation, event.delivery);
-      }
-
-      // Process read confirmation
-      if (event.read) {
-        await this.processRead(conversation, event.read);
-      }
     } catch (error) {
       this.logger.error('[processMessagingEvent] Error:', error);
     }
@@ -296,34 +310,53 @@ export class FacebookWebhookController {
       const existingMessage = await this.messagingService.findMessageByFacebookId(message.mid);
       
       if (isEcho) {
-        // NẾU LÀ ECHO: Tìm message gần đây nhất từ staff trong conversation để cập nhật facebook_message_id
-        this.logger.log(`[processMessage] 🔄 Processing echo message (app_id: ${message.app_id})`);
+        // NẾU LÀ ECHO: LƯU ĐẦY ĐỦ echo webhook từ Facebook
+        this.logger.log(`[processMessage] 🔄 Processing echo message - MID: ${message.mid}, Text: "${message.text?.substring(0, 50) || 'no-text'}", Conv: ${conversation.conversation_id}`);
         
+        // BƯỚC 1: Kiểm tra xem message với MID này đã tồn tại chưa (trong BẤT KỲ conversation nào)
         if (existingMessage) {
-          this.logger.log(`[processMessage] ✅ Echo message already has facebook_message_id: ${message.mid}, skipping`);
+          this.logger.log(`[processMessage] ✅ Echo skipped - message with MID ${message.mid} already exists in DB (message_id: ${existingMessage.message_id})`);
           return;
         }
         
-        // Tìm message staff gần đây (trong vòng 10 giây) chưa có facebook_message_id
+        // BƯỚC 2: Tìm message staff gần đây trong ĐÚNG conversation này để match
         const recentStaffMessage = await this.messagingService.findRecentStaffMessage(
           conversation.conversation_id,
-          10000 // 10 seconds
+          60000 // 60 seconds - tăng lên để bắt được messages có độ trễ cao
         );
         
-        if (recentStaffMessage && !recentStaffMessage.facebook_message_id) {
-          // Cập nhật facebook_message_id cho message đã tạo
-          await this.messagingService.updateMessageFacebookId(
-            recentStaffMessage.message_id,
-            message.mid
-          );
-          this.logger.log(`[processMessage] ✅ Updated facebook_message_id for staff message: ${recentStaffMessage.message_id} -> ${message.mid}`);
-          return;
-        } else if (recentStaffMessage) {
-          this.logger.log(`[processMessage] ⚠️  Recent staff message already has facebook_message_id, skipping echo`);
-          return;
+        if (recentStaffMessage) {
+          this.logger.log(`[processMessage] Found recent staff message in conversation: ${recentStaffMessage.message_id}, has MID: ${!!recentStaffMessage.facebook_message_id}, text: "${recentStaffMessage.text.substring(0, 50)}"`);
+          
+          // So sánh TEXT để match chính xác (vì MID chưa có hoặc khác)
+          const echoText = (message.text || '').trim();
+          const staffText = (recentStaffMessage.text || '').trim();
+          
+          if (!recentStaffMessage.facebook_message_id && echoText === staffText) {
+            // Case 2A: Message chưa có MID VÀ text khớp → Update MID
+            await this.messagingService.updateMessageFacebookId(
+              recentStaffMessage.message_id,
+              message.mid
+            );
+            this.logger.log(`[processMessage] ✅ Updated facebook_message_id for staff message (text matched): ${recentStaffMessage.message_id} -> ${message.mid}`);
+            return;
+          } else if (recentStaffMessage.facebook_message_id === message.mid) {
+            // Case 2B: Message đã có đúng MID này → Skip
+            this.logger.log(`[processMessage] ✅ Echo matched - staff message already has this facebook_message_id: ${message.mid}`);
+            return;
+          } else if (recentStaffMessage.facebook_message_id && recentStaffMessage.facebook_message_id !== message.mid) {
+            // Case 2C: Message đã có MID KHÁC → Tạo message mới (có thể là tin nhắn khác)
+            this.logger.log(`[processMessage] ⚠️  Staff message has different MID (${recentStaffMessage.facebook_message_id} vs ${message.mid}) - creating new message from echo`);
+            // Tiếp tục tạo message mới
+          } else {
+            // Case 2D: Text không khớp → Có thể là message khác
+            this.logger.log(`[processMessage] ⚠️  Text mismatch - echo: "${echoText.substring(0, 30)}", staff: "${staffText.substring(0, 30)}" - creating new message`);
+            // Tiếp tục tạo message mới
+          }
         } else {
-          this.logger.warn(`[processMessage] ⚠️  No recent staff message found for echo, creating new message`);
-          // Tiếp tục tạo message mới (fallback)
+          // BƯỚC 3: Không tìm thấy recent staff message → Tạo message mới từ echo
+          this.logger.log(`[processMessage] 📝 No recent staff message found within 60s - creating new message from echo webhook`);
+          // Tiếp tục tạo message mới bên dưới
         }
       }
       
@@ -341,12 +374,24 @@ export class FacebookWebhookController {
       let senderName: string;
       
       if (isEcho) {
-        // Echo message từ page (staff hoặc chatbot đã gửi)
-        // Mặc định coi là staff nếu không xác định được
-        senderType = 'staff';
-        senderId = page.facebook_page_id;
-        senderName = page.name || 'Page Staff';
-        this.logger.log(`[processMessage] Echo message - treating as staff message`);
+        // Echo message từ page (có thể là staff, chatbot, hoặc automation tool)
+        // Kiểm tra metadata để phân biệt nguồn gửi
+        const metadata = message.metadata;
+        
+        if (metadata) {
+          // Nếu có metadata từ custom integration (ví dụ: chatbot platform)
+          senderType = metadata.sender_type || 'chatbot';
+          senderId = metadata.sender_id || page.facebook_page_id;
+          senderName = metadata.sender_name || page.name || 'Chatbot';
+          this.logger.log(`[processMessage] Echo message with metadata - sender: ${senderType}`);
+        } else {
+          // Mặc định coi là staff nếu không có metadata
+          // (messages từ replyToConversation không có metadata)
+          senderType = 'staff';
+          senderId = page.facebook_page_id;
+          senderName = page.name || 'Page Staff';
+          this.logger.log(`[processMessage] Echo message without metadata - treating as staff message`);
+        }
       } else {
         // Message từ customer
         senderType = 'customer';
@@ -359,12 +404,24 @@ export class FacebookWebhookController {
       if (message.attachments && message.attachments.length > 0) {
         const facebookUrls = message.attachments.map((att: any) => att.payload?.url || att.url || '').filter(url => url);
         
+        this.logger.log(`[processMessage] Processing ${facebookUrls.length} attachments for upload to MinIO`);
+        
         const folder = this.minioService.generateChatFolder();
         const uploadedFiles = await this.minioService.downloadAndUploadMultipleFromUrls(facebookUrls, folder);
         
+        this.logger.log(`[processMessage] Uploaded ${uploadedFiles.length}/${facebookUrls.length} files successfully`);
+        
+        // Map attachments với uploaded files theo THỨ TỰ (vì uploadedFiles trả về theo thứ tự URLs)
         normalizedAttachments = message.attachments.map((att: any, index: number) => {
           const facebookUrl = att.payload?.url || att.url || '';
-          const uploadedFile = uploadedFiles.find(file => file.key.includes(`_${index}_`) || uploadedFiles[index]);
+          
+          // Tìm uploaded file tương ứng theo index
+          // uploadedFiles có thể ít hơn nếu có file upload thất bại
+          const uploadedFile = uploadedFiles[index];
+          
+          if (!uploadedFile) {
+            this.logger.warn(`[processMessage] ⚠️  No uploaded file found for attachment ${index}, facebook_url: ${facebookUrl.substring(0, 100)}`);
+          }
           
           return {
             type: att.type || 'file',
@@ -375,7 +432,9 @@ export class FacebookWebhookController {
           };
         });
         
-        this.logger.log(`Uploaded ${uploadedFiles.length}/${facebookUrls.length} attachments to MinIO`);
+        if (normalizedAttachments) {
+          this.logger.log(`[processMessage] Normalized ${normalizedAttachments.length} attachments with MinIO URLs`);
+        }
       }
 
       // Tạo message record
