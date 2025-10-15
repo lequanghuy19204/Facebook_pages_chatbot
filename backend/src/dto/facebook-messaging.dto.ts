@@ -155,8 +155,16 @@ export class UpdateCustomerDto {
   address?: string;
 
   @IsOptional()
+  @IsNumber()
+  height?: number;
+
+  @IsOptional()
+  @IsNumber()
+  weight?: number;
+
+  @IsOptional()
   @IsString()
-  notes?: string;
+  customer_notes?: string;
 
   @IsOptional()
   @IsArray()
@@ -193,6 +201,9 @@ export class GetConversationsQuery {
   needsAttention?: boolean;
 
   @IsOptional()
+  isRead?: boolean;
+
+  @IsOptional()
   @IsEnum(['messenger', 'comment'])
   source?: 'messenger' | 'comment';
 
@@ -207,6 +218,17 @@ export class GetConversationsQuery {
   @IsOptional()
   @IsArray()
   facebookPageIds?: string[];
+
+  @IsOptional()
+  hasPhone?: boolean;
+
+  @IsOptional()
+  @IsString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsString()
+  endDate?: string;
 
   @IsOptional()
   page?: number = 1;

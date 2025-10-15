@@ -396,6 +396,7 @@ export class FacebookMessagingService {
     if (query.handler) filter.current_handler = query.handler;
     if (query.assignedTo) filter.assigned_to = query.assignedTo;
     if (query.needsAttention !== undefined) filter.needs_attention = query.needsAttention;
+    if (query.isRead !== undefined) filter.is_read = query.isRead;
     if (query.source) filter.source = query.source;
     if (query.facebookPageId) filter.facebook_page_id = query.facebookPageId;
 
@@ -405,6 +406,31 @@ export class FacebookMessagingService {
       this.logger.log(`✅ FILTERING conversations by facebook_page_ids: ${query.facebookPageIds.join(', ')}`);
     } else {
       this.logger.log(`⚠️ NO FILTER - showing all conversations for company: ${companyId}`);
+    }
+
+    // FILTER THEO SỐ ĐIỆN THOẠI
+    if (query.hasPhone !== undefined) {
+      if (query.hasPhone) {
+        filter.$and = [
+          { customer_phone: { $exists: true } },
+          { customer_phone: { $ne: null } },
+          { customer_phone: { $ne: '' } }
+        ];
+      } else {
+        filter.$or = [
+          { customer_phone: { $exists: false } },
+          { customer_phone: null },
+          { customer_phone: '' }
+        ];
+      }
+    }
+
+    // FILTER THEO THỜI GIAN
+    if (query.startDate && query.endDate) {
+      filter.last_message_at = {
+        $gte: new Date(query.startDate),
+        $lte: new Date(query.endDate)
+      };
     }
 
     this.logger.log(`📊 Query filter:`, JSON.stringify(filter, null, 2));

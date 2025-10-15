@@ -9,9 +9,14 @@ import socketService from '@/services/socket';
 interface ChatListProps {
   onConversationSelect: (conversationId: string) => void;
   selectedConversation: string | null;
+  sidebarFilter?: {
+    type: 'all' | 'unread' | 'comments' | 'messages' | 'phone' | 'no-phone' | 'time';
+    startDate?: Date;
+    endDate?: Date;
+  };
 }
 
-export default function ChatList({ onConversationSelect, selectedConversation }: ChatListProps) {
+export default function ChatList({ onConversationSelect, selectedConversation, sidebarFilter }: ChatListProps) {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<FacebookConversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,6 +169,35 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
         console.log('No merged_pages_filter found - showing all conversations');
       }
 
+      // THÊM FILTER THEO SIDEBAR
+      if (sidebarFilter) {
+        switch (sidebarFilter.type) {
+          case 'unread':
+            params.handler = 'human';
+            params.needsAttention = true;
+            params.isRead = false;
+            break;
+          case 'comments':
+            params.source = 'comment';
+            break;
+          case 'messages':
+            params.source = 'messenger';
+            break;
+          case 'phone':
+            params.hasPhone = true;
+            break;
+          case 'no-phone':
+            params.hasPhone = false;
+            break;
+          case 'time':
+            if (sidebarFilter.startDate && sidebarFilter.endDate) {
+              params.startDate = sidebarFilter.startDate.toISOString();
+              params.endDate = sidebarFilter.endDate.toISOString();
+            }
+            break;
+        }
+      }
+
       const result = await ApiService.messaging.getConversations(token, params);
       
       // Sắp xếp: needs_attention = true lên đầu, sau đó theo last_message_at mới nhất
@@ -190,12 +224,12 @@ export default function ChatList({ onConversationSelect, selectedConversation }:
     }
   };
 
-  // Initial load - reload khi user.merged_pages_filter thay đổi
+  // Initial load - reload khi user.merged_pages_filter hoặc sidebarFilter thay đổi
   useEffect(() => {
     if (!loading) {
       fetchConversations();
     }
-  }, [filterSource, user?.merged_pages_filter]);
+  }, [filterSource, user?.merged_pages_filter, sidebarFilter]);
 
   // Search with debounce
   useEffect(() => {

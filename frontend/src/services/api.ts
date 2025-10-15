@@ -1442,10 +1442,14 @@ const ApiService = {
         status?: string;
         handler?: string;
         needsAttention?: boolean;
+        isRead?: boolean;
         assignedTo?: string;
         source?: string;
         facebookPageId?: string;
         facebookPageIds?: string[];
+        hasPhone?: boolean;
+        startDate?: string;
+        endDate?: string;
         search?: string;
         page?: number;
         limit?: number;

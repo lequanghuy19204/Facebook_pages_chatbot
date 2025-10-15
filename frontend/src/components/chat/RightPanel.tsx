@@ -93,7 +93,22 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
         throw new Error('No authentication token');
       }
 
-      await api.messaging.updateCustomer(token, customer.customer_id, editedCustomer);
+      const allowedFields = ['name', 'phone', 'address', 'height', 'weight', 'customer_notes'];
+      const updateData: any = {};
+      
+      Object.keys(editedCustomer).forEach(key => {
+        if (allowedFields.includes(key)) {
+          const value = editedCustomer[key as keyof CustomerInfo];
+          if (value !== null && value !== undefined && value !== '') {
+            updateData[key] = value;
+          }
+        }
+      });
+
+      console.log('📤 Sending update data:', updateData);
+      console.log('📝 Data types:', Object.keys(updateData).map(k => `${k}: ${typeof updateData[k]}`));
+
+      await api.messaging.updateCustomer(token, customer.customer_id, updateData);
       setCustomer({ ...customer, ...editedCustomer });
       setEditMode(false);
       toast.success('Đã cập nhật thông tin khách hàng');
@@ -236,8 +251,11 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
                         <input
                           type="number"
                           className="customer-info-input"
-                          value={editedCustomer.height || ''}
-                          onChange={(e) => handleInputChange('height', e.target.value ? Number(e.target.value) : undefined)}
+                          value={editedCustomer.height ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value.trim();
+                            handleInputChange('height', value ? Number(value) : null);
+                          }}
                           placeholder="cm"
                         />
                       )}
@@ -256,8 +274,11 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
                         <input
                           type="number"
                           className="customer-info-input"
-                          value={editedCustomer.weight || ''}
-                          onChange={(e) => handleInputChange('weight', e.target.value ? Number(e.target.value) : undefined)}
+                          value={editedCustomer.weight ?? ''}
+                          onChange={(e) => {
+                            const value = e.target.value.trim();
+                            handleInputChange('weight', value ? Number(value) : null);
+                          }}
                           placeholder="kg"
                         />
                       )}
