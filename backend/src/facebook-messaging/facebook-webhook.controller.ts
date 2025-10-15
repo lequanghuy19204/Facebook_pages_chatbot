@@ -323,7 +323,7 @@ export class FacebookWebhookController {
       if (message.attachments && message.attachments.length > 0) {
         const facebookUrls = message.attachments.map((att: any) => att.payload?.url || att.url || '').filter(url => url);
         
-        const folder = `attachments/${page.company_id}`;
+        const folder = this.minioService.generateChatFolder();
         const uploadedFiles = await this.minioService.downloadAndUploadMultipleFromUrls(facebookUrls, folder);
         
         normalizedAttachments = message.attachments.map((att: any, index: number) => {
@@ -502,7 +502,7 @@ export class FacebookWebhookController {
       let attachments: any[] | undefined = undefined;
       
       if (commentPhoto) {
-        const folder = `attachments/${page.company_id}`;
+        const folder = this.minioService.generateChatFolder();
         const uploadedFiles = await this.minioService.downloadAndUploadMultipleFromUrls([commentPhoto], folder);
         
         attachments = [{

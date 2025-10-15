@@ -50,43 +50,34 @@ export class FacebookMessagingService {
     });
 
     if (customer) {
-      const facebookUserInfo = await this.getFacebookUserInfo(facebookUserId, facebookPageId);
-      let needsUpdate = false;
+      // CHỈ cập nhật last_interaction_at, KHÔNG upload lại avatar mỗi lần có tin nhắn
+      customer.last_interaction_at = new Date();
       
-      if (facebookUserInfo.name && customer.name !== facebookUserInfo.name) {
-        customer.name = facebookUserInfo.name;
-        needsUpdate = true;
-      }
-      if (facebookUserInfo.first_name && customer.first_name !== facebookUserInfo.first_name) {
-        customer.first_name = facebookUserInfo.first_name;
-        needsUpdate = true;
-      }
-      if (facebookUserInfo.profile_pic && customer.profile_pic !== facebookUserInfo.profile_pic) {
-        customer.profile_pic = facebookUserInfo.profile_pic;
-        needsUpdate = true;
+      // CHỈ upload avatar nếu CHƯA CÓ trong DB (lần đầu tiên hoặc bị mất)
+      if (!customer.profile_pic_url && !customer.profile_pic_key) {
+        const facebookUserInfo = await this.getFacebookUserInfo(facebookUserId, facebookPageId);
         
-        const folder = `customers/${customer.customer_id}`;
-        const uploadResult = await this.minioService.downloadAndUploadFromUrl(
-          facebookUserInfo.profile_pic,
-          folder,
-          'avatar'
-        );
-        
-        if (uploadResult) {
-          customer.profile_pic_url = uploadResult.publicUrl;
-          customer.profile_pic_key = uploadResult.key;
-          this.logger.log(`Uploaded customer avatar to MinIO: ${uploadResult.key}`);
+        if (facebookUserInfo.profile_pic) {
+          const folder = this.minioService.generateChatFolder();
+          const uploadResult = await this.minioService.downloadAndUploadFromUrl(
+            facebookUserInfo.profile_pic,
+            folder,
+            'avatar'
+          );
+          
+          if (uploadResult) {
+            customer.profile_pic = facebookUserInfo.profile_pic;
+            customer.profile_pic_url = uploadResult.publicUrl;
+            customer.profile_pic_key = uploadResult.key;
+            this.logger.log(`Uploaded missing customer avatar to MinIO: ${uploadResult.key}`);
+            
+            // Sync avatar mới vào conversations
+            await this.syncCustomerInfoToConversations(customer.customer_id, companyId, customer);
+          }
         }
       }
       
-      customer.last_interaction_at = new Date();
       await customer.save();
-      
-      if (needsUpdate) {
-        await this.syncCustomerInfoToConversations(customer.customer_id, companyId, customer);
-        this.logger.log(`Updated and synced customer info: ${customer.customer_id}`);
-      }
-      
       return customer;
     }
 
@@ -98,7 +89,7 @@ export class FacebookMessagingService {
     let profilePicKey: string | undefined;
     
     if (facebookUserInfo.profile_pic) {
-      const folder = `customers/${customerId}`;
+      const folder = this.minioService.generateChatFolder();
       const uploadResult = await this.minioService.downloadAndUploadFromUrl(
         facebookUserInfo.profile_pic,
         folder,
@@ -907,21 +898,26 @@ export class FacebookMessagingService {
     const apiVersion = this.configService.get('FACEBOOK_API_VERSION') || 'v23.0';
     const url = `https://graph.facebook.com/${apiVersion}/${conversation.comment_id}/comments`;
 
-    let commentText = messageData.text || '';
+    // Chuẩn bị payload cho Facebook Comment API
+    const payload: any = {
+      message: messageData.text || '',
+    };
+
+    // Facebook Comment API chỉ hỗ trợ 1 ảnh/video per comment qua attachment_url
     if (dbAttachments && dbAttachments.length > 0) {
-      const imageUrls = dbAttachments
-        .filter(att => att.type === 'image')
-        .map(att => att.minio_url || att.facebook_url)
-        .filter(url => url);
+      const firstImage = dbAttachments.find(att => att.type === 'image' || att.type === 'video');
+      if (firstImage) {
+        payload.attachment_url = firstImage.minio_url || firstImage.facebook_url;
+        this.logger.log(`Adding attachment to comment: ${payload.attachment_url}`);
+      }
       
-      if (imageUrls.length > 0) {
-        commentText += '\n' + imageUrls.join('\n');
+      // Nếu có nhiều ảnh, log warning
+      if (dbAttachments.length > 1) {
+        this.logger.warn(`Facebook Comment API only supports 1 attachment per comment. ${dbAttachments.length} attachments provided, using first one only.`);
       }
     }
 
-    const response = await axios.post(url, {
-      message: commentText,
-    }, {
+    const response = await axios.post(url, payload, {
       params: { access_token: page.access_token },
       headers: { 'Content-Type': 'application/json' },
     });

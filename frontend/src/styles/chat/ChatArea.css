@@ -244,7 +244,7 @@
 }
 
 .chat-area-message-bubble {
-  max-width: 475px;
+  max-width: 550px;
   padding: 6px 12px;
   border-radius: 12px;
   font-family: 'Roboto', sans-serif;
@@ -456,6 +456,7 @@
   background-color: #ffffff;
   border-top: 1px solid #e0e0e0;
   padding: 8px 0;
+  position: relative;
 }
 
 .chat-area-input-container {

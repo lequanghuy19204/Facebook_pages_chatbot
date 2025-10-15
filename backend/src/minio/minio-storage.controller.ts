@@ -139,7 +139,7 @@ export class MinioStorageController {
     }
 
     const userId = req.user.user_id;
-    const uploadFolder = folder || `files/${userId}`;
+    const uploadFolder = folder === 'messages' ? this.minioService.generateChatFolder() : (folder || `files/${userId}`);
     
     const fileName = customFileName || file.originalname;
 

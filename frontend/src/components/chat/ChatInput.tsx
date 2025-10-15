@@ -60,21 +60,15 @@ const ChatInputChatInput = React.memo(({
     textareaRef.current?.focus();
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    
-    const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+  const processFiles = (files: FileList | File[]) => {
+    const MAX_FILE_SIZE = 25 * 1024 * 1024;
     const newFiles: UploadedFile[] = [];
     const errors: string[] = [];
     
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      
-      // Kiểm tra kích thước file
+    Array.from(files).forEach((file) => {
       if (file.size > MAX_FILE_SIZE) {
         errors.push(`${file.name}: Vượt quá 25MB (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
-        continue;
+        return;
       }
       
       const fileType = file.type.startsWith('image/') ? 'image' : 
@@ -89,16 +83,126 @@ const ChatInputChatInput = React.memo(({
         preview,
         type: fileType,
       });
-    }
+    });
     
     if (errors.length > 0) {
       toast.error(`Một số file không thể tải lên:\n${errors.join('\n')}`, { autoClose: 4000 });
     }
     
-    setSelectedFiles(prev => [...prev, ...newFiles]);
+    if (newFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    processFiles(files);
     
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+    }
+  };
+
+  const compressImage = async (file: File, maxSizeMB: number = 2): Promise<File> => {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('image/')) {
+        resolve(file);
+        return;
+      }
+
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        const MAX_WIDTH = 1920;
+        const MAX_HEIGHT = 1920;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = (height * MAX_WIDTH) / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = (width * MAX_HEIGHT) / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        const tryCompress = (quality: number) => {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                resolve(file);
+                return;
+              }
+
+              const sizeInMB = blob.size / 1024 / 1024;
+              
+              if (sizeInMB > maxSizeMB && quality > 0.1) {
+                tryCompress(quality - 0.1);
+              } else {
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                console.log(`Nén ảnh: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+                resolve(compressedFile);
+              }
+            },
+            'image/jpeg',
+            quality
+          );
+        };
+
+        tryCompress(0.85);
+      };
+
+      img.onerror = () => {
+        resolve(file);
+      };
+
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    if (uploading) return;
+    
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    const files: File[] = [];
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file) {
+          if (file.type.startsWith('image/')) {
+            const compressed = await compressImage(file);
+            files.push(compressed);
+          } else {
+            files.push(file);
+          }
+        }
+      }
+    }
+    
+    if (files.length > 0) {
+      e.preventDefault();
+      processFiles(files);
+      toast.success(`Đã dán ${files.length} file`, { autoClose: 2000 });
     }
   };
 
@@ -319,6 +423,7 @@ const ChatInputChatInput = React.memo(({
               value={inputMessage}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               disabled={uploading}
               rows={1}
             />
