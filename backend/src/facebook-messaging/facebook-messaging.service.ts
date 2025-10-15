@@ -61,8 +61,7 @@ export class FacebookMessagingService {
           const folder = this.minioService.generateChatFolder();
           const uploadResult = await this.minioService.downloadAndUploadFromUrl(
             facebookUserInfo.profile_pic,
-            folder,
-            'avatar'
+            folder
           );
           
           if (uploadResult) {
@@ -92,8 +91,7 @@ export class FacebookMessagingService {
       const folder = this.minioService.generateChatFolder();
       const uploadResult = await this.minioService.downloadAndUploadFromUrl(
         facebookUserInfo.profile_pic,
-        folder,
-        'avatar'
+        folder
       );
       
       if (uploadResult) {

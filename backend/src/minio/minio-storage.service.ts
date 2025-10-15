@@ -56,16 +56,19 @@ export class MinioStorageService {
     this.logger.log(`MinIO endpoint: ${endpoint}, bucket: ${this.bucketName}`);
   }
 
+  generateRandomFileName(originalName: string): string {
+    const fileExtension = path.extname(originalName);
+    const randomNumber = Math.floor(Math.random() * 9000000000) + 1000000000;
+    return `${randomNumber}${fileExtension}`;
+  }
+
   async uploadFile(
     file: Express.Multer.File,
     folder: string = 'uploads',
     customFileName?: string
   ): Promise<MinioStorageUploadResult> {
     try {
-      const fileExtension = path.extname(file.originalname);
-      const fileName = customFileName 
-        ? `${customFileName}${fileExtension}`
-        : `${uuidv4()}${fileExtension}`;
+      const fileName = customFileName || this.generateRandomFileName(file.originalname);
       
       const key = `${folder}/${fileName}`;
 
@@ -255,13 +258,6 @@ export class MinioStorageService {
     return allowedTypes.includes(file.mimetype) && allowedExtensions.includes(fileExtension);
   }
 
-  generateImageFileName(originalName: string, prefix: string = 'img'): string {
-    const fileExtension = path.extname(originalName);
-    const timestamp = Date.now();
-    const uuid = uuidv4().split('-')[0];
-    return `${prefix}_${timestamp}_${uuid}${fileExtension}`;
-  }
-
   generateChatFolder(): string {
     const now = new Date();
     const hours = String(now.getHours()).padStart(2, '0');
@@ -291,11 +287,14 @@ export class MinioStorageService {
       const buffer = Buffer.from(response.data);
       const contentType = response.headers['content-type'] || 'application/octet-stream';
       
-      let fileName = customFileName;
-      if (!fileName) {
+      let fileName: string;
+      if (customFileName) {
+        fileName = customFileName;
+      } else {
         const urlPath = new URL(sourceUrl).pathname;
         const urlFileName = path.basename(urlPath);
-        fileName = urlFileName || `file_${Date.now()}`;
+        const originalName = urlFileName || 'file.jpg';
+        fileName = this.generateRandomFileName(originalName);
       }
       
       const fileExtension = path.extname(fileName);
@@ -304,11 +303,7 @@ export class MinioStorageService {
         fileName = `${fileName}.${ext}`;
       }
       
-      const timestamp = Date.now();
-      const uuid = uuidv4().split('-')[0];
-      const finalFileName = `${path.parse(fileName).name}_${timestamp}_${uuid}${path.extname(fileName)}`;
-      
-      const key = `${folder}/${finalFileName}`;
+      const key = `${folder}/${fileName}`;
 
       this.logger.log(`Uploading to MinIO: ${key} (${buffer.length} bytes)`);
 

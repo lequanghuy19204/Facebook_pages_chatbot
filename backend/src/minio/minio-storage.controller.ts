@@ -86,7 +86,7 @@ export class MinioStorageController {
     const userId = req.user.user_id;
     const uploadFolder = folder || `images/${userId}`;
     
-    const fileName = customFileName || this.minioService.generateImageFileName(file.originalname);
+    const fileName = customFileName || this.minioService.generateRandomFileName(file.originalname);
 
     this.logger.log(`User ${userId} uploading image: ${file.originalname} (${file.size} bytes)`);
 
@@ -141,7 +141,7 @@ export class MinioStorageController {
     const userId = req.user.user_id;
     const uploadFolder = folder === 'messages' ? this.minioService.generateChatFolder() : (folder || `files/${userId}`);
     
-    const fileName = customFileName || file.originalname;
+    const fileName = customFileName || this.minioService.generateRandomFileName(file.originalname);
 
     this.logger.log(`User ${userId} uploading file: ${file.originalname} (${file.size} bytes, ${file.mimetype})`);
 
@@ -176,13 +176,13 @@ export class MinioStorageController {
     }
 
     const userId = req.user.user_id;
-    const uploadFolder = folder || `files/${userId}`;
+    const uploadFolder = folder === 'messages' ? this.minioService.generateChatFolder() : (folder || `files/${userId}`);
     
     this.logger.log(`User ${userId} uploading ${files.length} files in parallel`);
 
     // Upload TẤT CẢ files SONG SONG để tăng tốc
     const uploadPromises = files.map(file => 
-      this.minioService.uploadFile(file, uploadFolder, file.originalname)
+      this.minioService.uploadFile(file, uploadFolder, this.minioService.generateRandomFileName(file.originalname))
         .catch(error => {
           this.logger.error(`Error uploading ${file.originalname}:`, error);
           return null;
@@ -276,7 +276,7 @@ export class MinioStorageController {
           continue;
         }
 
-        const fileName = this.minioService.generateImageFileName(file.originalname);
+        const fileName = this.minioService.generateRandomFileName(file.originalname);
         const result = await this.minioService.uploadFile(file, uploadFolder, fileName);
         results.push(result);
       } catch (error) {
