@@ -63,6 +63,7 @@ export class FacebookCustomer {
     quantity: number;
     purchase_date: Date;
     notes?: string;
+    images?: string[]; // Mảng URLs ảnh sản phẩm (từ Minio hoặc external URLs)
   }[]; // Danh sách sản phẩm đã mua/quan tâm (AI extract từ chat)
 
   @Prop()

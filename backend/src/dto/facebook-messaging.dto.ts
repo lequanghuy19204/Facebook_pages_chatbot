@@ -171,6 +171,17 @@ export class UpdateCustomerDto {
   tags?: string[];
 
   @IsOptional()
+  @IsArray()
+  purchased_products?: {
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    purchase_date: Date;
+    notes?: string;
+    images?: string[];
+  }[];
+
+  @IsOptional()
   @IsString()
   assignedTo?: string;
 

@@ -267,7 +267,7 @@ export class MinioStorageService {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
     
-    return `chat/${hours}-${minutes}-${seconds}-${day}-${month}-${year}`;
+    return `chat/${day}-${month}-${year}-${hours}-${minutes}-${seconds}`;
   }
 
   async downloadAndUploadFromUrl(

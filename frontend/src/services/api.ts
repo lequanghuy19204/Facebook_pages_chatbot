@@ -383,6 +383,7 @@ export interface FacebookCustomer {
     quantity: number;
     purchase_date: Date;
     notes?: string;
+    images?: string[];
   }>;
   customer_notes?: string;
   tags: string[];

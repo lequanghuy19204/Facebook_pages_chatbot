@@ -22,6 +22,7 @@ interface CustomerInfo {
     quantity: number;
     purchase_date: string;
     notes?: string;
+    images?: string[];
   }[];
   customer_notes?: string;
 }
@@ -37,6 +38,15 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editedCustomer, setEditedCustomer] = useState<Partial<CustomerInfo>>({});
+  const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null);
+  const [newProduct, setNewProduct] = useState<{
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    purchase_date: string;
+    notes?: string;
+    images?: string[];
+  } | null>(null);
 
   useEffect(() => {
     if (conversationId) {
@@ -93,7 +103,7 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
         throw new Error('No authentication token');
       }
 
-      const allowedFields = ['name', 'phone', 'address', 'height', 'weight', 'customer_notes'];
+      const allowedFields = ['name', 'phone', 'address', 'height', 'weight', 'customer_notes', 'purchased_products'];
       const updateData: any = {};
       
       Object.keys(editedCustomer).forEach(key => {
@@ -111,6 +121,8 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
       await api.messaging.updateCustomer(token, customer.customer_id, updateData);
       setCustomer({ ...customer, ...editedCustomer });
       setEditMode(false);
+      setEditingProductIndex(null);
+      setNewProduct(null);
       toast.success('Đã cập nhật thông tin khách hàng');
     } catch (error) {
       console.error('Failed to update customer:', error);
@@ -125,6 +137,131 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('vi-VN');
+  };
+
+  // === PURCHASED PRODUCTS FUNCTIONS ===
+  
+  const handleAddProduct = () => {
+    setNewProduct({
+      product_id: `prod_${Date.now()}`,
+      product_name: '',
+      quantity: 1,
+      purchase_date: new Date().toISOString().split('T')[0],
+      notes: '',
+      images: [],
+    });
+  };
+
+  const handleSaveNewProduct = () => {
+    if (!newProduct || !newProduct.product_name) {
+      toast.error('Vui lòng nhập tên sản phẩm');
+      return;
+    }
+
+    const currentProducts = editedCustomer.purchased_products || [];
+    setEditedCustomer({
+      ...editedCustomer,
+      purchased_products: [...currentProducts, newProduct],
+    });
+    setNewProduct(null);
+    toast.success('Đã thêm sản phẩm');
+  };
+
+  const handleCancelNewProduct = () => {
+    setNewProduct(null);
+  };
+
+  const handleEditProduct = (index: number) => {
+    setEditingProductIndex(index);
+  };
+
+  const handleSaveEditProduct = (index: number) => {
+    setEditingProductIndex(null);
+    toast.success('Đã cập nhật sản phẩm');
+  };
+
+  const handleCancelEditProduct = () => {
+    setEditingProductIndex(null);
+    // Reset về giá trị cũ
+    setEditedCustomer(customer || {});
+  };
+
+  const handleDeleteProduct = (index: number) => {
+    if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return;
+    
+    const currentProducts = editedCustomer.purchased_products || [];
+    const updatedProducts = currentProducts.filter((_, i) => i !== index);
+    setEditedCustomer({
+      ...editedCustomer,
+      purchased_products: updatedProducts,
+    });
+    toast.success('Đã xóa sản phẩm');
+  };
+
+  const handleProductFieldChange = (index: number, field: string, value: any) => {
+    const currentProducts = [...(editedCustomer.purchased_products || [])];
+    currentProducts[index] = {
+      ...currentProducts[index],
+      [field]: value,
+    };
+    setEditedCustomer({
+      ...editedCustomer,
+      purchased_products: currentProducts,
+    });
+  };
+
+  const handleNewProductFieldChange = (field: string, value: any) => {
+    if (!newProduct) return;
+    setNewProduct({
+      ...newProduct,
+      [field]: value,
+    });
+  };
+
+  const handleAddProductImage = (index: number, imageUrl: string) => {
+    if (!imageUrl.trim()) return;
+    
+    const currentProducts = [...(editedCustomer.purchased_products || [])];
+    const currentImages = currentProducts[index].images || [];
+    currentProducts[index] = {
+      ...currentProducts[index],
+      images: [...currentImages, imageUrl],
+    };
+    setEditedCustomer({
+      ...editedCustomer,
+      purchased_products: currentProducts,
+    });
+  };
+
+  const handleRemoveProductImage = (productIndex: number, imageIndex: number) => {
+    const currentProducts = [...(editedCustomer.purchased_products || [])];
+    const currentImages = currentProducts[productIndex].images || [];
+    currentProducts[productIndex] = {
+      ...currentProducts[productIndex],
+      images: currentImages.filter((_, i) => i !== imageIndex),
+    };
+    setEditedCustomer({
+      ...editedCustomer,
+      purchased_products: currentProducts,
+    });
+  };
+
+  const handleAddNewProductImage = (imageUrl: string) => {
+    if (!imageUrl.trim() || !newProduct) return;
+    
+    setNewProduct({
+      ...newProduct,
+      images: [...(newProduct.images || []), imageUrl],
+    });
+  };
+
+  const handleRemoveNewProductImage = (imageIndex: number) => {
+    if (!newProduct) return;
+    
+    setNewProduct({
+      ...newProduct,
+      images: (newProduct.images || []).filter((_, i) => i !== imageIndex),
+    });
   };
 
   if (!conversationId) {
@@ -314,19 +451,279 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
                 </div>
 
                 <div className="purchased-products-section">
-                  {customer.purchased_products && customer.purchased_products.length > 0 ? (
+                  {editMode && (
+                    <button 
+                      className="add-product-btn"
+                      onClick={handleAddProduct}
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        marginBottom: '10px',
+                        backgroundColor: '#4CAF50',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                      }}
+                    >
+                      + Thêm sản phẩm
+                    </button>
+                  )}
+
+                  {/* New Product Form */}
+                  {newProduct && (
+                    <div className="purchased-product-item" style={{ border: '2px solid #4CAF50', marginBottom: '10px' }}>
+                      <div style={{ padding: '10px' }}>
+                        <h4 style={{ margin: '0 0 10px 0', color: '#4CAF50' }}>Thêm sản phẩm mới</h4>
+                        
+                        <div style={{ marginBottom: '8px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Tên sản phẩm *</label>
+                          <input
+                            type="text"
+                            value={newProduct.product_name}
+                            onChange={(e) => handleNewProductFieldChange('product_name', e.target.value)}
+                            placeholder="VD: Áo thun nam"
+                            style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                          />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Số lượng</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={newProduct.quantity}
+                              onChange={(e) => handleNewProductFieldChange('quantity', parseInt(e.target.value) || 1)}
+                              style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                            />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Ngày mua</label>
+                            <input
+                              type="date"
+                              value={newProduct.purchase_date}
+                              onChange={(e) => handleNewProductFieldChange('purchase_date', e.target.value)}
+                              style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                            />
+                          </div>
+                        </div>
+
+                        <div style={{ marginBottom: '8px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Ghi chú</label>
+                          <textarea
+                            value={newProduct.notes || ''}
+                            onChange={(e) => handleNewProductFieldChange('notes', e.target.value)}
+                            placeholder="VD: Size M, màu đen"
+                            rows={2}
+                            style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '8px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Ảnh sản phẩm</label>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                            <input
+                              type="text"
+                              placeholder="Nhập URL ảnh"
+                              id="new-product-image-url"
+                              style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                            />
+                            <button
+                              onClick={() => {
+                                const input = document.getElementById('new-product-image-url') as HTMLInputElement;
+                                handleAddNewProductImage(input.value);
+                                input.value = '';
+                              }}
+                              style={{ padding: '8px 16px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                            >
+                              Thêm
+                            </button>
+                          </div>
+                          {newProduct.images && newProduct.images.length > 0 && (
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                              {newProduct.images.map((img, imgIdx) => (
+                                <div key={imgIdx} style={{ position: 'relative', width: '80px', height: '80px' }}>
+                                  <img src={img} alt={`Product ${imgIdx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }} />
+                                  <button
+                                    onClick={() => handleRemoveNewProductImage(imgIdx)}
+                                    style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: 'red', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '12px' }}
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                          <button
+                            onClick={handleSaveNewProduct}
+                            style={{ flex: 1, padding: '8px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                          >
+                            Lưu
+                          </button>
+                          <button
+                            onClick={handleCancelNewProduct}
+                            style={{ flex: 1, padding: '8px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                          >
+                            Hủy
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Existing Products List */}
+                  {(editedCustomer.purchased_products || customer.purchased_products || []).length > 0 ? (
                     <div className="purchased-products-list">
-                      {customer.purchased_products.map((product, index) => (
-                        <div key={index} className="purchased-product-item">
-                          <div className="purchased-product-header">
-                            <span className="purchased-product-name">{product.product_name}</span>
-                            <span className="purchased-product-quantity">x{product.quantity}</span>
-                          </div>
-                          <div className="purchased-product-meta">
-                            <span className="purchased-product-date">{formatDate(product.purchase_date)}</span>
-                          </div>
-                          {product.notes && (
-                            <div className="purchased-product-notes">{product.notes}</div>
+                      {(editedCustomer.purchased_products || customer.purchased_products || []).map((product, index) => (
+                        <div key={index} className="purchased-product-item" style={{ position: 'relative' }}>
+                          {editingProductIndex === index ? (
+                            // Edit Mode
+                            <div style={{ padding: '10px' }}>
+                              <h4 style={{ margin: '0 0 10px 0', color: '#2196F3' }}>Chỉnh sửa sản phẩm</h4>
+                              
+                              <div style={{ marginBottom: '8px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Tên sản phẩm</label>
+                                <input
+                                  type="text"
+                                  value={product.product_name}
+                                  onChange={(e) => handleProductFieldChange(index, 'product_name', e.target.value)}
+                                  style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                                />
+                              </div>
+
+                              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                <div style={{ flex: 1 }}>
+                                  <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Số lượng</label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={product.quantity}
+                                    onChange={(e) => handleProductFieldChange(index, 'quantity', parseInt(e.target.value) || 1)}
+                                    style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                                  />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Ngày mua</label>
+                                  <input
+                                    type="date"
+                                    value={product.purchase_date}
+                                    onChange={(e) => handleProductFieldChange(index, 'purchase_date', e.target.value)}
+                                    style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div style={{ marginBottom: '8px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Ghi chú</label>
+                                <textarea
+                                  value={product.notes || ''}
+                                  onChange={(e) => handleProductFieldChange(index, 'notes', e.target.value)}
+                                  rows={2}
+                                  style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                                />
+                              </div>
+
+                              <div style={{ marginBottom: '8px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Ảnh sản phẩm</label>
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                  <input
+                                    type="text"
+                                    placeholder="Nhập URL ảnh"
+                                    id={`product-image-url-${index}`}
+                                    style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      const input = document.getElementById(`product-image-url-${index}`) as HTMLInputElement;
+                                      handleAddProductImage(index, input.value);
+                                      input.value = '';
+                                    }}
+                                    style={{ padding: '8px 16px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                  >
+                                    Thêm
+                                  </button>
+                                </div>
+                                {product.images && product.images.length > 0 && (
+                                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                                    {product.images.map((img, imgIdx) => (
+                                      <div key={imgIdx} style={{ position: 'relative', width: '80px', height: '80px' }}>
+                                        <img src={img} alt={`Product ${imgIdx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '4px' }} />
+                                        <button
+                                          onClick={() => handleRemoveProductImage(index, imgIdx)}
+                                          style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: 'red', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '12px' }}
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                <button
+                                  onClick={() => handleSaveEditProduct(index)}
+                                  style={{ flex: 1, padding: '8px', backgroundColor: '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                >
+                                  Lưu
+                                </button>
+                                <button
+                                  onClick={handleCancelEditProduct}
+                                  style={{ flex: 1, padding: '8px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                >
+                                  Hủy
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            // View Mode
+                            <>
+                              <div className="purchased-product-header">
+                                <span className="purchased-product-name">{product.product_name}</span>
+                                <span className="purchased-product-quantity">x{product.quantity}</span>
+                              </div>
+                              <div className="purchased-product-meta">
+                                <span className="purchased-product-date">{formatDate(product.purchase_date)}</span>
+                              </div>
+                              {product.notes && (
+                                <div className="purchased-product-notes">{product.notes}</div>
+                              )}
+                              {product.images && product.images.length > 0 && (
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                                  {product.images.map((img, imgIdx) => (
+                                    <img 
+                                      key={imgIdx} 
+                                      src={img} 
+                                      alt={`${product.product_name} ${imgIdx + 1}`} 
+                                      style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '4px', cursor: 'pointer' }}
+                                      onClick={() => window.open(img, '_blank')}
+                                      title="Click để xem ảnh đầy đủ"
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                              {editMode && (
+                                <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                                  <button
+                                    onClick={() => handleEditProduct(index)}
+                                    style={{ flex: 1, padding: '6px', backgroundColor: '#2196F3', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                  >
+                                    Sửa
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteProduct(index)}
+                                    style={{ flex: 1, padding: '6px', backgroundColor: '#f44336', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}
+                                  >
+                                    Xóa
+                                  </button>
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       ))}
