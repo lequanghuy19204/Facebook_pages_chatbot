@@ -20,10 +20,17 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
   const { user } = useAuth();
   const [conversations, setConversations] = useState<FacebookConversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSource, setFilterSource] = useState<'all' | 'messenger' | 'comment'>('all');
   const [tagsMap, setTagsMap] = useState<Map<string, FacebookTag>>(new Map());
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalConversations, setTotalConversations] = useState(0);
+  const limit = 30;
 
   const CACHE_DURATION = 5 * 60 * 1000; // 5 phút
 
@@ -127,10 +134,16 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
     loadAllTagsFromCache();
   };
 
-  // Fetch conversations from API
-  const fetchConversations = async () => {
+  // Fetch conversations from API (với option append để load more)
+  const fetchConversations = async (isLoadMore = false) => {
     try {
-      setLoading(true);
+      if (isLoadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+        setPage(1);
+        setHasMore(true);
+      }
       setError(null);
       
       // Check if we're in browser environment
@@ -150,8 +163,8 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
       const currentUser = storedUser ? JSON.parse(storedUser) : user;
 
       const params: any = {
-        page: 1,
-        limit: 50,
+        page: isLoadMore ? page : 1,
+        limit: limit,
       };
 
       if (filterSource !== 'all') {
@@ -198,6 +211,7 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
         }
       }
 
+      console.log(`📥 Fetching conversations - Page: ${params.page}, Limit: ${params.limit}`);
       const result = await ApiService.messaging.getConversations(token, params);
       
       // Sắp xếp: needs_attention = true lên đầu, sau đó theo last_message_at mới nhất
@@ -212,7 +226,19 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
         return timeB - timeA;
       });
       
-      setConversations(sortedConversations);
+      // Update conversations: append nếu load more, replace nếu load mới
+      if (isLoadMore) {
+        setConversations(prev => [...prev, ...sortedConversations]);
+      } else {
+        setConversations(sortedConversations);
+      }
+      
+      // Update pagination state
+      setTotalConversations(result.pagination.total);
+      const totalPages = result.pagination.pages;
+      setHasMore(params.page < totalPages);
+      
+      console.log(`✅ Loaded ${sortedConversations.length} conversations. Total: ${result.pagination.total}, HasMore: ${params.page < totalPages}`);
       
       // Fetch and cache tags for all pages in conversations
       await fetchAndCacheTagsForAllPages(sortedConversations);
@@ -221,20 +247,111 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
       setError(err.message || 'Failed to load conversations');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  // Load more conversations
+  const loadMoreConversations = async () => {
+    if (loadingMore || !hasMore) return;
+    
+    console.log('📥 Loading more conversations...');
+    const nextPage = page + 1;
+    setPage(nextPage);
+    
+    // Fetch with next page
+    try {
+      setLoadingMore(true);
+      
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const storedUser = localStorage.getItem('auth_user');
+      const currentUser = storedUser ? JSON.parse(storedUser) : user;
+
+      const params: any = {
+        page: nextPage,
+        limit: limit,
+      };
+
+      if (filterSource !== 'all') {
+        params.source = filterSource;
+      }
+
+      if (searchQuery) {
+        params.search = searchQuery;
+      }
+
+      if (currentUser?.merged_pages_filter && currentUser.merged_pages_filter.length > 0) {
+        params.facebookPageIds = currentUser.merged_pages_filter;
+      }
+
+      if (sidebarFilter) {
+        switch (sidebarFilter.type) {
+          case 'unread':
+            params.handler = 'human';
+            params.needsAttention = true;
+            params.isRead = false;
+            break;
+          case 'comments':
+            params.source = 'comment';
+            break;
+          case 'messages':
+            params.source = 'messenger';
+            break;
+          case 'phone':
+            params.hasPhone = true;
+            break;
+          case 'no-phone':
+            params.hasPhone = false;
+            break;
+          case 'time':
+            if (sidebarFilter.startDate && sidebarFilter.endDate) {
+              params.startDate = sidebarFilter.startDate.toISOString();
+              params.endDate = sidebarFilter.endDate.toISOString();
+            }
+            break;
+        }
+      }
+
+      console.log(`📥 Loading page ${nextPage}...`);
+      const result = await ApiService.messaging.getConversations(token, params);
+      
+      const sortedConversations = result.conversations.sort((a, b) => {
+        if (a.needs_attention !== b.needs_attention) {
+          return a.needs_attention ? -1 : 1;
+        }
+        const timeA = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+        const timeB = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+        return timeB - timeA;
+      });
+      
+      // Append new conversations
+      setConversations(prev => [...prev, ...sortedConversations]);
+      
+      // Update pagination state
+      setHasMore(nextPage < result.pagination.pages);
+      
+      console.log(`✅ Loaded ${sortedConversations.length} more conversations. Page ${nextPage}/${result.pagination.pages}`);
+      
+      // Fetch and cache tags
+      await fetchAndCacheTagsForAllPages(sortedConversations);
+    } catch (err: any) {
+      console.error('Failed to load more conversations:', err);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
   // Initial load - reload khi user.merged_pages_filter hoặc sidebarFilter thay đổi
   useEffect(() => {
-    if (!loading) {
-      fetchConversations();
-    }
+    fetchConversations(false);
   }, [filterSource, user?.merged_pages_filter, sidebarFilter]);
 
   // Search with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
-      fetchConversations();
+      fetchConversations(false);
     }, 500);
 
     return () => clearTimeout(timer);
@@ -400,6 +517,18 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
     return null;
   };
 
+  // Scroll handler for infinite scroll
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const scrollBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    
+    // Khi scroll đến gần cuối (còn 100px nữa là đến cuối)
+    if (scrollBottom < 100 && !loadingMore && hasMore) {
+      console.log('🔄 Reached bottom, loading more...');
+      loadMoreConversations();
+    }
+  };
+
   return (
     <div className="chat-list-container">
       {/* Search and Filter Header */}
@@ -438,8 +567,10 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
       </div>
 
       {/* Message List */}
-      <div className="chat-list-messages">
-        {loading && <div style={{ padding: '20px', textAlign: 'center' }}>Đang tải...</div>}
+      <div className="chat-list-messages" onScroll={handleScroll}>
+        {loading && conversations.length === 0 && (
+          <div style={{ padding: '20px', textAlign: 'center' }}>Đang tải...</div>
+        )}
         
         {error && (
           <div style={{ padding: '20px', textAlign: 'center', color: 'red' }}>
@@ -549,6 +680,21 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
             </div>
           );
         })}
+
+        {/* Loading More Indicator */}
+        {loadingMore && (
+          <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+            <div style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</div>
+            {' '}Đang tải thêm...
+          </div>
+        )}
+
+        {/* No More Data */}
+        {!loading && !loadingMore && conversations.length > 0 && !hasMore && (
+          <div style={{ padding: '20px', textAlign: 'center', color: '#999', fontSize: '14px' }}>
+            Đã hiển thị tất cả {totalConversations} cuộc hội thoại
+          </div>
+        )}
       </div>
     </div>
   );

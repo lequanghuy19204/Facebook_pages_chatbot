@@ -438,3 +438,9 @@
   margin-left: 72px;
   box-sizing: border-box;
 }
+
+/* Loading spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
