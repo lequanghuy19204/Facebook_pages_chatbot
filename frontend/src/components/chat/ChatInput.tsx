@@ -261,7 +261,9 @@ const ChatInputChatInput = React.memo(({
   };
 
   const getPageAvatar = () => {
-    if (!conversation) return '';
+    if (!conversation) {
+      return `https://ui-avatars.com/api/?name=Page&background=random&size=200`;
+    }
     return conversation.page_picture_url || conversation.page_picture || 
       `https://ui-avatars.com/api/?name=${encodeURIComponent(conversation.page_name || 'Page')}&background=random&size=200`;
   };

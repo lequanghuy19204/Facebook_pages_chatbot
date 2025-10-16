@@ -143,7 +143,7 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
   
   const handleAddProduct = () => {
     setNewProduct({
-      product_id: `prod_${Date.now()}`,
+      product_id: '',
       product_name: '',
       quantity: 1,
       purchase_date: new Date().toISOString().split('T')[0],
@@ -153,7 +153,11 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
   };
 
   const handleSaveNewProduct = () => {
-    if (!newProduct || !newProduct.product_name) {
+    if (!newProduct || !newProduct.product_id.trim()) {
+      toast.error('Vui lòng nhập mã sản phẩm');
+      return;
+    }
+    if (!newProduct.product_name.trim()) {
       toast.error('Vui lòng nhập tên sản phẩm');
       return;
     }
@@ -478,6 +482,17 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
                         <h4 style={{ margin: '0 0 10px 0', color: '#4CAF50' }}>Thêm sản phẩm mới</h4>
                         
                         <div style={{ marginBottom: '8px' }}>
+                          <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Mã sản phẩm *</label>
+                          <input
+                            type="text"
+                            value={newProduct.product_id}
+                            onChange={(e) => handleNewProductFieldChange('product_id', e.target.value)}
+                            placeholder="VD: PROD001"
+                            style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                          />
+                        </div>
+
+                        <div style={{ marginBottom: '8px' }}>
                           <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Tên sản phẩm *</label>
                           <input
                             type="text"
@@ -587,6 +602,16 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
                               <h4 style={{ margin: '0 0 10px 0', color: '#2196F3' }}>Chỉnh sửa sản phẩm</h4>
                               
                               <div style={{ marginBottom: '8px' }}>
+                                <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Mã sản phẩm</label>
+                                <input
+                                  type="text"
+                                  value={product.product_id}
+                                  onChange={(e) => handleProductFieldChange(index, 'product_id', e.target.value)}
+                                  style={{ width: '100%', padding: '8px', marginTop: '4px', border: '1px solid #ddd', borderRadius: '4px' }}
+                                />
+                              </div>
+
+                              <div style={{ marginBottom: '8px' }}>
                                 <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Tên sản phẩm</label>
                                 <input
                                   type="text"
@@ -688,6 +713,9 @@ export default function RightPanel({ conversationId }: RightPanelProps) {
                                 <span className="purchased-product-quantity">x{product.quantity}</span>
                               </div>
                               <div className="purchased-product-meta">
+                                <span className="purchased-product-id" style={{ fontSize: '12px', color: '#666', marginRight: '10px' }}>
+                                  Mã: {product.product_id}
+                                </span>
                                 <span className="purchased-product-date">{formatDate(product.purchase_date)}</span>
                               </div>
                               {product.notes && (

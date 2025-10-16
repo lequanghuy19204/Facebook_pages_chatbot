@@ -34,6 +34,23 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
 
   const CACHE_DURATION = 5 * 60 * 1000; // 5 phút
 
+  // Helper function to deduplicate conversations by conversation_id
+  const deduplicateConversations = (conversations: FacebookConversation[]): FacebookConversation[] => {
+    const seen = new Set<string>();
+    const unique: FacebookConversation[] = [];
+    
+    for (const conv of conversations) {
+      if (!seen.has(conv.conversation_id)) {
+        seen.add(conv.conversation_id);
+        unique.push(conv);
+      } else {
+        console.warn(`⚠️ Duplicate conversation detected: ${conv.conversation_id}`);
+      }
+    }
+    
+    return unique;
+  };
+
   // Get cache key for a page
   const getCacheKey = (pageId: string) => {
     return `conversation_tags_cache_${pageId}`;
@@ -228,9 +245,12 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
       
       // Update conversations: append nếu load more, replace nếu load mới
       if (isLoadMore) {
-        setConversations(prev => [...prev, ...sortedConversations]);
+        setConversations(prev => {
+          const combined = [...prev, ...sortedConversations];
+          return deduplicateConversations(combined);
+        });
       } else {
-        setConversations(sortedConversations);
+        setConversations(deduplicateConversations(sortedConversations));
       }
       
       // Update pagination state
@@ -327,7 +347,10 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
       });
       
       // Append new conversations
-      setConversations(prev => [...prev, ...sortedConversations]);
+      setConversations(prev => {
+        const combined = [...prev, ...sortedConversations];
+        return deduplicateConversations(combined);
+      });
       
       // Update pagination state
       setHasMore(nextPage < result.pagination.pages);
@@ -468,7 +491,15 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
 
     // Listen for new conversations
     const handleNewConversation = (data: any) => {
-      setConversations(prev => [data, ...prev]);
+      setConversations(prev => {
+        // Check if conversation already exists
+        const exists = prev.find(c => c.conversation_id === data.conversation_id);
+        if (exists) {
+          console.warn(`⚠️ Conversation ${data.conversation_id} already exists, skipping add`);
+          return prev;
+        }
+        return [data, ...prev];
+      });
       
       // Fetch tags for the new conversation's page if not cached
       if (data.facebook_page_id) {
