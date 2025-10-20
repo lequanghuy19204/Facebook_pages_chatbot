@@ -12,6 +12,7 @@ import { CompanyModule } from './company/company.module';
 import { ProductsModule } from './products/products.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { TagsModule } from './tags/tags.module';
+import { ChatbotModule } from './chatbot/chatbot.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { TagsModule } from './tags/tags.module';
     ProductsModule,
     WebsocketModule,
     TagsModule,
+    ChatbotModule,
   ],
   controllers: [AppController],
   providers: [AppService],

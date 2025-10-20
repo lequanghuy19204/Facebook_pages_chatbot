@@ -34,11 +34,14 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
     return pathname === path;
   };
 
-  
+
   const canAccessManagement = user?.roles.includes('admin') || user?.roles.includes('manage_user');
-  
-  
+
+
   const canAccessProducts = user?.roles.includes('admin') || user?.roles.includes('manage_products');
+
+
+  const canAccessChatbot = user?.roles.includes('admin') || user?.roles.includes('manage_chatbot');
 
   // Lấy danh sách pages đang được gộp
   const mergedPages = user?.merged_pages_filter && user.merged_pages_filter.length > 0
@@ -76,14 +79,22 @@ export default function Header({ className = '', onLogout }: HeaderProps) {
             </div>
           )}
           {canAccessProducts && (
-            <div 
+            <div
               className={`nav-item ${isActive('/products') ? 'active' : ''}`}
               onClick={() => navigateTo('/products')}
             >
               <div className="nav-text">Sản phẩm</div>
             </div>
           )}
-          <div 
+          {canAccessChatbot && (
+            <div
+              className={`nav-item ${isActive('/chatbot') ? 'active' : ''}`}
+              onClick={() => navigateTo('/chatbot')}
+            >
+              <div className="nav-text">Chatbot</div>
+            </div>
+          )}
+          <div
             className={`nav-item ${isActive('/settings') ? 'active' : ''}`}
             onClick={() => navigateTo('/settings')}
           >

@@ -507,6 +507,110 @@ export interface TagsResponse {
   total: number;
 }
 
+// ===== CHATBOT INTERFACES =====
+
+export interface AIChatbotSettings {
+  setting_id?: string;
+  company_id: string;
+  ai_provider: string;
+  ai_model: string;
+  api_key: string;
+  is_active: boolean;
+  temperature: number;
+  max_tokens: number;
+  response_delay: number;
+  fallback_enabled: boolean;
+  system_prompt: string;
+  enabled_facebook_page_ids: string[];
+  created_by?: string;
+  updated_by?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateAISettingsDto {
+  ai_provider: string;
+  ai_model: string;
+  api_key: string;
+  is_active?: boolean;
+  temperature?: number;
+  max_tokens?: number;
+  response_delay?: number;
+  fallback_enabled?: boolean;
+  system_prompt: string;
+  enabled_facebook_page_ids?: string[];
+}
+
+export interface UpdateAISettingsDto {
+  ai_provider?: string;
+  ai_model?: string;
+  api_key?: string;
+  is_active?: boolean;
+  temperature?: number;
+  max_tokens?: number;
+  response_delay?: number;
+  fallback_enabled?: boolean;
+  system_prompt?: string;
+  enabled_facebook_page_ids?: string[];
+}
+
+export interface TestConnectionDto {
+  ai_provider: string;
+  api_key: string;
+}
+
+export interface TestConnectionResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface AITrainingDocument {
+  document_id: string;
+  company_id: string;
+  category: string;
+  question: string;
+  answer: string;
+  prompt?: string;
+  images: string[];
+  created_by?: string;
+  updated_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTrainingDocumentDto {
+  category: string;
+  question: string;
+  answer: string;
+  prompt?: string;
+  images?: string[];
+}
+
+export interface UpdateTrainingDocumentDto {
+  category?: string;
+  question?: string;
+  answer?: string;
+  prompt?: string;
+  images?: string[];
+}
+
+export interface QueryTrainingDocumentsDto {
+  category?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface TrainingDocumentsResponse {
+  documents: AITrainingDocument[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 const ApiService = {
   
   auth: {
@@ -2190,6 +2294,247 @@ const ApiService = {
         return await response.json();
       } catch (error) {
         console.error('Remove tag error:', error);
+        throw error;
+      }
+    },
+  },
+
+  // ===== CHATBOT API =====
+  chatbot: {
+    // AI Settings
+    getAISettings: async (token: string): Promise<AIChatbotSettings> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/chatbot/ai-settings`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to get AI settings');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Get AI settings error:', error);
+        throw error;
+      }
+    },
+
+    createAISettings: async (
+      token: string,
+      data: CreateAISettingsDto
+    ): Promise<AIChatbotSettings> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/chatbot/ai-settings`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create AI settings');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Create AI settings error:', error);
+        throw error;
+      }
+    },
+
+    updateAISettings: async (
+      token: string,
+      data: UpdateAISettingsDto
+    ): Promise<AIChatbotSettings> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/chatbot/ai-settings`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update AI settings');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Update AI settings error:', error);
+        throw error;
+      }
+    },
+
+    testConnection: async (
+      token: string,
+      data: TestConnectionDto
+    ): Promise<TestConnectionResponse> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/chatbot/ai-settings/test-connection`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Connection test failed');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Test connection error:', error);
+        throw error;
+      }
+    },
+
+    // Training Documents
+    getTrainingDocuments: async (
+      token: string,
+      query?: QueryTrainingDocumentsDto
+    ): Promise<TrainingDocumentsResponse> => {
+      try {
+        const queryParams = new URLSearchParams();
+        if (query?.category) queryParams.append('category', query.category);
+        if (query?.search) queryParams.append('search', query.search);
+        if (query?.page) queryParams.append('page', query.page.toString());
+        if (query?.limit) queryParams.append('limit', query.limit.toString());
+
+        const url = `${API_BASE_URL}/chatbot/training-documents${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to get training documents');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Get training documents error:', error);
+        throw error;
+      }
+    },
+
+    getTrainingDocumentById: async (
+      token: string,
+      documentId: string
+    ): Promise<AITrainingDocument> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/chatbot/training-documents/${documentId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to get training document');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Get training document error:', error);
+        throw error;
+      }
+    },
+
+    createTrainingDocument: async (
+      token: string,
+      data: CreateTrainingDocumentDto
+    ): Promise<AITrainingDocument> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/chatbot/training-documents`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create training document');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Create training document error:', error);
+        throw error;
+      }
+    },
+
+    updateTrainingDocument: async (
+      token: string,
+      documentId: string,
+      data: UpdateTrainingDocumentDto
+    ): Promise<AITrainingDocument> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/chatbot/training-documents/${documentId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update training document');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Update training document error:', error);
+        throw error;
+      }
+    },
+
+    deleteTrainingDocument: async (
+      token: string,
+      documentId: string
+    ): Promise<{ message: string }> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/chatbot/training-documents/${documentId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to delete training document');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Delete training document error:', error);
         throw error;
       }
     },

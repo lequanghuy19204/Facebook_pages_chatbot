@@ -12,26 +12,22 @@ async function bootstrap() {
   // Raw body middleware for webhook signature verification
   app.use('/api/webhook/facebook', express.raw({ type: 'application/json' }));
   
+  // Global validation pipe with transformation enabled
   app.useGlobalPipes(
     new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
       transformOptions: {
         enableImplicitConversion: true,
       },
     }),
   );
   
-  
   app.enableCors({
     origin: [configService.get('FRONTEND_URL')], 
     credentials: true,
   });
-
-  
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
 
   
   app.setGlobalPrefix('api');
