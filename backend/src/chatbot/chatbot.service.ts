@@ -1,60 +1,29 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { ConfigService } from '@nestjs/config';
 import { Model } from 'mongoose';
 import { AIChatbotSettings, AIChatbotSettingsDocument } from '../schemas/ai-chatbot-settings.schema';
 import { AITrainingDocument, AITrainingDocumentDocument } from '../schemas/ai-training-document.schema';
 import { CreateAISettingsDto, UpdateAISettingsDto, CreateTrainingDocumentDto, UpdateTrainingDocumentDto, QueryTrainingDocumentsDto } from '../dto/chatbot.dto';
-import * as crypto from 'crypto';
+import { MinioStorageService } from '../minio/minio-storage.service';
 
 @Injectable()
 export class ChatbotService {
-  private readonly ENCRYPTION_KEY: string;
-  private readonly ENCRYPTION_IV_LENGTH = 16;
+  private readonly logger = new Logger(ChatbotService.name);
+  private readonly n8nWebhookUrl: string | undefined;
 
   constructor(
     @InjectModel(AIChatbotSettings.name)
     private aiSettingsModel: Model<AIChatbotSettingsDocument>,
     @InjectModel(AITrainingDocument.name)
     private trainingDocumentModel: Model<AITrainingDocumentDocument>,
+    private minioStorageService: MinioStorageService,
+    private configService: ConfigService,
   ) {
-    // Get encryption key from environment or generate one (in production, use env variable)
-    this.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
+    this.n8nWebhookUrl = this.configService.get<string>('N8N_WEBHOOK_URL');
   }
 
-  // ===== ENCRYPTION HELPERS =====
-  
-  private encryptApiKey(apiKey: string): string {
-    const iv = crypto.randomBytes(this.ENCRYPTION_IV_LENGTH);
-    const cipher = crypto.createCipheriv(
-      'aes-256-cbc',
-      Buffer.from(this.ENCRYPTION_KEY, 'hex').slice(0, 32),
-      iv
-    );
-    let encrypted = cipher.update(apiKey, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
-  }
-
-  private decryptApiKey(encryptedApiKey: string): string {
-    const parts = encryptedApiKey.split(':');
-    const iv = Buffer.from(parts[0], 'hex');
-    const encryptedText = parts[1];
-    const decipher = crypto.createDecipheriv(
-      'aes-256-cbc',
-      Buffer.from(this.ENCRYPTION_KEY, 'hex').slice(0, 32),
-      iv
-    );
-    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
-  }
-
-  private maskApiKey(apiKey: string): string {
-    if (apiKey.length <= 8) return '***';
-    return apiKey.substring(0, 4) + '***************' + apiKey.substring(apiKey.length - 4);
-  }
-
-  // ===== AI SETTINGS METHODS =====
+  // ===== API SETTINGS METHODS =====
 
   async getAISettings(companyId: string): Promise<any> {
     const settings = await this.aiSettingsModel.findOne({ company_id: companyId }).exec();
@@ -63,12 +32,8 @@ export class ChatbotService {
       throw new NotFoundException('AI settings not found for this company');
     }
 
-    // Return settings with masked API key
-    const settingsObj = settings.toObject();
-    return {
-      ...settingsObj,
-      api_key: this.maskApiKey(settingsObj.api_key),
-    };
+    // Return settings with full API key (no masking)
+    return settings.toObject();
   }
 
   async createAISettings(
@@ -82,19 +47,16 @@ export class ChatbotService {
       throw new ConflictException('AI settings already exist for this company. Use update instead.');
     }
 
-    // Encrypt API key
-    const encryptedApiKey = this.encryptApiKey(dto.api_key);
-
     // Generate setting_id
     const settingId = `ai_setting_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create new settings
+    // Create new settings - store API key directly
     const newSettings = new this.aiSettingsModel({
       setting_id: settingId,
       company_id: companyId,
       ai_provider: dto.ai_provider,
       ai_model: dto.ai_model,
-      api_key: encryptedApiKey,
+      api_key: dto.api_key, // Store directly without encryption
       is_active: dto.is_active ?? false,
       temperature: dto.temperature ?? 0.7,
       max_tokens: dto.max_tokens ?? 1000,
@@ -108,12 +70,8 @@ export class ChatbotService {
 
     const savedSettings = await newSettings.save();
     
-    // Return with masked API key
-    const settingsObj = savedSettings.toObject();
-    return {
-      ...settingsObj,
-      api_key: this.maskApiKey(dto.api_key),
-    };
+    // Return with full API key (no masking)
+    return savedSettings.toObject();
   }
 
   async updateAISettings(
@@ -130,7 +88,7 @@ export class ChatbotService {
     // Update fields
     if (dto.ai_provider !== undefined) settings.ai_provider = dto.ai_provider;
     if (dto.ai_model !== undefined) settings.ai_model = dto.ai_model;
-    if (dto.api_key !== undefined) settings.api_key = this.encryptApiKey(dto.api_key);
+    if (dto.api_key !== undefined) settings.api_key = dto.api_key; // Store directly without encryption
     if (dto.is_active !== undefined) settings.is_active = dto.is_active;
     if (dto.temperature !== undefined) settings.temperature = dto.temperature;
     if (dto.max_tokens !== undefined) settings.max_tokens = dto.max_tokens;
@@ -145,29 +103,84 @@ export class ChatbotService {
 
     const updatedSettings = await settings.save();
     
-    // Return with masked API key
-    const settingsObj = updatedSettings.toObject();
-    return {
-      ...settingsObj,
-      api_key: this.maskApiKey(settingsObj.api_key),
-    };
+    // Return with full API key (no masking)
+    return updatedSettings.toObject();
   }
 
-  async testConnection(dto: any): Promise<{ success: boolean; message: string }> {
-    // TODO: Implement actual API connection test based on provider
-    // For now, just validate that API key is provided
-    if (!dto.api_key || dto.api_key.length < 10) {
+  async testConnection(companyId: string, dto: any): Promise<{ success: boolean; message: string }> {
+    // Validate input
+    if (!dto.ai_provider) {
       return {
         success: false,
-        message: 'Invalid API key format',
+        message: 'AI provider is required',
       };
     }
 
-    // Simulate connection test
-    return {
-      success: true,
-      message: 'Connection successful',
-    };
+    // Check if n8n webhook URL is configured
+    if (!this.n8nWebhookUrl) {
+      this.logger.error('N8N_WEBHOOK_URL is not configured in environment variables');
+      return {
+        success: false,
+        message: 'Test service is not configured',
+      };
+    }
+
+    try {
+      // Get the API key from database if not provided
+      let apiKeyToTest = dto.api_key;
+      
+      // If API key not provided, get from database
+      if (!dto.api_key) {
+        const settings = await this.aiSettingsModel.findOne({ company_id: companyId }).exec();
+        if (!settings) {
+          return {
+            success: false,
+            message: 'AI settings not found. Please save your settings first.',
+          };
+        }
+        apiKeyToTest = settings.api_key;
+        this.logger.log('Using stored API key from database for testing');
+      }
+
+      // Validate API key
+      if (!apiKeyToTest || apiKeyToTest.length < 10) {
+        return {
+          success: false,
+          message: 'Invalid API key format',
+        };
+      }
+
+      this.logger.log(`Testing ${dto.ai_provider} API connection via n8n webhook`);
+
+      // Call n8n webhook to test the actual API connection
+      const response = await fetch(this.n8nWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ai_provider: dto.ai_provider,
+          api_key: apiKeyToTest, // Send the REAL API key to n8n
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        this.logger.log(`${dto.ai_provider} API connection test successful`);
+      } else {
+        this.logger.warn(`${dto.ai_provider} API connection test failed: ${result.message}`);
+      }
+
+      return result;
+
+    } catch (error) {
+      this.logger.error('Error testing connection via n8n webhook:', error);
+      return {
+        success: false,
+        message: 'Failed to test connection: ' + (error.message || 'Unknown error'),
+      };
+    }
   }
 
   // ===== TRAINING DOCUMENTS METHODS =====
@@ -293,5 +306,66 @@ export class ChatbotService {
     }
 
     return { message: 'Training document deleted successfully' };
+  }
+
+  async uploadTrainingImage(
+    companyId: string,
+    file: Express.Multer.File,
+  ): Promise<{ success: boolean; data: { key: string; url: string; publicUrl: string } }> {
+    try {
+      // Upload to MinIO with company-specific folder
+      const uploadFolder = `training-documents/${companyId}`;
+      const result = await this.minioStorageService.uploadFile(file, uploadFolder);
+
+      return {
+        success: true,
+        data: {
+          key: result.key,
+          url: result.url,
+          publicUrl: result.publicUrl,
+        },
+      };
+    } catch (error) {
+      throw new BadRequestException('Failed to upload training image: ' + error.message);
+    }
+  }
+
+  async uploadTrainingImages(
+    companyId: string,
+    files: Express.Multer.File[],
+  ): Promise<{ 
+    success: boolean; 
+    data: Array<{ key: string; url: string; publicUrl: string; originalName: string }>;
+    failed: Array<{ fileName: string; error: string }>;
+  }> {
+    const uploadFolder = `training-documents/${companyId}`;
+    const results: Array<{ key: string; url: string; publicUrl: string; originalName: string }> = [];
+    const failed: Array<{ fileName: string; error: string }> = [];
+
+    // Upload tất cả ảnh song song để tăng tốc
+    await Promise.allSettled(
+      files.map(async (file) => {
+        try {
+          const result = await this.minioStorageService.uploadFile(file, uploadFolder);
+          results.push({
+            key: result.key,
+            url: result.url,
+            publicUrl: result.publicUrl,
+            originalName: file.originalname,
+          });
+        } catch (error) {
+          failed.push({
+            fileName: file.originalname,
+            error: error.message || 'Upload failed',
+          });
+        }
+      })
+    );
+
+    return {
+      success: true,
+      data: results,
+      failed: failed,
+    };
   }
 }

@@ -4,6 +4,7 @@ import { ChatbotController } from './chatbot.controller';
 import { ChatbotService } from './chatbot.service';
 import { AIChatbotSettings, AIChatbotSettingsSchema } from '../schemas/ai-chatbot-settings.schema';
 import { AITrainingDocument, AITrainingDocumentSchema } from '../schemas/ai-training-document.schema';
+import { MinioStorageService } from '../minio/minio-storage.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { AITrainingDocument, AITrainingDocumentSchema } from '../schemas/ai-trai
     ]),
   ],
   controllers: [ChatbotController],
-  providers: [ChatbotService],
+  providers: [ChatbotService, MinioStorageService],
   exports: [ChatbotService],
 })
 export class ChatbotModule {}

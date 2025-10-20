@@ -2538,6 +2538,75 @@ const ApiService = {
         throw error;
       }
     },
+
+    // Upload training image (single)
+    uploadTrainingImage: async (token: string, file: File): Promise<{key: string; url: string; publicUrl: string}> => {
+      try {
+        const formData = new FormData();
+        formData.append('images', file);
+
+        const response = await fetch(`${API_BASE_URL}/chatbot/training-documents/upload-images`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to upload training image');
+        }
+
+        const result = await response.json();
+        // Trả về ảnh đầu tiên nếu upload thành công
+        if (result.data && result.data.length > 0) {
+          return result.data[0];
+        }
+        throw new Error('No image uploaded');
+      } catch (error) {
+        console.error('Upload training image error:', error);
+        throw error;
+      }
+    },
+
+    // Upload training images (multiple)
+    uploadTrainingImages: async (
+      token: string, 
+      files: File[]
+    ): Promise<{
+      data: Array<{key: string; url: string; publicUrl: string; originalName: string}>;
+      failed: Array<{fileName: string; error: string}>;
+    }> => {
+      try {
+        const formData = new FormData();
+        files.forEach(file => {
+          formData.append('images', file);
+        });
+
+        const response = await fetch(`${API_BASE_URL}/chatbot/training-documents/upload-images`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to upload training images');
+        }
+
+        const result = await response.json();
+        return {
+          data: result.data || [],
+          failed: result.failed || [],
+        };
+      } catch (error) {
+        console.error('Upload training images error:', error);
+        throw error;
+      }
+    },
   },
 };
 export default ApiService;

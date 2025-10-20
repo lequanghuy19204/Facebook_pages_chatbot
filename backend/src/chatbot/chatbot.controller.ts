@@ -9,7 +9,12 @@ import {
   Query,
   UseGuards,
   Request,
+  UploadedFile,
+  UploadedFiles,
+  UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { ChatbotService } from './chatbot.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -59,8 +64,9 @@ export class ChatbotController {
 
   @Post('ai-settings/test-connection')
   @Roles(UserRole.ADMIN, UserRole.MANAGE_CHATBOT)
-  async testConnection(@Body() dto: TestConnectionDto) {
-    return this.chatbotService.testConnection(dto);
+  async testConnection(@Request() req, @Body() dto: TestConnectionDto) {
+    const companyId = req.user.company_id;
+    return this.chatbotService.testConnection(companyId, dto);
   }
 
   // ===== TRAINING DOCUMENTS ENDPOINTS =====
@@ -123,6 +129,33 @@ export class ChatbotController {
     return this.chatbotService.deleteTrainingDocument(
       req.user.company_id,
       documentId,
+    );
+  }
+
+  @Post('training-documents/upload-images')
+  @Roles(UserRole.ADMIN, UserRole.MANAGE_CHATBOT)
+  @UseInterceptors(FilesInterceptor('images', 10, { // Tối đa 10 ảnh cùng lúc
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB per file
+    },
+    fileFilter: (req, file, callback) => {
+      if (!file.mimetype.startsWith('image/')) {
+        return callback(new BadRequestException('Only image files are allowed'), false);
+      }
+      callback(null, true);
+    },
+  }))
+  async uploadTrainingImages(
+    @Request() req,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('No image files provided');
+    }
+
+    return this.chatbotService.uploadTrainingImages(
+      req.user.company_id,
+      files,
     );
   }
 }
