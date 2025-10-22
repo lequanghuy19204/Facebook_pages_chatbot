@@ -2607,6 +2607,31 @@ const ApiService = {
         throw error;
       }
     },
+
+    /**
+     * Sync all training documents to RAG (Qdrant)
+     */
+    syncRagDocuments: async (token: string): Promise<{success: boolean; message: string}> => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/chatbot/sync-rag`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to sync RAG documents');
+        }
+
+        return await response.json();
+      } catch (error) {
+        console.error('Sync RAG documents error:', error);
+        throw error;
+      }
+    },
   },
 };
 export default ApiService;

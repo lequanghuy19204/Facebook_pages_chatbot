@@ -22,6 +22,12 @@
   flex: 1;
 }
 
+.training-doc-header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .training-doc-search-box {
   flex: 1;
   display: flex;
@@ -441,9 +447,14 @@
   border: 1px solid #d1d5db;
 }
 
-.training-doc-btn-secondary:hover {
+.training-doc-btn-secondary:hover:not(:disabled) {
   background: #e5e7eb;
   border-color: #9ca3af;
+}
+
+.training-doc-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .training-doc-btn-icon {

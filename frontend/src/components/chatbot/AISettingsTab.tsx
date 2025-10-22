@@ -7,10 +7,38 @@ import ApiService, { AIChatbotSettings, CreateAISettingsDto, UpdateAISettingsDto
 import { toast } from 'react-toastify';
 
 const AI_PROVIDERS = [
-  { value: 'openai', label: 'OpenAI', models: ['gpt-4', 'gpt-3.5-turbo', 'gpt-4-turbo'] },
-  { value: 'anthropic', label: 'Anthropic Claude', models: ['claude-3-opus', 'claude-3-sonnet'] },
-  { value: 'google', label: 'Google AI', models: ['gemini-pro', 'gemini-1.5-flash', 'gemini-1.5-pro'] },
-  { value: 'azure', label: 'Azure OpenAI', models: ['azure-gpt-4', 'azure-gpt-35-turbo'] }
+  { 
+    value: 'openai', 
+    label: 'OpenAI', 
+    models: [
+      { value: 'gpt-4o-mini', label: 'gpt-4o-mini ($0.60/$2.40 per 1M tokens)' },
+      { value: 'gpt-4.1', label: 'gpt-4.1 ($0.80/$3.20 per 1M tokens)' },
+      { value: 'gpt-4.1-mini', label: 'gpt-4.1-mini ($0.40/$1.60 per 1M tokens)' },
+      { value: 'gpt-4o', label: 'gpt-4o ($5.00/$20.00 per 1M tokens)' },
+      { value: 'gpt-5-mini', label: 'gpt-5-mini ($0.25/$2.00 per 1M tokens)' },
+      { value: 'gpt-4.1-nano', label: 'gpt-4.1-nano ($0.20/$0.80 per 1M tokens)' },
+      { value: 'gpt-4o-2024-11-20', label: 'gpt-4o-2024-11-20 ($5.00/$20.00 per 1M tokens)' },
+      { value: 'gpt-5-nano', label: 'gpt-5-nano ($0.05/$0.40 per 1M tokens)' },
+      { value: 'o1-mini', label: 'o1-mini ($0.20/$0.60 per 1M tokens)' },
+      { value: 'gpt-3.5-turbo', label: 'gpt-3.5-turbo ($0.50/$1.50 per 1M tokens)' }
+    ]
+  },
+  { 
+    value: 'google', 
+    label: 'Google AI', 
+    models: [
+      { value: 'models/gemini-2.5-flash-lite', label: 'gemini-2.5-flash-lite ($0.10/$0.40 per 1M tokens)' },
+      { value: 'models/gemini-2.0-flash-lite-001', label: 'gemini-2.0-flash-lite-001 ($0.075/$0.30 per 1M tokens)' },
+      { value: 'models/gemini-2.5-flash', label: 'gemini-2.5-flash ($0.15/$0.60 per 1M tokens)' },
+      { value: 'models/gemini-2.0-flash-001', label: 'gemini-2.0-flash-001 ($0.10/$0.40 per 1M tokens)' },
+      { value: 'models/gemini-2.5-pro', label: 'gemini-2.5-pro ($1.25/$10.00 per 1M tokens)' },
+      { value: 'models/gemini-2.0-pro-exp', label: 'gemini-2.0-pro-exp ($1.00/$8.00 per 1M tokens)' },
+      { value: 'models/gemini-flash-latest', label: 'gemini-flash-latest ($0.15/$0.60 per 1M tokens)' },
+      { value: 'models/gemini-2.0-flash-thinking-exp-1219', label: 'gemini-2.0-flash-thinking-exp-1219 ($0.15/$0.60 per 1M tokens)' },
+      { value: 'models/aqa', label: 'aqa ($0.20/$0.80 per 1M tokens)' },
+      { value: 'models/gemini-2.5-flash-lite-preview-09-2025', label: 'gemini-2.5-flash-lite-preview-09-2025 ($0.10/$0.40 per 1M tokens)' }
+    ]
+  }
 ];
 
 export default function AISettingsTab() {
@@ -67,10 +95,11 @@ export default function AISettingsTab() {
 
   const handleProviderChange = (provider: string) => {
     const providerInfo = AI_PROVIDERS.find(p => p.value === provider);
+    const firstModel = providerInfo?.models[0];
     setSettings({
       ...settings,
       ai_provider: provider,
-      ai_model: providerInfo?.models[0] || ''
+      ai_model: typeof firstModel === 'string' ? firstModel : firstModel?.value || ''
     });
   };
 
@@ -229,11 +258,15 @@ export default function AISettingsTab() {
               value={settings.ai_model}
               onChange={(e) => setSettings({ ...settings, ai_model: e.target.value })}
             >
-              {selectedProvider?.models.map(model => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
+              {selectedProvider?.models.map(model => {
+                const modelValue = typeof model === 'string' ? model : model.value;
+                const modelLabel = typeof model === 'string' ? model : model.label;
+                return (
+                  <option key={modelValue} value={modelValue}>
+                    {modelLabel}
+                  </option>
+                );
+              })}
             </select>
           </div>
 

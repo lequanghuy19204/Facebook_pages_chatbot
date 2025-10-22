@@ -134,9 +134,9 @@ export class ChatbotController {
 
   @Post('training-documents/upload-images')
   @Roles(UserRole.ADMIN, UserRole.MANAGE_CHATBOT)
-  @UseInterceptors(FilesInterceptor('images', 10, { // Tối đa 10 ảnh cùng lúc
+  @UseInterceptors(FilesInterceptor('images', 10, {
     limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB per file
+      fileSize: 10 * 1024 * 1024,
     },
     fileFilter: (req, file, callback) => {
       if (!file.mimetype.startsWith('image/')) {
@@ -157,5 +157,11 @@ export class ChatbotController {
       req.user.company_id,
       files,
     );
+  }
+
+  @Post('sync-rag')
+  @Roles(UserRole.ADMIN, UserRole.MANAGE_CHATBOT)
+  async syncRagDocuments(@Request() req) {
+    return this.chatbotService.syncRagDocuments(req.user.company_id);
   }
 }

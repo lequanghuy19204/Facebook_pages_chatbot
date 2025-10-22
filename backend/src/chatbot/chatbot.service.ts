@@ -11,6 +11,7 @@ import { MinioStorageService } from '../minio/minio-storage.service';
 export class ChatbotService {
   private readonly logger = new Logger(ChatbotService.name);
   private readonly n8nWebhookUrl: string | undefined;
+  private readonly n8nEmbeddingWebhookUrl: string | undefined;
 
   constructor(
     @InjectModel(AIChatbotSettings.name)
@@ -21,6 +22,7 @@ export class ChatbotService {
     private configService: ConfigService,
   ) {
     this.n8nWebhookUrl = this.configService.get<string>('N8N_WEBHOOK_URL');
+    this.n8nEmbeddingWebhookUrl = this.configService.get<string>('N8N_EMBEDDING_WEBHOOK_URL');
   }
 
   // ===== API SETTINGS METHODS =====
@@ -264,7 +266,9 @@ export class ChatbotService {
       updated_by: userId,
     });
 
-    return await newDocument.save();
+    const savedDocument = await newDocument.save();
+
+    return savedDocument;
   }
 
   async updateTrainingDocument(
@@ -290,7 +294,9 @@ export class ChatbotService {
     
     document.updated_by = userId;
 
-    return await document.save();
+    const updatedDocument = await document.save();
+
+    return updatedDocument;
   }
 
   async deleteTrainingDocument(
@@ -367,5 +373,64 @@ export class ChatbotService {
       data: results,
       failed: failed,
     };
+  }
+
+  // ===== PRIVATE HELPER METHODS =====
+
+  /**
+   * Sync all training documents to Qdrant for RAG
+   * This will:
+   * 1. Get AI settings for the company (to get api_key and provider)
+   * 2. Send company_id, ai_provider, and api_key to n8n
+   * 3. n8n will delete old embeddings and create new ones
+   */
+  async syncRagDocuments(companyId: string): Promise<{ success: boolean; message: string }> {
+    if (!this.n8nEmbeddingWebhookUrl) {
+      throw new BadRequestException('N8N_EMBEDDING_WEBHOOK_URL is not configured');
+    }
+
+    try {
+      this.logger.log(`Starting RAG sync for company ${companyId}`);
+
+      // Get AI settings to retrieve api_key and provider
+      const aiSettings = await this.aiSettingsModel.findOne({ company_id: companyId }).exec();
+      
+      if (!aiSettings) {
+        throw new BadRequestException('AI settings not found. Please configure AI settings first.');
+      }
+
+      if (!aiSettings.api_key) {
+        throw new BadRequestException('API key not configured. Please add API key in AI settings.');
+      }
+
+      // Call n8n webhook with company_id, ai_provider, and api_key
+      const response = await fetch(this.n8nEmbeddingWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+          ai_provider: aiSettings.ai_provider,
+          api_key: aiSettings.api_key, // Send API key directly (already stored unencrypted)
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`n8n webhook returned ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      this.logger.log(`RAG sync completed for company ${companyId}:`, result);
+
+      return {
+        success: true,
+        message: 'RAG documents synced successfully',
+      };
+    } catch (error) {
+      this.logger.error(`Error syncing RAG documents for company ${companyId}:`, error);
+      throw new BadRequestException(`Failed to sync RAG documents: ${error.message}`);
+    }
   }
 }
