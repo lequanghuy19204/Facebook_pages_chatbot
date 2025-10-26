@@ -135,6 +135,14 @@ export class UpdateConversationDto {
   @IsOptional()
   @IsEnum(['low', 'normal', 'high', 'urgent'])
   priority?: string;
+
+  @IsOptional()
+  @IsNumber()
+  summaryCheckpoint?: number;
+
+  @IsOptional()
+  @IsString()
+  currentSummary?: string;
 }
 
 export class UpdateCustomerDto {

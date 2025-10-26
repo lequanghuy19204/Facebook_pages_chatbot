@@ -15,6 +15,7 @@ import type { RawBodyRequest } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { FacebookMessagingService } from './facebook-messaging.service';
+import { ChatbotWebhookHandlerService } from './chatbot-webhook-handler.service';
 import { MinioStorageService } from '../minio/minio-storage.service';
 
 interface FacebookWebhookEntry {
@@ -61,6 +62,7 @@ export class FacebookWebhookController {
   constructor(
     private readonly configService: ConfigService,
     private readonly messagingService: FacebookMessagingService,
+    private readonly chatbotWebhookHandler: ChatbotWebhookHandlerService,
     private readonly minioService: MinioStorageService,
   ) {}
 
@@ -310,8 +312,28 @@ export class FacebookWebhookController {
       const existingMessage = await this.messagingService.findMessageByFacebookId(message.mid);
       
       if (isEcho) {
-        // NẾU LÀ ECHO: LƯU ĐẦY ĐỦ echo webhook từ Facebook
+        // NẾU LÀ ECHO: Kiểm tra metadata trước để xác định có phải tin nhắn đã được lưu không
         this.logger.log(`[processMessage] 🔄 Processing echo message - MID: ${message.mid}, Text: "${message.text?.substring(0, 50) || 'no-text'}", Conv: ${conversation.conversation_id}`);
+        
+        // Parse metadata nếu có (Facebook trả về dạng string JSON)
+        let parsedMetadata: any = null;
+        if (message.metadata) {
+          try {
+            parsedMetadata = typeof message.metadata === 'string' 
+              ? JSON.parse(message.metadata) 
+              : message.metadata;
+            
+            this.logger.log(`[processMessage] Found metadata in echo: sender_type=${parsedMetadata.sender_type}, sender_id=${parsedMetadata.sender_id}`);
+          } catch (error) {
+            this.logger.warn(`[processMessage] Failed to parse metadata: ${message.metadata}`);
+          }
+        }
+        
+        // KIỂM TRA: Nếu có metadata từ chatbot/staff → Bỏ qua echo này vì message đã được lưu
+        if (parsedMetadata && (parsedMetadata.sender_type === 'chatbot' || parsedMetadata.sender_type === 'staff')) {
+          this.logger.log(`[processMessage] ✅ Skipping echo with metadata (sender_type=${parsedMetadata.sender_type}) - message already saved by ${parsedMetadata.sender_type}`);
+          return;
+        }
         
         // BƯỚC 1: Kiểm tra xem message với MID này đã tồn tại chưa (trong BẤT KỲ conversation nào)
         if (existingMessage) {
@@ -460,10 +482,17 @@ export class FacebookWebhookController {
       if (isEcho) {
         this.logger.log('[processMessage] ✅ Echo message (staff/bot reply) saved successfully');
       } else {
-        // Customer message
+        // Customer message - schedule chatbot webhook với debounce
         if (conversation.current_handler === 'chatbot') {
-          // TODO: Xử lý chatbot logic ở đây
-          this.logger.log('[processMessage] Customer message saved, chatbot should handle');
+          this.logger.log('[processMessage] Customer message saved, scheduling chatbot webhook...');
+          
+          // Gọi service để schedule webhook (với debounce mechanism)
+          await this.chatbotWebhookHandler.scheduleWebhookCall(
+            page.company_id,
+            conversation.conversation_id,
+            page.facebook_page_id,
+            customer.customer_id,
+          );
         } else {
           // current_handler = "human" -> needs_attention sẽ được set = true trong updateConversationLastMessage
           this.logger.log('[processMessage] Customer message saved, staff should handle');

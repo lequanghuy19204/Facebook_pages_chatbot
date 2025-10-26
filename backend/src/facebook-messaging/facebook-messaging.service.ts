@@ -698,7 +698,7 @@ export class FacebookMessagingService {
   async sendMessageToFacebook(
     facebookPageId: string,
     facebookUserId: string,
-    message: { text: string; attachments?: any[] },
+    message: { text: string; attachments?: any[]; senderType?: 'chatbot' | 'staff'; senderId?: string; senderName?: string },
   ): Promise<any> {
     try {
       // Lấy page access token
@@ -709,6 +709,14 @@ export class FacebookMessagingService {
 
       const apiVersion = this.configService.get('FACEBOOK_API_VERSION') || 'v23.0';
       const url = `https://graph.facebook.com/${apiVersion}/${page.facebook_page_id}/messages`;
+
+      // Tạo metadata để đánh dấu nguồn gửi (chatbot hoặc staff)
+      const metadata = message.senderType ? JSON.stringify({
+        sender_type: message.senderType,
+        sender_id: message.senderId || (message.senderType === 'chatbot' ? 'chatbot' : page.facebook_page_id),
+        sender_name: message.senderName || (message.senderType === 'chatbot' ? 'AI Chatbot' : page.name),
+        timestamp: Date.now(),
+      }) : undefined;
 
       // Nếu có attachments, gửi TẤT CẢ SONG SONG để tăng tốc
       if (message.attachments && message.attachments.length > 0) {
@@ -729,6 +737,11 @@ export class FacebookMessagingService {
             },
           };
 
+          // Thêm metadata nếu có
+          if (metadata) {
+            payload.message.metadata = metadata;
+          }
+
           return axios.post(url, payload, {
             params: { access_token: page.access_token },
             headers: { 'Content-Type': 'application/json' },
@@ -744,10 +757,15 @@ export class FacebookMessagingService {
 
         // Gửi text message song song nếu có
         if (message.text && message.text.trim()) {
-          const textPayload = {
+          const textPayload: any = {
             recipient: { id: facebookUserId },
             message: { text: message.text },
           };
+
+          // Thêm metadata nếu có
+          if (metadata) {
+            textPayload.message.metadata = metadata;
+          }
 
           attachmentPromises.push(
             axios.post(url, textPayload, {
@@ -777,6 +795,11 @@ export class FacebookMessagingService {
           recipient: { id: facebookUserId },
           message: { text: message.text },
         };
+
+        // Thêm metadata nếu có
+        if (metadata) {
+          payload.message.metadata = metadata;
+        }
 
         const response = await axios.post(url, payload, {
           params: { access_token: page.access_token },

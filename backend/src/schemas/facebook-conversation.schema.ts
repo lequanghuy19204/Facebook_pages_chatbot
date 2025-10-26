@@ -129,6 +129,13 @@ export class FacebookConversation {
   @Prop({ default: 0 })
   unread_customer_messages: number; // Số tin nhắn từ khách chưa được xử lý
 
+  // ROLLING SUMMARY (Token Optimization)
+  @Prop({ default: 0 })
+  summary_checkpoint: number; // Số tin nhắn đã được tóm tắt (0, 10, 20, 30, ...)
+
+  @Prop({ default: null })
+  current_summary?: string; // Summary hiện tại của các tin nhắn đã qua (null = chưa có summary)
+
   // ESCALATION (Bot → Human)
   @Prop({ default: false })
   escalated_from_bot: boolean; // Bot có chuyển lên human không
@@ -177,3 +184,4 @@ FacebookConversationSchema.index({ company_id: 1, source: 1 });
 FacebookConversationSchema.index({ tags: 1 }); // Find conversations by tags
 FacebookConversationSchema.index({ company_id: 1, tags: 1 }); // Filter conversations by tags in company
 FacebookConversationSchema.index({ customer_id: 1, status: 1 }); // Lấy conversations của customer
+FacebookConversationSchema.index({ conversation_id: 1, summary_checkpoint: 1 }); // Summary query optimization
