@@ -389,13 +389,14 @@ export class FacebookService {
         }
       });
       
-      // Clear existing pages for this company
-      await this.facebookPageModel.deleteMany({ company_id: user.company_id }).exec();
-      this.logger.log(`Cleared existing pages for company: ${user.company_id}`);
+      // Track Facebook page IDs from API to identify deleted pages later
+      const facebookPageIdsFromApi = pages.map(p => p.id);
 
       // Step 1: Prepare all page data without image processing
       const pageDataList = pages.map(page => {
-        const pageId = `page_${uuidv4().replace(/-/g, '').substring(0, 12)}`;
+        // Check if page already exists to preserve page_id
+        const existingPage = existingPages.find(p => p.facebook_page_id === page.id);
+        const pageId = existingPage?.page_id || `page_${uuidv4().replace(/-/g, '').substring(0, 12)}`;
         
         return {
           pageId,
@@ -412,9 +413,8 @@ export class FacebookService {
             last_sync: new Date(),
             sync_status: 'success',
             imported_by: userId,
-            imported_at: new Date(),
+            imported_at: existingPage?.imported_at || new Date(),
             tasks: page.tasks,
-            // Will be filled later if image processing succeeds
             picture: page.picture?.data?.url || null,
             picture_url: null as string | null,
             picture_key: null as string | null
@@ -480,21 +480,27 @@ export class FacebookService {
       });
       this.logger.log(`Image processing completed: ${imageSuccessCount} successful (${imageReusedCount} reused), ${imageResults.length - imageSuccessCount} failed`);
 
-      // Step 3: Save all pages to database in parallel
+      // Step 3: Upsert all pages to database in parallel (update existing or insert new)
       const dbSavePromises = pageDataList.map(async (item) => {
         try {
-          const facebookPage = new this.facebookPageModel(item.pageData);
-          await facebookPage.save();
-          this.logger.log(`Saved page to database: ${item.page.name} (${item.page.id})`);
+          await this.facebookPageModel.updateOne(
+            { 
+              facebook_page_id: item.page.id,
+              company_id: user.company_id 
+            },
+            { $set: item.pageData },
+            { upsert: true }
+          ).exec();
+          this.logger.log(`Upserted page to database: ${item.page.name} (${item.page.id})`);
           return { success: true, page: item.page.name };
         } catch (saveError) {
-          this.logger.error(`Failed to save page ${item.page.name} to database:`, saveError);
+          this.logger.error(`Failed to upsert page ${item.page.name} to database:`, saveError);
           return { success: false, page: item.page.name, error: saveError.message };
         }
       });
 
-      // Execute database saves in parallel
-      this.logger.log(`Starting parallel database saves for ${pageDataList.length} pages...`);
+      // Execute database upserts in parallel
+      this.logger.log(`Starting parallel database upserts for ${pageDataList.length} pages...`);
       const dbResults = await Promise.allSettled(dbSavePromises);
       
       // Process final results
@@ -509,9 +515,28 @@ export class FacebookService {
           // Promise was rejected
           const pageName = pageDataList[index]?.page?.name || `Unknown Page ${index}`;
           failedPages.push(pageName);
-          this.logger.error(`Database save promise rejected for page ${pageName}:`, result.reason);
+          this.logger.error(`Database upsert promise rejected for page ${pageName}:`, result.reason);
         }
       });
+
+      // Step 4: Delete pages that no longer exist on Facebook (were removed or access revoked)
+      const deletedPages = await this.facebookPageModel.updateMany(
+        {
+          company_id: user.company_id,
+          facebook_page_id: { $nin: facebookPageIdsFromApi }
+        },
+        {
+          $set: { 
+            is_active: false,
+            sync_status: 'removed',
+            last_sync: new Date()
+          }
+        }
+      ).exec();
+
+      if (deletedPages.modifiedCount > 0) {
+        this.logger.log(`Marked ${deletedPages.modifiedCount} pages as inactive (no longer exist on Facebook)`);
+      }
 
       const result: FacebookPageSyncResultDto = {
         pages_synced: syncedCount,
@@ -521,7 +546,7 @@ export class FacebookService {
         failed_pages: failedPages.length > 0 ? failedPages : undefined
       };
 
-      this.logger.log(`Sync completed: ${syncedCount}/${pages.length} pages synced`);
+      this.logger.log(`Sync completed: ${syncedCount}/${pages.length} pages synced, ${deletedPages.modifiedCount} pages marked as removed`);
       return result;
 
     } catch (error) {
