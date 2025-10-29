@@ -124,6 +124,19 @@ export class MessagingGateway
   }
 
   /**
+   * Broadcast conversation escalated to human (needs attention)
+   */
+  emitConversationEscalated(companyId: string, data: {
+    conversation_id: string;
+    customer_id: string;
+    escalation_reason: string;
+    escalated_at: Date;
+  }) {
+    this.server.to(`company:${companyId}`).emit('conversation_escalated', data);
+    this.logger.log(`🔔 Emitted conversation_escalated to company:${companyId} - Conversation: ${data.conversation_id}`);
+  }
+
+  /**
    * Get connected clients count for a company
    */
   getConnectedClientsCount(companyId: string): number {

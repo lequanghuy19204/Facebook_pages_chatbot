@@ -514,11 +514,20 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
     socketService.onConversationUpdated(handleConversationUpdated);
     socketService.onNewConversation(handleNewConversation);
 
+    // Listen for conversation escalated (chatbot → human)
+    const handleConversationEscalated = (data: any) => {
+      console.log('🔔 Conversation escalated to human:', data);
+      // Just log, UI will update via conversation_updated event
+    };
+
+    socketService.onConversationEscalated(handleConversationEscalated);
+
     // Cleanup
     return () => {
       socketService.off('new_message', handleNewMessage);
       socketService.off('conversation_updated', handleConversationUpdated);
       socketService.off('new_conversation', handleNewConversation);
+      socketService.off('conversation_escalated', handleConversationEscalated);
     };
   }, []);
 

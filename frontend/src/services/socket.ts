@@ -108,6 +108,13 @@ class SocketService {
   }
 
   /**
+   * Subscribe to conversation escalated (chatbot → human)
+   */
+  onConversationEscalated(callback: (data: any) => void): void {
+    this.socket?.on('conversation_escalated', callback);
+  }
+
+  /**
    * Remove all event listeners
    */
   removeAllListeners(): void {

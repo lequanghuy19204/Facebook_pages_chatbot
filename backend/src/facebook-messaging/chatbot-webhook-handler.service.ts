@@ -8,6 +8,7 @@ import { AIChatbotSettings, AIChatbotSettingsDocument } from '../schemas/ai-chat
 import { FacebookConversation, FacebookConversationDocument } from '../schemas/facebook-conversation.schema';
 import { FacebookCustomer, FacebookCustomerDocument } from '../schemas/facebook-customer.schema';
 import { FacebookMessagingService } from './facebook-messaging.service';
+import { MessagingGateway } from '../websocket/messaging.gateway';
 
 interface PendingWebhook {
   companyId: string;
@@ -25,6 +26,8 @@ interface N8nChatbotResponse {
     answer: string;
     images?: string[];
     has_images: boolean;
+    needs_human_support?: boolean;
+    current_handler?: 'chatbot' | 'human';
     extracted_customer_info?: {
       purchased_products?: Array<{
         product_id: string | null;
@@ -40,7 +43,17 @@ interface N8nChatbotResponse {
       phone?: string | null;
       weight?: number | null;
     };
-  }[];
+  }[] | {
+    answer: string;
+    images?: string[];
+    has_images: boolean;
+    needs_human_support?: boolean;
+    current_handler?: 'chatbot' | 'human';
+    extracted_customer_info?: any;
+  } | string; // Support array, object, or string (fallback)
+  current_handler?: 'chatbot' | 'human';
+  needs_human_support?: boolean;
+  fallback?: boolean;
   timestamp: string;
 }
 
@@ -63,6 +76,8 @@ export class ChatbotWebhookHandlerService {
     private readonly messagingService: FacebookMessagingService,
     
     private readonly configService: ConfigService,
+    
+    private readonly messagingGateway: MessagingGateway,
   ) {}
 
   /**
@@ -191,7 +206,7 @@ export class ChatbotWebhookHandlerService {
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 30000, // 30 seconds timeout
+        timeout: 60000, // 30 seconds timeout
       });
 
       this.logger.log(
@@ -210,6 +225,13 @@ export class ChatbotWebhookHandlerService {
           `Processing n8n response for conversation ${conversationId}`
         );
         
+        // Kiểm tra current_handler và needs_human_support ở ngoài response
+        const shouldEscalate = response.data.current_handler === 'human' || response.data.needs_human_support;
+        
+        this.logger.log(
+          `[N8N Response Check] current_handler=${response.data.current_handler}, needs_human_support=${response.data.needs_human_support}, shouldEscalate=${shouldEscalate}`
+        );
+        
         await this.processN8nResponse(
           response.data,
           companyId,
@@ -217,6 +239,19 @@ export class ChatbotWebhookHandlerService {
           facebookPageId,
           customerId
         );
+
+        // Kiểm tra nếu n8n yêu cầu chuyển sang human support (kiểm tra ở ngoài response)
+        if (shouldEscalate) {
+          this.logger.log(
+            `N8N requested human support for conversation ${conversationId}. Escalating to human.`
+          );
+          
+          await this.escalateToHuman(
+            companyId,
+            conversationId,
+            response.data.needs_human_support ? 'no_answer' : 'complex_query'
+          );
+        }
       } else {
         this.logger.warn(
           `No valid response from n8n for conversation ${conversationId}. Response: ${JSON.stringify(response.data)}`
@@ -252,11 +287,51 @@ export class ChatbotWebhookHandlerService {
         `[processN8nResponse] Starting to process n8n response for conversation: ${conversationId}`
       );
       this.logger.log(
-        `[processN8nResponse] Response structure: success=${n8nResponse.success}, response.length=${n8nResponse.response?.length}`
+        `[processN8nResponse] Full n8n response:`,
+        JSON.stringify(n8nResponse, null, 2)
+      );
+      this.logger.log(
+        `[processN8nResponse] Response type: ${typeof n8nResponse.response}, isArray: ${Array.isArray(n8nResponse.response)}`
       );
 
-      if (!n8nResponse.success || !n8nResponse.response || n8nResponse.response.length === 0) {
+      if (!n8nResponse.success) {
+        this.logger.warn(`N8N response not successful for conversation: ${conversationId}`);
+        return;
+      }
+
+      if (!n8nResponse.response) {
         this.logger.warn(`No response from n8n for conversation: ${conversationId}`);
+        return;
+      }
+
+      // Normalize response to array format
+      let responseArray: any[];
+      
+      if (Array.isArray(n8nResponse.response)) {
+        // Already an array
+        responseArray = n8nResponse.response;
+        this.logger.log(`[processN8nResponse] Response is array with ${responseArray.length} items`);
+      } else if (typeof n8nResponse.response === 'object') {
+        // Single object - wrap in array
+        responseArray = [n8nResponse.response];
+        this.logger.log(`[processN8nResponse] Response is object, wrapped to array`);
+      } else if (typeof n8nResponse.response === 'string') {
+        // String response (fallback case)
+        responseArray = [{
+          answer: n8nResponse.response,
+          images: [],
+          has_images: false,
+        }];
+        this.logger.log(`[processN8nResponse] Response is string, converted to object array`);
+      } else {
+        this.logger.error(
+          `[processN8nResponse] Unexpected response type: ${typeof n8nResponse.response}`
+        );
+        return;
+      }
+
+      if (responseArray.length === 0) {
+        this.logger.warn(`Empty response array from n8n for conversation: ${conversationId}`);
         return;
       }
 
@@ -276,7 +351,7 @@ export class ChatbotWebhookHandlerService {
       );
 
       // Xử lý từng response (thường chỉ có 1)
-      for (const responseItem of n8nResponse.response) {
+      for (const responseItem of responseArray) {
         const { answer, images, has_images, extracted_customer_info } = responseItem;
 
         this.logger.log(
@@ -370,7 +445,7 @@ export class ChatbotWebhookHandlerService {
   private async updateCustomerInfo(
     customerId: string,
     companyId: string,
-    extractedInfo: N8nChatbotResponse['response'][0]['extracted_customer_info'],
+    extractedInfo: any,
   ): Promise<void> {
     if (!extractedInfo) return;
 
@@ -489,5 +564,75 @@ export class ChatbotWebhookHandlerService {
     });
     this.pendingWebhooks.clear();
     this.logger.log('Cleared all pending webhooks');
+  }
+
+  /**
+   * Chuyển conversation sang human handler
+   */
+  private async escalateToHuman(
+    companyId: string,
+    conversationId: string,
+    reason: 'no_answer' | 'customer_request' | 'complex_query',
+  ): Promise<void> {
+    try {
+      const escalatedAt = new Date();
+      
+      const updateData = {
+        current_handler: 'human',
+        escalated_from_bot: true,
+        escalation_reason: reason,
+        escalated_at: escalatedAt,
+        needs_attention: true,
+        is_read: false,
+        updated_at: escalatedAt,
+      };
+
+      await this.conversationModel.updateOne(
+        {
+          conversation_id: conversationId,
+          company_id: companyId,
+        },
+        { $set: updateData }
+      );
+
+      // Hủy pending webhook nếu có
+      this.cancelPendingWebhook(conversationId);
+
+      // Lấy thông tin conversation để gửi qua WebSocket
+      const conversation = await this.conversationModel.findOne({
+        conversation_id: conversationId,
+        company_id: companyId,
+      });
+
+      this.logger.log(
+        `✅ Escalated conversation ${conversationId} to human support. Reason: ${reason}`
+      );
+
+      // Gửi WebSocket notification đến frontend
+      if (conversation) {
+        this.messagingGateway.emitConversationEscalated(companyId, {
+          conversation_id: conversationId,
+          customer_id: conversation.customer_id,
+          escalation_reason: reason,
+          escalated_at: escalatedAt,
+        });
+
+        // Cũng gửi conversation_updated để cập nhật UI
+        this.messagingGateway.emitConversationUpdate(companyId, {
+          conversation_id: conversationId,
+          current_handler: 'human',
+          needs_attention: true,
+          is_read: false,
+          escalated_from_bot: true,
+          escalation_reason: reason,
+          escalated_at: escalatedAt,
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to escalate conversation ${conversationId} to human:`,
+        error
+      );
+    }
   }
 }
