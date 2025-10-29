@@ -392,13 +392,13 @@ export default function AISettingsTab() {
             <input
               type="number"
               className="chatbot-form-input"
-              min="100"
-              max="4000"
+              min="1000"
+              max="10000"
               value={settings.max_tokens}
               onChange={(e) => setSettings({ ...settings, max_tokens: parseInt(e.target.value) })}
             />
             <p className="chatbot-form-hint">
-              Giới hạn độ dài câu trả lời (100-4000 tokens)
+              Giới hạn độ dài câu trả lời (1000-10000 tokens)
             </p>
           </div>
 

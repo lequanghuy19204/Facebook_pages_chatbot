@@ -28,8 +28,8 @@ export class CreateAISettingsDto {
   temperature?: number;
 
   @IsNumber()
-  @Min(100)
-  @Max(4000)
+  @Min(1000)
+  @Max(10000)
   @IsOptional()
   max_tokens?: number;
 
@@ -77,8 +77,8 @@ export class UpdateAISettingsDto {
   temperature?: number;
 
   @IsNumber()
-  @Min(100)
-  @Max(4000)
+  @Min(1000)
+  @Max(10000)
   @IsOptional()
   max_tokens?: number;
 
