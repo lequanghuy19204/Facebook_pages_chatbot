@@ -255,20 +255,64 @@ export class ChatbotWebhookHandlerService {
           );
         }
       } else {
+        // N8N trả về response không hợp lệ hoặc success = false
         this.logger.warn(
           `No valid response from n8n for conversation ${conversationId}. Response: ${JSON.stringify(response.data)}`
         );
+        
+        this.logger.log(
+          `[N8N Error] Invalid response received. Escalating to human support.`
+        );
+        
+        // Chuyển sang human vì N8N có lỗi
+        await this.escalateToHuman(
+          companyId,
+          conversationId,
+          facebookPageId,
+          customerId,
+          'complex_query'
+        );
       }
     } catch (error) {
+      // Xử lý lỗi: timeout, network error, N8N down, etc.
       if (axios.isAxiosError(error)) {
         this.logger.error(
           `Webhook call failed for conversation ${conversationId}: ${error.message}`,
           error.response?.data
         );
+        
+        // Kiểm tra loại lỗi
+        if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+          this.logger.error(`[N8N Timeout] Request timeout for conversation ${conversationId}`);
+        } else if (error.response) {
+          this.logger.error(`[N8N Error] HTTP ${error.response.status} for conversation ${conversationId}`);
+        } else if (error.request) {
+          this.logger.error(`[N8N Error] No response received for conversation ${conversationId}`);
+        }
       } else {
         this.logger.error(
           `Webhook call error for conversation ${conversationId}:`,
           error
+        );
+      }
+      
+      // Bất kỳ lỗi nào cũng chuyển sang human support
+      this.logger.log(
+        `[N8N Error] Escalating conversation ${conversationId} to human due to error.`
+      );
+      
+      try {
+        await this.escalateToHuman(
+          companyId,
+          conversationId,
+          facebookPageId,
+          customerId,
+          'complex_query'
+        );
+      } catch (escalateError) {
+        this.logger.error(
+          `Failed to escalate conversation ${conversationId} after N8N error:`,
+          escalateError
         );
       }
     }
