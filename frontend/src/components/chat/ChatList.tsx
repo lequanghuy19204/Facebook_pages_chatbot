@@ -700,6 +700,13 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
                       )}
                     </div>
                     <div className="chat-list-icons-group">
+                      {/* Handler Icon (Chatbot or Human) */}
+                      <div className="chat-list-handler-icon" title={conversation.current_handler === 'chatbot' ? 'Chatbot đang xử lý' : 'Nhân viên đang xử lý'}>
+                        <img 
+                          src={conversation.current_handler === 'chatbot' ? '/chat-bot.svg' : '/human.svg'} 
+                          alt={conversation.current_handler === 'chatbot' ? 'chatbot' : 'human'} 
+                        />
+                      </div>
                       {conversation.page_picture_url && (
                         <div className="chat-list-page-icon">
                           <img src={conversation.page_picture_url} alt="page avatar" />
