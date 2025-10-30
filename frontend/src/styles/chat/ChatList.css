@@ -393,6 +393,24 @@
   object-fit: contain;
 }
 
+.chat-list-phone-icon {
+  width: 18px;
+  height: 18px;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: help;
+}
+
+.chat-list-phone-icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
 .chat-list-page-icon {
   width: 18px;
   height: 18px;

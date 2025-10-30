@@ -520,6 +520,7 @@ export interface AIChatbotSettings {
   max_tokens: number;
   response_delay: number;
   fallback_enabled: boolean;
+  send_no_info_message: boolean;
   system_prompt: string;
   enabled_facebook_page_ids: string[];
   created_by?: string;
@@ -537,6 +538,7 @@ export interface CreateAISettingsDto {
   max_tokens?: number;
   response_delay?: number;
   fallback_enabled?: boolean;
+  send_no_info_message?: boolean;
   system_prompt: string;
   enabled_facebook_page_ids?: string[];
 }
@@ -550,6 +552,7 @@ export interface UpdateAISettingsDto {
   max_tokens?: number;
   response_delay?: number;
   fallback_enabled?: boolean;
+  send_no_info_message?: boolean;
   system_prompt?: string;
   enabled_facebook_page_ids?: string[];
 }

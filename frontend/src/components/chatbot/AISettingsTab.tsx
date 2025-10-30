@@ -55,6 +55,7 @@ export default function AISettingsTab() {
     max_tokens: 1000,
     response_delay: 2,
     fallback_enabled: true,
+    send_no_info_message: true,
     system_prompt: 'Bạn là trợ lý AI thông minh, hỗ trợ khách hàng một cách chuyên nghiệp và thân thiện.',
     enabled_facebook_page_ids: []
   });
@@ -179,6 +180,7 @@ export default function AISettingsTab() {
           max_tokens: settings.max_tokens,
           response_delay: settings.response_delay,
           fallback_enabled: settings.fallback_enabled,
+          send_no_info_message: settings.send_no_info_message,
           system_prompt: settings.system_prompt,
           enabled_facebook_page_ids: settings.enabled_facebook_page_ids,
         };
@@ -197,6 +199,7 @@ export default function AISettingsTab() {
           max_tokens: settings.max_tokens,
           response_delay: settings.response_delay,
           fallback_enabled: settings.fallback_enabled,
+          send_no_info_message: settings.send_no_info_message,
           system_prompt: settings.system_prompt,
           enabled_facebook_page_ids: settings.enabled_facebook_page_ids,
         };
@@ -358,6 +361,22 @@ export default function AISettingsTab() {
                 type="checkbox"
                 checked={settings.fallback_enabled}
                 onChange={(e) => setSettings({ ...settings, fallback_enabled: e.target.checked })}
+              />
+              <span className="chatbot-toggle-slider"></span>
+            </label>
+          </div>
+
+          {/* Send No Info Message Toggle */}
+          <div className="chatbot-form-group-inline">
+            <div className="chatbot-form-group-inline-content">
+              <label className="chatbot-form-label">Gửi thông báo "Không có thông tin"</label>
+              <p className="chatbot-form-hint">Khi chatbot không có câu trả lời, gửi tin nhắn thông báo cho khách hàng trước khi chuyển cho nhân viên. Nếu tắt, chỉ chuyển sang nhân viên mà không gửi tin nhắn.</p>
+            </div>
+            <label className="chatbot-toggle-switch">
+              <input
+                type="checkbox"
+                checked={settings.send_no_info_message}
+                onChange={(e) => setSettings({ ...settings, send_no_info_message: e.target.checked })}
               />
               <span className="chatbot-toggle-slider"></span>
             </label>

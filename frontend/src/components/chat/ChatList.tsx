@@ -707,6 +707,12 @@ export default function ChatList({ onConversationSelect, selectedConversation, s
                           alt={conversation.current_handler === 'chatbot' ? 'chatbot' : 'human'} 
                         />
                       </div>
+                      {/* Phone Icon */}
+                      {conversation.customer_phone && (
+                        <div className="chat-list-phone-icon" title={`SĐT: ${conversation.customer_phone}`}>
+                          <img src="/phone.svg" alt="phone" />
+                        </div>
+                      )}
                       {conversation.page_picture_url && (
                         <div className="chat-list-page-icon">
                           <img src={conversation.page_picture_url} alt="page avatar" />

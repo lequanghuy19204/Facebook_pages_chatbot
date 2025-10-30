@@ -249,6 +249,8 @@ export class ChatbotWebhookHandlerService {
           await this.escalateToHuman(
             companyId,
             conversationId,
+            facebookPageId,
+            customerId,
             response.data.needs_human_support ? 'no_answer' : 'complex_query'
           );
         }
@@ -358,78 +360,85 @@ export class ChatbotWebhookHandlerService {
           `[processN8nResponse] Processing response item: answer_length=${answer?.length}, has_images=${has_images}, images_count=${images?.length || 0}`
         );
 
-        // Import FacebookMessagingService để gửi tin nhắn
-        // Đã được inject trong constructor
+        // Chỉ gửi tin nhắn nếu answer không rỗng (N8N đã xử lý logic send_no_info_message)
+        if (answer && answer.trim() !== '') {
+          // Import FacebookMessagingService để gửi tin nhắn
+          // Đã được inject trong constructor
 
-        // Chuẩn bị attachments nếu có images
-        const attachments = has_images && images && images.length > 0
-          ? images.map(imageUrl => ({
-              type: 'image',
-              facebook_url: imageUrl,
-              minio_url: imageUrl, // Đã là URL từ MinIO
-              minio_key: this.extractMinioKeyFromUrl(imageUrl),
-              filename: this.extractFilenameFromUrl(imageUrl),
-            }))
-          : undefined;
+          // Chuẩn bị attachments nếu có images
+          const attachments = has_images && images && images.length > 0
+            ? images.map(imageUrl => ({
+                type: 'image',
+                facebook_url: imageUrl,
+                minio_url: imageUrl, // Đã là URL từ MinIO
+                minio_key: this.extractMinioKeyFromUrl(imageUrl),
+                filename: this.extractFilenameFromUrl(imageUrl),
+              }))
+            : undefined;
 
-        // Gửi tin nhắn qua Facebook
-        const message = {
-          text: answer,
-          attachments: attachments,
-          senderType: 'chatbot' as const,
-          senderId: 'chatbot',
-          senderName: 'AI Chatbot',
-        };
-
-        this.logger.log(
-          `Sending chatbot response to customer ${customerId}: text=${answer.substring(0, 50)}..., images=${images?.length || 0}`
-        );
-
-        this.logger.log(
-          `[processN8nResponse] About to call sendMessageToFacebook with pageId=${facebookPageId}, userId=${customer.facebook_user_id}`
-        );
-
-        await this.messagingService.sendMessageToFacebook(
-          facebookPageId,
-          customer.facebook_user_id,
-          message
-        );
-
-        this.logger.log(
-          `[processN8nResponse] Message sent to Facebook successfully`
-        );
-
-        // Lưu tin nhắn vào DB
-        this.logger.log(
-          `[processN8nResponse] Saving chatbot message to database...`
-        );
-
-        await this.messagingService.createMessage(
-          companyId,
-          facebookPageId,
-          customerId,
-          conversationId,
-          {
-            messageType: attachments ? 'image' : 'text',
+          // Gửi tin nhắn qua Facebook
+          const message = {
             text: answer,
             attachments: attachments,
-            senderType: 'chatbot',
+            senderType: 'chatbot' as const,
             senderId: 'chatbot',
             senderName: 'AI Chatbot',
-            sentAt: new Date(),
-          }
-        );
+          };
 
-        this.logger.log(
-          `[processN8nResponse] Message saved to database successfully`
-        );
+          this.logger.log(
+            `Sending chatbot response to customer ${customerId}: text=${answer.substring(0, 50)}..., images=${images?.length || 0}`
+          );
+
+          this.logger.log(
+            `[processN8nResponse] About to call sendMessageToFacebook with pageId=${facebookPageId}, userId=${customer.facebook_user_id}`
+          );
+
+          await this.messagingService.sendMessageToFacebook(
+            facebookPageId,
+            customer.facebook_user_id,
+            message
+          );
+
+          this.logger.log(
+            `[processN8nResponse] Message sent to Facebook successfully`
+          );
+
+          // Lưu tin nhắn vào DB
+          this.logger.log(
+            `[processN8nResponse] Saving chatbot message to database...`
+          );
+
+          await this.messagingService.createMessage(
+            companyId,
+            facebookPageId,
+            customerId,
+            conversationId,
+            {
+              messageType: attachments ? 'image' : 'text',
+              text: answer,
+              attachments: attachments,
+              senderType: 'chatbot',
+              senderId: 'chatbot',
+              senderName: 'AI Chatbot',
+              sentAt: new Date(),
+            }
+          );
+
+          this.logger.log(
+            `[processN8nResponse] Message saved to database successfully`
+          );
+
+          this.logger.log(`✅ Chatbot response sent successfully for conversation: ${conversationId}`);
+        } else {
+          this.logger.log(
+            `[processN8nResponse] Answer is empty, skipping message send (N8N handled send_no_info_message logic)`
+          );
+        }
 
         // Cập nhật thông tin customer nếu có extracted_customer_info
         if (extracted_customer_info) {
           await this.updateCustomerInfo(customerId, companyId, extracted_customer_info);
         }
-
-        this.logger.log(`✅ Chatbot response sent successfully for conversation: ${conversationId}`);
       }
     } catch (error) {
       this.logger.error(
@@ -572,10 +581,16 @@ export class ChatbotWebhookHandlerService {
   private async escalateToHuman(
     companyId: string,
     conversationId: string,
-    reason: 'no_answer' | 'customer_request' | 'complex_query',
+    facebookPageId: string,
+    customerId: string,
+    reason: 'no_answer' | 'customer_request' | 'complex_query'
   ): Promise<void> {
     try {
       const escalatedAt = new Date();
+      
+      this.logger.log(
+        `[escalateToHuman] Escalating conversation ${conversationId} to human. Reason: ${reason}`
+      );
       
       const updateData = {
         current_handler: 'human',

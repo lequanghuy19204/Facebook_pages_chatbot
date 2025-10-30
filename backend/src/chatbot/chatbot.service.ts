@@ -6,6 +6,7 @@ import { AIChatbotSettings, AIChatbotSettingsDocument } from '../schemas/ai-chat
 import { AITrainingDocument, AITrainingDocumentDocument } from '../schemas/ai-training-document.schema';
 import { CreateAISettingsDto, UpdateAISettingsDto, CreateTrainingDocumentDto, UpdateTrainingDocumentDto, QueryTrainingDocumentsDto } from '../dto/chatbot.dto';
 import { MinioStorageService } from '../minio/minio-storage.service';
+import axios from 'axios';
 
 @Injectable()
 export class ChatbotService {
@@ -64,6 +65,7 @@ export class ChatbotService {
       max_tokens: dto.max_tokens ?? 1000,
       response_delay: dto.response_delay ?? 2,
       fallback_enabled: dto.fallback_enabled ?? true,
+      send_no_info_message: dto.send_no_info_message ?? true,
       system_prompt: dto.system_prompt,
       enabled_facebook_page_ids: dto.enabled_facebook_page_ids ?? [],
       created_by: userId,
@@ -96,6 +98,7 @@ export class ChatbotService {
     if (dto.max_tokens !== undefined) settings.max_tokens = dto.max_tokens;
     if (dto.response_delay !== undefined) settings.response_delay = dto.response_delay;
     if (dto.fallback_enabled !== undefined) settings.fallback_enabled = dto.fallback_enabled;
+    if (dto.send_no_info_message !== undefined) settings.send_no_info_message = dto.send_no_info_message;
     if (dto.system_prompt !== undefined) settings.system_prompt = dto.system_prompt;
     if (dto.enabled_facebook_page_ids !== undefined) {
       settings.enabled_facebook_page_ids = dto.enabled_facebook_page_ids;

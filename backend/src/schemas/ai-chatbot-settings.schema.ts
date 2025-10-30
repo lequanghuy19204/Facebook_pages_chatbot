@@ -36,7 +36,7 @@ export class AIChatbotSettings {
   @Prop({ required: true, default: 0.7, min: 0, max: 2 })
   temperature: number;
 
-  @Prop({ required: true, default: 1000, min: 100, max: 4000 })
+  @Prop({ required: true, default: 1000, min: 100, max: 10000 })
   max_tokens: number;
 
   @Prop({ required: true, default: 2, min: 0, max: 30 })
@@ -44,6 +44,9 @@ export class AIChatbotSettings {
 
   @Prop({ required: true, default: true })
   fallback_enabled: boolean;
+
+  @Prop({ required: true, default: true })
+  send_no_info_message: boolean; // Gửi tin nhắn "không có thông tin" cho khách trước khi chuyển human
 
   @Prop({ required: true })
   system_prompt: string;

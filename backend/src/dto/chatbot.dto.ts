@@ -43,6 +43,10 @@ export class CreateAISettingsDto {
   @IsOptional()
   fallback_enabled?: boolean;
 
+  @IsBoolean()
+  @IsOptional()
+  send_no_info_message?: boolean;
+
   @IsString()
   @IsNotEmpty()
   system_prompt: string;
@@ -91,6 +95,10 @@ export class UpdateAISettingsDto {
   @IsBoolean()
   @IsOptional()
   fallback_enabled?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  send_no_info_message?: boolean;
 
   @IsString()
   @IsOptional()
