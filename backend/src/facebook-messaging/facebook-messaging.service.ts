@@ -1296,7 +1296,7 @@ export class FacebookMessagingService {
       const page = await this.pageModel.findOne({ facebook_page_id: facebookPageId });
       if (!page || !page.access_token) {
         this.logger.warn(`No access token found for page: ${facebookPageId}`);
-        return { name: 'Unknown User' };
+        return { name: 'Unknown User', facebook_user_id: facebookUserId };
       }
 
       const apiVersion = this.configService.get('FACEBOOK_API_VERSION') || 'v23.0';
@@ -1312,8 +1312,52 @@ export class FacebookMessagingService {
       return response.data;
       
     } catch (error) {
-      this.logger.error(`Failed to get Facebook user info for ${facebookUserId}:`, error.response?.data || error.message);
-      return { name: 'Unknown User' };
+      // Xử lý các loại lỗi từ Facebook Graph API
+      if (axios.isAxiosError(error) && error.response?.data?.error) {
+        const fbError = error.response.data.error;
+        
+        // Error code 100, subcode 33: User không tồn tại hoặc thiếu quyền
+        if (fbError.code === 100 && fbError.error_subcode === 33) {
+          this.logger.warn(
+            `[Facebook API] User ${facebookUserId} does not exist or permissions missing. ` +
+            `This may happen if user deleted conversation or blocked the page.`
+          );
+        }
+        // Error code 190: Access token hết hạn hoặc không hợp lệ
+        else if (fbError.code === 190) {
+          this.logger.error(
+            `[Facebook API] Invalid or expired access token for page ${facebookPageId}. ` +
+            `Please reconnect the Facebook page.`
+          );
+        }
+        // Error code 10: Permission denied
+        else if (fbError.code === 10) {
+          this.logger.error(
+            `[Facebook API] Permission denied for page ${facebookPageId}. ` +
+            `Missing required permissions: pages_messaging or pages_read_user_content`
+          );
+        }
+        // Các lỗi khác
+        else {
+          this.logger.error(
+            `[Facebook API] Error ${fbError.code} (subcode: ${fbError.error_subcode || 'N/A'}) ` +
+            `for user ${facebookUserId}: ${fbError.message}`
+          );
+        }
+      } else {
+        this.logger.error(
+          `Failed to get Facebook user info for ${facebookUserId}:`,
+          error.response?.data || error.message
+        );
+      }
+      
+      // Trả về thông tin mặc định với facebook_user_id để có thể track
+      return { 
+        name: 'Unknown User',
+        facebook_user_id: facebookUserId,
+        first_name: 'Unknown',
+        last_name: 'User'
+      };
     }
   }
 
