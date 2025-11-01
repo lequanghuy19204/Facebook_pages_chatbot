@@ -140,12 +140,22 @@ export class FacebookWebhookController {
         }
       }
 
-      // Process webhook
+      // ✅ SONG SONG HÓA: Xử lý tất cả entries cùng lúc để tăng tốc độ
       if (parsedBody.object === 'page') {
-        for (const entry of parsedBody.entry) {
-          this.logger.log(`[Webhook] Processing entry: pageId=${entry.id}, messaging=${entry.messaging?.length || 0}, changes=${entry.changes?.length || 0}`);
-          await this.processEntry(entry);
-        }
+        this.logger.log(`[Webhook] Processing ${parsedBody.entry.length} entries in parallel`);
+        
+        // Xử lý song song tất cả entries
+        const entryPromises = parsedBody.entry.map(entry => 
+          this.processEntry(entry).catch(error => {
+            this.logger.error(`[Webhook] Failed to process entry ${entry.id}:`, error);
+            // Không throw để không ảnh hưởng đến các entries khác
+          })
+        );
+        
+        // Đợi tất cả entries xử lý xong (hoặc lỗi)
+        await Promise.all(entryPromises);
+        
+        this.logger.log(`[Webhook] ✅ Processed ${parsedBody.entry.length} entries successfully`);
       } else {
         this.logger.warn(`[Webhook] Unhandled object type: ${parsedBody.object}`);
       }
@@ -193,19 +203,41 @@ export class FacebookWebhookController {
     try {
       this.logger.log(`[processEntry] Processing entry for page: ${entry.id}`);
 
-      // Process messaging events
-      if (entry.messaging) {
-        for (const event of entry.messaging) {
-          await this.processMessagingEvent(entry.id, event);
-        }
+      // ✅ SONG SONG HÓA: Xử lý messaging events và page changes cùng lúc
+      const promises: Promise<void>[] = [];
+
+      // Process messaging events in parallel
+      if (entry.messaging && entry.messaging.length > 0) {
+        this.logger.log(`[processEntry] Processing ${entry.messaging.length} messaging events in parallel`);
+        
+        const messagingPromises = entry.messaging.map(event =>
+          this.processMessagingEvent(entry.id, event).catch(error => {
+            this.logger.error(`[processEntry] Failed to process messaging event:`, error);
+            // Không throw để không ảnh hưởng đến các events khác
+          })
+        );
+        
+        promises.push(...messagingPromises);
       }
 
-      // Process page changes (comments, posts, etc.)
-      if (entry.changes) {
-        for (const change of entry.changes) {
-          await this.processPageChange(entry.id, change);
-        }
+      // Process page changes in parallel
+      if (entry.changes && entry.changes.length > 0) {
+        this.logger.log(`[processEntry] Processing ${entry.changes.length} page changes in parallel`);
+        
+        const changePromises = entry.changes.map(change =>
+          this.processPageChange(entry.id, change).catch(error => {
+            this.logger.error(`[processEntry] Failed to process page change:`, error);
+            // Không throw để không ảnh hưởng đến các changes khác
+          })
+        );
+        
+        promises.push(...changePromises);
       }
+
+      // Đợi tất cả xử lý xong
+      await Promise.all(promises);
+      
+      this.logger.log(`[processEntry] ✅ Completed processing entry ${entry.id}`);
     } catch (error) {
       this.logger.error(`[processEntry] Error processing entry ${entry.id}:`, error);
     }

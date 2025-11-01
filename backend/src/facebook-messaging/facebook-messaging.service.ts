@@ -12,10 +12,29 @@ import { FacebookPage, FacebookPageDocument } from '../schemas/facebook-page.sch
 import { CreateMessageDto, ReplyMessageDto, UpdateConversationDto, UpdateCustomerDto, GetConversationsQuery } from '../dto/facebook-messaging.dto';
 import { MessagingGateway } from '../websocket/messaging.gateway';
 import { MinioStorageService } from '../minio/minio-storage.service';
+import { 
+  uploadCustomerAvatarInBackground, 
+  updateCustomerInfoInBackground 
+} from './facebook-messaging-background.helper';
 
 @Injectable()
 export class FacebookMessagingService {
   private readonly logger = new Logger(FacebookMessagingService.name);
+
+  // ✅ IN-MEMORY CACHE để giảm DB queries
+  private customerCache = new Map<string, { 
+    customer: FacebookCustomerDocument; 
+    timestamp: number;
+  }>();
+  private conversationCache = new Map<string, {
+    conversation: FacebookConversationDocument;
+    timestamp: number;
+  }>();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 phút
+  
+  // ✅ RATE LIMITING cho Facebook API
+  private facebookApiCallTimestamps: number[] = [];
+  private readonly MAX_FB_API_CALLS_PER_HOUR = 180; // Dưới limit của Facebook (200)
 
   constructor(
     @InjectModel(FacebookCustomer.name)
@@ -33,7 +52,41 @@ export class FacebookMessagingService {
     private readonly configService: ConfigService,
     private readonly messagingGateway: MessagingGateway,
     private readonly minioService: MinioStorageService,
-  ) {}
+  ) {
+    // ✅ Cleanup cache định kỳ để tránh memory leak
+    setInterval(() => {
+      this.cleanupExpiredCache();
+    }, 10 * 60 * 1000); // Mỗi 10 phút
+  }
+
+  // ✅ Dọn dẹp cache hết hạn
+  private cleanupExpiredCache(): void {
+    const now = Date.now();
+    let cleanedCustomers = 0;
+    let cleanedConversations = 0;
+
+    // Cleanup customer cache
+    for (const [key, value] of this.customerCache.entries()) {
+      if (now - value.timestamp > this.CACHE_TTL) {
+        this.customerCache.delete(key);
+        cleanedCustomers++;
+      }
+    }
+
+    // Cleanup conversation cache
+    for (const [key, value] of this.conversationCache.entries()) {
+      if (now - value.timestamp > this.CACHE_TTL) {
+        this.conversationCache.delete(key);
+        cleanedConversations++;
+      }
+    }
+
+    if (cleanedCustomers > 0 || cleanedConversations > 0) {
+      this.logger.debug(
+        `🧹 Cleaned up cache: ${cleanedCustomers} customers, ${cleanedConversations} conversations`
+      );
+    }
+  }
 
   // ===== CUSTOMER MANAGEMENT =====
 
@@ -42,7 +95,27 @@ export class FacebookMessagingService {
     facebookPageId: string,
     facebookUserId: string,
   ): Promise<FacebookCustomerDocument> {
-    // Tìm customer đã tồn tại - PHẢI PHÂN BIỆT GIỮA CÁC PAGE
+    const cacheKey = `${companyId}_${facebookPageId}_${facebookUserId}`;
+    
+    // ✅ BƯỚC 1: CHECK CACHE TRƯỚC - Tránh query DB không cần thiết
+    const cached = this.customerCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      this.logger.debug(`✅ Customer cache HIT: ${cacheKey}`);
+      
+      // ✅ Cập nhật last_interaction_at trong BACKGROUND (không chặn webhook)
+      setImmediate(() => {
+        this.customerModel.updateOne(
+          { customer_id: cached.customer.customer_id },
+          { $set: { last_interaction_at: new Date() } }
+        ).catch(error => {
+          this.logger.error(`Failed to update last_interaction_at for ${cached.customer.customer_id}:`, error);
+        });
+      });
+      
+      return cached.customer;
+    }
+
+    // ✅ BƯỚC 2: QUERY DB - Cache miss
     let customer = await this.customerModel.findOne({
       company_id: companyId,
       facebook_page_id: facebookPageId,
@@ -50,76 +123,72 @@ export class FacebookMessagingService {
     });
 
     if (customer) {
-      // CHỈ cập nhật last_interaction_at, KHÔNG upload lại avatar mỗi lần có tin nhắn
+      // Cập nhật last_interaction_at
       customer.last_interaction_at = new Date();
       
-      // CHỈ upload avatar nếu CHƯA CÓ trong DB (lần đầu tiên hoặc bị mất)
+      // ✅ Upload avatar trong BACKGROUND nếu chưa có (không chặn webhook)
       if (!customer.profile_pic_url && !customer.profile_pic_key) {
-        const facebookUserInfo = await this.getFacebookUserInfo(facebookUserId, facebookPageId);
-        
-        if (facebookUserInfo.profile_pic) {
-          const folder = this.minioService.generateChatFolder();
-          const uploadResult = await this.minioService.downloadAndUploadFromUrl(
-            facebookUserInfo.profile_pic,
-            folder
-          );
-          
-          if (uploadResult) {
-            customer.profile_pic = facebookUserInfo.profile_pic;
-            customer.profile_pic_url = uploadResult.publicUrl;
-            customer.profile_pic_key = uploadResult.key;
-            this.logger.log(`Uploaded missing customer avatar to MinIO: ${uploadResult.key}`);
-            
-            // Sync avatar mới vào conversations
-            await this.syncCustomerInfoToConversations(customer.customer_id, companyId, customer);
-          }
-        }
+        this.logger.log(`Customer ${customer.customer_id} missing avatar, uploading in background...`);
+        uploadCustomerAvatarInBackground(
+          customer,
+          facebookUserId,
+          facebookPageId,
+          companyId,
+          this.customerModel,
+          this.conversationModel,
+          this.minioService,
+          (uid, pid) => this.getFacebookUserInfo(uid, pid),
+          this.customerCache,
+        );
       }
       
       await customer.save();
+      
+      // ✅ LƯU VÀO CACHE
+      this.customerCache.set(cacheKey, { 
+        customer, 
+        timestamp: Date.now() 
+      });
+      
       return customer;
     }
 
-    const facebookUserInfo = await this.getFacebookUserInfo(facebookUserId, facebookPageId);
-    
+    // ✅ BƯỚC 3: TẠO CUSTOMER MỚI - Không gọi Facebook API ngay (tránh chặn webhook)
     const customerId = this.generateCustomerId();
-    
-    let profilePicUrl: string | undefined;
-    let profilePicKey: string | undefined;
-    
-    if (facebookUserInfo.profile_pic) {
-      const folder = this.minioService.generateChatFolder();
-      const uploadResult = await this.minioService.downloadAndUploadFromUrl(
-        facebookUserInfo.profile_pic,
-        folder
-      );
-      
-      if (uploadResult) {
-        profilePicUrl = uploadResult.publicUrl;
-        profilePicKey = uploadResult.key;
-        this.logger.log(`Uploaded new customer avatar to MinIO: ${uploadResult.key}`);
-      }
-    }
     
     customer = new this.customerModel({
       customer_id: customerId,
       company_id: companyId,
       facebook_page_id: facebookPageId,
       facebook_user_id: facebookUserId,
-      name: facebookUserInfo.name || 'Unknown User',
-      first_name: facebookUserInfo.first_name,
-      last_name: facebookUserInfo.last_name,
-      profile_pic: facebookUserInfo.profile_pic,
-      profile_pic_url: profilePicUrl,
-      profile_pic_key: profilePicKey,
-      locale: facebookUserInfo.locale,
-      timezone: facebookUserInfo.timezone,
+      name: `Facebook User ${facebookUserId.slice(-6)}`, // Tên tạm thời
+      first_name: 'Facebook',
+      last_name: 'User',
       first_contact_at: new Date(),
       last_interaction_at: new Date(),
     });
 
     await customer.save();
-    this.logger.log(`Created new customer: ${customerId} for user: ${facebookUserId}`);
+    this.logger.log(`✅ Created new customer: ${customerId} for user: ${facebookUserId} (info will be updated in background)`);
+    
+    // ✅ CẬP NHẬT THÔNG TIN FACEBOOK TRONG BACKGROUND
+    updateCustomerInfoInBackground(
+      customer,
+      facebookUserId,
+      facebookPageId,
+      companyId,
+      this.customerModel,
+      this.conversationModel,
+      this.minioService,
+      (uid, pid) => this.getFacebookUserInfo(uid, pid),
+      this.customerCache,
+    );
+    
+    // ✅ LƯU VÀO CACHE
+    this.customerCache.set(cacheKey, { 
+      customer, 
+      timestamp: Date.now() 
+    });
     
     return customer;
   }
